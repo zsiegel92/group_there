@@ -1,5 +1,6 @@
 from app_infra import app
-from models import Problem
+from models import Problem, Solution
+from solve import solve_problem
 
 
 @app.get("/")
@@ -8,5 +9,5 @@ def read_root():
 
 
 @app.post("/solve")
-def solve(problem: Problem):
-    return {"message": "Hello, World!"}
+def solve(problem: Problem)-> Solution:
+    return solve_problem(problem)
