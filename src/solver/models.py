@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+import datetime
 
 
 class LatLon(BaseModel):
@@ -25,10 +26,17 @@ class User(BaseModel):
     home_address: Location
 
 
+class Event(BaseModel):
+    id: str
+    name: str
+    start_time: datetime.datetime
+    location: Location
+
 class Tripper(BaseModel):
     id: str
     user_id: str
     origin_id: str
+    event_id: str
     car_fits: int = Field(
         ...,
         ge=0,
@@ -41,7 +49,7 @@ class Tripper(BaseModel):
 
 
 class Problem(BaseModel):
-    destination_id: str
+    event_id: str
     trippers: list[Tripper]
     tripper_origin_distances: dict[tuple[str, str], float] = Field(
         ...,
