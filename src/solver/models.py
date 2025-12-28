@@ -1,0 +1,49 @@
+from pydantic import BaseModel, Field
+
+
+class LatLon(BaseModel):
+    latitude: float = Field(..., ge=-90, le=90)
+    longitude: float = Field(..., ge=-180, le=180)
+
+
+class Location(BaseModel):
+    id: str
+    name: str
+    address_string: str
+    street1: str | None = None
+    street2: str | None = None
+    city: str | None = None
+    state: str | None = None
+    zip: str | None = None
+    latlon: LatLon | None = None
+
+
+class User(BaseModel):
+    id: str
+    email: str
+    name: str
+    home_address: Location
+
+
+class Tripper(BaseModel):
+    id: str
+    user_id: str
+    origin_id: str
+    car_fits: int = Field(
+        ...,
+        ge=0,
+        le=5,
+    )
+    mins_before_event_start_can_leave: int = Field(
+        ...,
+        ge=0,
+    )
+
+
+class Problem(BaseModel):
+    destination_id: str
+    trippers: list[Tripper]
+    tripper_origin_distances: dict[tuple[str, str], float] = Field(
+        ...,
+        description="Tuples of tripper_ids mapped to the distance in minutes between the tripper's origins",
+    )
