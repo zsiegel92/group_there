@@ -12,7 +12,6 @@ class Settings(BaseSettings):
     GROUPTHERE_SOLVER_API_KEY: str | None = None
     GOOGLE_ROUTES_API_KEY: str | None = None
 
-
 settings = Settings()
 
 

@@ -14,7 +14,9 @@
     "python:test": "uv run --directory src/solver/tests pytest",
     "python:check-all": "pnpm run python:type-check && pnpm run python:lint && pnpm run python:format && pnpm run python:test",
     "python:dev": "uv run --directory src/solver uvicorn server:app --reload --port 8000",
-    "python:dev2": "uv run --directory src/solver fastapi run server.py --reload --port 8000"
+    "python:dev2": "uv run --directory src/solver fastapi run server.py --reload --port 8000",
+    "python:generate-openapi-json": "uv run --directory src/solver python dump_openapi.py",
+    "generate-openapi-ts": "openapi-ts"
   },
   "dependencies": {
     "next": "16.1.1",
