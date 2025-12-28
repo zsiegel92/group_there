@@ -56,3 +56,13 @@ class Problem(BaseModel):
         ...,
         description="Tuples of tripper_ids mapped to the distance in minutes between the tripper's origins",
     )
+
+class Party(BaseModel):
+    id: str
+    driver_tripper_id: str | None = None
+    passenger_tripper_ids: list[str]
+
+class Solution(BaseModel):
+    id: str
+    parties: list[Party]
+    total_drive_time_minutes: float
