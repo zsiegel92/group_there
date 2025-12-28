@@ -10,15 +10,12 @@ def solutions_are_equivalent(sol1: Solution, sol2: Solution) -> bool:
     - The same total drive time (within floating point tolerance)
     - The same set of parties (same driver and passengers, ignoring order)
     """
-    # Check total drive time (within 0.01 minute tolerance)
     if abs(sol1.total_drive_seconds - sol2.total_drive_seconds) > 0.01:
         return False
 
-    # Check that we have the same number of parties
     if len(sol1.parties) != len(sol2.parties):
         return False
 
-    # Create normalized representations of parties for comparison
     def normalize_party(party: Party) -> tuple[str | None, tuple[str, ...]]:
         """Return (driver_id, sorted_passenger_ids) tuple."""
         return (party.driver_tripper_id, tuple(sorted(party.passenger_tripper_ids)))
