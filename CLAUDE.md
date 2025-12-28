@@ -24,6 +24,12 @@ uv run --directory src/solver ruff format --check
 uv run --directory src/solver ruff format
 ```
 
+We also have tests that can be run with
+
+```sh
+uv run --directory src/solver/tests pytest
+```
+
 Everything in my IDE should be type-aware, but don't add extra type annotations where the type can be inferred. Sometimes return types are appropriate, sometimes inferring it is best - use taste!
 
 

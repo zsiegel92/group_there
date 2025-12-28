@@ -43,7 +43,7 @@ class Tripper(BaseModel):
         ge=0,
         le=5,
     )
-    mins_before_event_start_can_leave: int = Field(
+    seconds_before_event_start_can_leave: int = Field(
         ...,
         ge=0,
     )
@@ -52,17 +52,19 @@ class Tripper(BaseModel):
 class Problem(BaseModel):
     event_id: str
     trippers: list[Tripper]
-    tripper_origin_distances: dict[tuple[str, str], float] = Field(
+    tripper_origin_distances_seconds: dict[tuple[str, str], float] = Field(
         ...,
-        description="Tuples of tripper_ids mapped to the distance in minutes between the tripper's origins",
+        description="Tuples of tripper_ids mapped to the distance in seconds between the tripper's origins",
     )
+
 
 class Party(BaseModel):
     id: str
     driver_tripper_id: str | None = None
     passenger_tripper_ids: list[str]
 
+
 class Solution(BaseModel):
     id: str
     parties: list[Party]
-    total_drive_time_minutes: float
+    total_drive_seconds: float
