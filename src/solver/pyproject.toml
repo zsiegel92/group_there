@@ -8,3 +8,9 @@ dependencies = [
     "numpy>=2.4.0",
     "pydantic>=2.12.5",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.10",
+    "ty>=0.0.7",
+]

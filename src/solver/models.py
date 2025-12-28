@@ -32,6 +32,7 @@ class Event(BaseModel):
     start_time: datetime.datetime
     location: Location
 
+
 class Tripper(BaseModel):
     id: str
     user_id: str

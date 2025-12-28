@@ -1,0 +1,2 @@
+export UV_PROJECT=src/solver
+source src/solver/.venv/bin/activate
