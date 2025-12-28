@@ -1,4 +1,4 @@
-# source .env
+source .env
 curl -X POST -d '{
   "origins": [
     {

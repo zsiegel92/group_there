@@ -1,4 +1,4 @@
-# source .env
+source .env
 curl -X POST -d '{
   "origin":{
     "address": "1600 Amphitheatre Parkway, Mountain View, CA"
