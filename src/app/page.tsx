@@ -1,4 +1,5 @@
 import { solveSolvePost } from "@/python-client/sdk.gen";
+
 export default async function Home() {
   const response = await solveSolvePost({
     body: {
@@ -6,7 +7,7 @@ export default async function Home() {
       trippers: [],
       tripper_origin_distances_seconds: {},
     },
-    
+    auth: process.env.GROUPTHERE_SOLVER_API_KEY,
   });
   if (response.error) {
     return (
@@ -17,9 +18,11 @@ export default async function Home() {
     );
   }
   console.log(response.data);
-  return <div>
-    <h1>Hello World</h1>
-    <h2>Response from local Python API</h2>
-    <pre>{JSON.stringify(response.data, null, 2)}</pre>
-  </div>;
+  return (
+    <div>
+      <h1>Hello World</h1>
+      <h2>Response from local Python API</h2>
+      <pre>{JSON.stringify(response.data, null, 2)}</pre>
+    </div>
+  );
 }
