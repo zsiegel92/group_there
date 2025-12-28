@@ -1,6 +1,14 @@
-import { defineConfig } from '@hey-api/openapi-ts';
+import { defineConfig } from "@hey-api/openapi-ts";
 
 export default defineConfig({
-  input: 'http://localhost:8000/openapi.json', // sign up at app.heyapi.dev
-  output: 'src/python-client',
+  input: "http://localhost:8000/openapi.json", // sign up at app.heyapi.dev
+  output: "src/python-client",
+  plugins: [
+    "@hey-api/sdk",
+    "zod",
+    {
+      name: "@hey-api/sdk",
+      validator: true,
+    },
+  ],
 });

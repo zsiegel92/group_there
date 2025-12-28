@@ -3,6 +3,7 @@
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
 import type { ReadRootGetData, ReadRootGetResponses, SolveSolvePostData, SolveSolvePostErrors, SolveSolvePostResponses } from './types.gen';
+import { zReadRootGetData, zSolveSolvePostData, zSolveSolvePostResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -22,6 +23,7 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
  * Read Root
  */
 export const readRootGet = <ThrowOnError extends boolean = false>(options?: Options<ReadRootGetData, ThrowOnError>) => (options?.client ?? client).get<ReadRootGetResponses, unknown, ThrowOnError>({
+    requestValidator: async (data) => await zReadRootGetData.parseAsync(data),
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/',
     ...options
@@ -31,6 +33,8 @@ export const readRootGet = <ThrowOnError extends boolean = false>(options?: Opti
  * Solve
  */
 export const solveSolvePost = <ThrowOnError extends boolean = false>(options: Options<SolveSolvePostData, ThrowOnError>) => (options.client ?? client).post<SolveSolvePostResponses, SolveSolvePostErrors, ThrowOnError>({
+    requestValidator: async (data) => await zSolveSolvePostData.parseAsync(data),
+    responseValidator: async (data) => await zSolveSolvePostResponse.parseAsync(data),
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/solve',
     ...options,
