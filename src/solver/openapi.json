@@ -1,0 +1,258 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FastAPI",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Read Root",
+        "operationId": "read_root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/solve": {
+      "post": {
+        "summary": "Solve",
+        "operationId": "solve_solve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Problem"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Solution"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Party": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "driver_tripper_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Driver Tripper Id"
+          },
+          "passenger_tripper_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Passenger Tripper Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "passenger_tripper_ids"
+        ],
+        "title": "Party"
+      },
+      "Problem": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "trippers": {
+            "items": {
+              "$ref": "#/components/schemas/Tripper"
+            },
+            "type": "array",
+            "title": "Trippers"
+          },
+          "tripper_origin_distances_seconds": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Tripper Origin Distances Seconds",
+            "description": "Tuples of tripper_ids mapped to the distance in seconds between the tripper's origins"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "trippers",
+          "tripper_origin_distances_seconds"
+        ],
+        "title": "Problem"
+      },
+      "Solution": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "parties": {
+            "items": {
+              "$ref": "#/components/schemas/Party"
+            },
+            "type": "array",
+            "title": "Parties"
+          },
+          "total_drive_seconds": {
+            "type": "number",
+            "title": "Total Drive Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "parties",
+          "total_drive_seconds"
+        ],
+        "title": "Solution"
+      },
+      "Tripper": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "origin_id": {
+            "type": "string",
+            "title": "Origin Id"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "car_fits": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Car Fits"
+          },
+          "seconds_before_event_start_can_leave": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Seconds Before Event Start Can Leave"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "origin_id",
+          "event_id",
+          "car_fits",
+          "seconds_before_event_start_can_leave"
+        ],
+        "title": "Tripper"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}
