@@ -2,18 +2,27 @@
 
 import { Button } from "@/components/ui/button";
 import { signIn } from "@/lib/auth-client";
+import { savePreviewUrlForOAuth } from "@/lib/preview-redirect";
 
 type SignInProps = {
   callbackUrl?: string;
 };
 
 export function SignIn({ callbackUrl = "/" }: SignInProps) {
+  const handleSignIn = () => {
+    // Save preview URL to localStorage before OAuth redirect
+    savePreviewUrlForOAuth();
+
+    // Use callback-handler page to handle preview redirects
+    // This page will check if we came from a preview and redirect appropriately
+    signIn.social({
+      provider: "github",
+      callbackURL: "/auth/callback-handler",
+    });
+  };
+
   return (
-    <Button
-      onClick={() =>
-        signIn.social({ provider: "github", callbackURL: callbackUrl })
-      }
-      size="lg"
+    <Button onClick={handleSignIn} size="lg"
     >
       <svg
         className="size-5"

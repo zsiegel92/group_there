@@ -6,15 +6,23 @@ import { db } from "@/db/db";
 import * as schema from "@/db/schema";
 
 const getBaseURL = () => {
-  if (process.env.VERCEL_ENV === "production" && !!process.env.PRODUCTION_URL) {
+  // For local development, use localhost
+  if (!process.env.VERCEL_ENV && process.env.VERCEL_URL?.includes("localhost")) {
+    return process.env.VERCEL_URL.startsWith("http")
+      ? process.env.VERCEL_URL
+      : `http://${process.env.VERCEL_URL}`;
+  }
+
+  // For all Vercel deployments (production and preview), use production URL
+  // This allows OAuth callbacks to work with a single GitHub OAuth app configuration
+  if (process.env.PRODUCTION_URL) {
     return process.env.PRODUCTION_URL;
   }
-  const vercelUrl =
-    process.env.VERCEL_ENV === "production" && !!process.env.PRODUCTION_URL
-      ? process.env.PRODUCTION_URL
-      : process.env.VERCEL_URL;
+
+  // Fallback to VERCEL_URL if PRODUCTION_URL is not set (shouldn't happen in production)
+  const vercelUrl = process.env.VERCEL_URL;
   if (!vercelUrl) {
-    throw new Error("VERCEL_URL is not set");
+    throw new Error("Neither PRODUCTION_URL nor VERCEL_URL is set");
   }
   if (vercelUrl.startsWith("http")) {
     return vercelUrl;
