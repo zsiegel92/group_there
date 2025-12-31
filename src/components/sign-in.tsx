@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { signIn, emailOtp } from "@/lib/auth-client";
+import { emailOtp, signIn } from "@/lib/auth-client";
 
 type SignInProps = {
   callbackUrl?: string;
@@ -21,7 +22,21 @@ export function SignIn({ callbackUrl = "/" }: SignInProps) {
   const handleGithubSignIn = async () => {
     setGithubError(false);
     try {
-      await signIn.social({ provider: "github", callbackURL: callbackUrl });
+      const result = await signIn.social(
+        {
+          provider: "github",
+          callbackURL: callbackUrl,
+        },
+        {
+          onError: () => {
+            setGithubError(true);
+          },
+        }
+      );
+
+      if (result?.error) {
+        setGithubError(true);
+      }
     } catch (_err) {
       setGithubError(true);
     }
