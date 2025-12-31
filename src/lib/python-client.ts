@@ -1,3 +1,5 @@
+import "server-only";
+
 import { client } from "@/python-client/client.gen";
 
 const GROUPTHERE_SOLVER_API_KEY = process.env.GROUPTHERE_SOLVER_API_KEY;
