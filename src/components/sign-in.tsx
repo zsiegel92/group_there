@@ -4,11 +4,7 @@ import { Button } from "@/components/ui/button";
 import { signIn } from "@/lib/auth-client";
 import { savePreviewUrlForOAuth } from "@/lib/preview-redirect";
 
-type SignInProps = {
-  callbackUrl?: string;
-};
-
-export function SignIn({ callbackUrl = "/" }: SignInProps) {
+export function SignIn() {
   const handleSignIn = () => {
     // Save preview URL to localStorage before OAuth redirect
     savePreviewUrlForOAuth();
@@ -22,8 +18,7 @@ export function SignIn({ callbackUrl = "/" }: SignInProps) {
   };
 
   return (
-    <Button onClick={handleSignIn} size="lg"
-    >
+    <Button onClick={handleSignIn} size="lg">
       <svg
         className="size-5"
         fill="currentColor"

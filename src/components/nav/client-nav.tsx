@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Spinner } from "@/components/ui/spinner";
-import { useSession } from "@/lib/auth-client";
 import type { User } from "@/lib/auth";
+import { useSession } from "@/lib/auth-client";
 
 import { SignIn } from "../sign-in";
 import { SignOut } from "../sign-out";

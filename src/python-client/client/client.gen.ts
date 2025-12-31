@@ -76,7 +76,7 @@ export const createClient = (config: Config = {}): Client => {
   };
 
   const request: Client['request'] = async (options) => {
-    // @ts-expect-error
+    // @ts-expect-error - Generated code: beforeRequest return type not properly inferred
     const { opts, url } = await beforeRequest(options);
     const requestInit: ReqInit = {
       redirect: 'follow',

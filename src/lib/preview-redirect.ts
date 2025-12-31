@@ -67,7 +67,9 @@ export function shouldRedirectToPreview(): boolean {
  * Get the redirect URL for completing OAuth on a preview deployment
  * @param callbackPath - The path to redirect to (default: /auth/callback-redirect)
  */
-export function getPreviewRedirectUrl(callbackPath = "/auth/callback-redirect"): string | null {
+export function getPreviewRedirectUrl(
+  callbackPath = "/auth/callback-redirect"
+): string | null {
   const previewUrl = getSavedPreviewUrl();
   if (!previewUrl) return null;
 

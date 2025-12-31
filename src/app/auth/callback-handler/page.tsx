@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 import { useSession } from "@/lib/auth-client";
@@ -18,24 +18,21 @@ import {
 export default function CallbackHandlerPage() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
-  const [status, setStatus] = useState<"checking" | "redirecting" | "error">(
-    "checking"
-  );
+  const hasRedirected = useRef(false);
 
   useEffect(() => {
     // Wait for session to load
-    if (isPending) return;
+    if (isPending || hasRedirected.current) return;
 
     // Check if we should redirect to preview
     const shouldRedirect = shouldRedirectToPreview();
 
     if (shouldRedirect && session) {
-      setStatus("redirecting");
+      hasRedirected.current = true;
 
       // Get the preview redirect URL
       const previewUrl = getPreviewRedirectUrl();
       if (!previewUrl) {
-        setStatus("error");
         console.error("[Preview OAuth] No preview URL found");
         return;
       }
@@ -69,44 +66,18 @@ export default function CallbackHandlerPage() {
       // Redirect to preview deployment
       window.location.href = redirectUrl.href;
     } else if (session) {
+      hasRedirected.current = true;
       // Not a preview redirect, go to home
       console.log("[OAuth] Redirecting to home");
       router.push("/");
-    } else {
-      // No session, something went wrong
-      setStatus("error");
-      console.error("[OAuth] No session found after OAuth callback");
     }
   }, [session, isPending, router]);
 
   return (
     <div className="flex min-h-screen items-center justify-center">
       <div className="text-center">
-        {status === "checking" && (
-          <>
-            <div className="mb-4 inline-block size-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-            <p className="text-lg">Completing sign in...</p>
-          </>
-        )}
-        {status === "redirecting" && (
-          <>
-            <div className="mb-4 inline-block size-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-            <p className="text-lg">Redirecting to preview deployment...</p>
-          </>
-        )}
-        {status === "error" && (
-          <>
-            <p className="mb-4 text-lg text-red-600">
-              Authentication error occurred
-            </p>
-            <button
-              onClick={() => router.push("/")}
-              className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-            >
-              Return to home
-            </button>
-          </>
-        )}
+        <div className="mb-4 inline-block size-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+        <p className="text-lg">Completing sign in...</p>
       </div>
     </div>
   );

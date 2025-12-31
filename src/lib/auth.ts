@@ -7,7 +7,10 @@ import * as schema from "@/db/schema";
 
 const getBaseURL = () => {
   // For local development, use localhost
-  if (!process.env.VERCEL_ENV && process.env.VERCEL_URL?.includes("localhost")) {
+  if (
+    !process.env.VERCEL_ENV &&
+    process.env.VERCEL_URL?.includes("localhost")
+  ) {
     return process.env.VERCEL_URL.startsWith("http")
       ? process.env.VERCEL_URL
       : `http://${process.env.VERCEL_URL}`;
