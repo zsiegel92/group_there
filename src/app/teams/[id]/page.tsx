@@ -60,9 +60,7 @@ export default function TeamDetailPage(props: {
     try {
       // Send all invites in parallel
       await Promise.all(
-        validEmails.map((email) =>
-          inviteToTeam.mutateAsync({ teamId, email })
-        )
+        validEmails.map((email) => inviteToTeam.mutateAsync({ teamId, email }))
       );
       setInviteEmails([""]);
       setShowInviteDialog(false);
@@ -138,7 +136,11 @@ export default function TeamDetailPage(props: {
           <div className="flex flex-wrap gap-2">
             {team.isAdmin && (
               <>
-                <Button onClick={() => setShowInviteDialog(true)} size="sm" className="sm:h-10">
+                <Button
+                  onClick={() => setShowInviteDialog(true)}
+                  size="sm"
+                  className="sm:h-10"
+                >
                   Invite Members
                 </Button>
                 <Button
@@ -209,7 +211,9 @@ export default function TeamDetailPage(props: {
                         </span>
                       )}
                     </div>
-                    <div className="text-sm text-gray-600 break-all">{member.email}</div>
+                    <div className="text-sm text-gray-600 break-all">
+                      {member.email}
+                    </div>
                     <div className="text-xs text-gray-500">
                       Joined {member.joinedAt.toLocaleDateString()}
                     </div>

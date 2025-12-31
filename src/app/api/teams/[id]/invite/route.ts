@@ -72,9 +72,7 @@ export async function POST(request: NextRequest, props: Params) {
 
   // Create the invite URL
   const baseUrl =
-    process.env.VERCEL_URL ||
-    process.env.PRODUCTION_URL ||
-    "localhost:3000";
+    process.env.VERCEL_URL || process.env.PRODUCTION_URL || "localhost:3000";
   const protocol = baseUrl.includes("localhost") ? "http" : "https";
   const inviteUrl = `${protocol}://${baseUrl}/teams/invite/accept?token=${inviteToken}`;
 

@@ -146,7 +146,10 @@ export function SignIn({ callbackUrl = "/" }: SignInProps) {
                 }}
               />
               <div className="flex gap-2">
-                <Button onClick={() => void handleVerifyOTP()} disabled={loading}>
+                <Button
+                  onClick={() => void handleVerifyOTP()}
+                  disabled={loading}
+                >
                   {loading ? "Verifying..." : "Verify"}
                 </Button>
                 <Button
