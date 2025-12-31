@@ -1,6 +1,12 @@
 import { SignIn } from "@/components/sign-in";
 
-export default async function LoginPage() {
+type LoginPageProps = {
+  searchParams: Promise<{ callbackUrl?: string }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const { callbackUrl } = await searchParams;
+
   return (
     <div className="flex justify-center items-center min-h-[calc(100vh-4rem)]">
       <div className="w-full max-w-md p-8 space-y-6">
@@ -12,7 +18,7 @@ export default async function LoginPage() {
           </p>
         </div>
         <div className="flex justify-center">
-          <SignIn />
+          <SignIn callbackUrl={callbackUrl} />
         </div>
       </div>
     </div>

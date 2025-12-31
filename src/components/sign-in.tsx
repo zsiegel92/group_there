@@ -3,10 +3,16 @@
 import { Button } from "@/components/ui/button";
 import { signIn } from "@/lib/auth-client";
 
-export function SignIn() {
+type SignInProps = {
+  callbackUrl?: string;
+};
+
+export function SignIn({ callbackUrl = "/" }: SignInProps) {
   return (
     <Button
-      onClick={() => signIn.social({ provider: "github", callbackURL: "/" })}
+      onClick={() =>
+        signIn.social({ provider: "github", callbackURL: callbackUrl })
+      }
       size="lg"
     >
       <svg
