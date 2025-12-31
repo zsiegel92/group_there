@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { Nav, NavFallback } from "@/components/nav/nav";
+import { QueryProvider } from "@/components/query-provider";
 
 export const dynamic = "force-dynamic"; // NOTE: disables NextJS `fetch`-caching everywhere!
 
@@ -33,10 +34,12 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Suspense fallback={<NavFallback />}>
-          <Nav />
-        </Suspense>
-        {children}
+        <QueryProvider>
+          <Suspense fallback={<NavFallback />}>
+            <Nav />
+          </Suspense>
+          {children}
+        </QueryProvider>
       </body>
     </html>
   );

@@ -1,5 +1,12 @@
 import { relations } from "drizzle-orm";
-import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 export const users = pgTable(
   "users",
@@ -82,9 +89,40 @@ export const verifications = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)]
 );
 
+export const teams = pgTable("teams", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  secret: text("secret").notNull(), // hashed team secret for invite verification
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export const teamsToUsers = pgTable(
+  "teamsToUsers",
+  {
+    teamId: text("teamId")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    isAdmin: boolean("isAdmin").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.teamId, table.userId] }),
+    index("teamsToUsers_teamId_idx").on(table.teamId),
+    index("teamsToUsers_userId_idx").on(table.userId),
+  ]
+);
+
 export const userRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   accounts: many(accounts),
+  teamsToUsers: many(teamsToUsers),
 }));
 
 export const sessionRelations = relations(sessions, ({ one }) => ({
@@ -97,6 +135,21 @@ export const sessionRelations = relations(sessions, ({ one }) => ({
 export const accountRelations = relations(accounts, ({ one }) => ({
   user: one(users, {
     fields: [accounts.userId],
+    references: [users.id],
+  }),
+}));
+
+export const teamRelations = relations(teams, ({ many }) => ({
+  teamsToUsers: many(teamsToUsers),
+}));
+
+export const teamsToUsersRelations = relations(teamsToUsers, ({ one }) => ({
+  team: one(teams, {
+    fields: [teamsToUsers.teamId],
+    references: [teams.id],
+  }),
+  user: one(users, {
+    fields: [teamsToUsers.userId],
     references: [users.id],
   }),
 }));

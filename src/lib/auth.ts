@@ -1,3 +1,4 @@
+import { NextRequest } from "next/server";
 import { waitUntil } from "@vercel/functions";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -98,10 +99,10 @@ export const auth = betterAuth({
 export type Session = typeof auth.$Infer.Session.session;
 export type User = typeof auth.$Infer.Session.user;
 
-export async function getUser(): Promise<User | null> {
+export async function getUser(request?: NextRequest): Promise<User | null> {
   const { headers } = await import("next/headers");
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: request ? request.headers : await headers(),
   });
   return session?.user ?? null;
 }
