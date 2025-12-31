@@ -6,14 +6,20 @@ import { db } from "@/db/db";
 import * as schema from "@/db/schema";
 
 const getBaseURL = () => {
-  const vercelUrl = process.env.VERCEL_URL;
+  if (process.env.VERCEL_ENV === "production" && !!process.env.PRODUCTION_URL) {
+    return process.env.PRODUCTION_URL;
+  }
+  const vercelUrl =
+    process.env.VERCEL_ENV === "production" && !!process.env.PRODUCTION_URL
+      ? process.env.PRODUCTION_URL
+      : process.env.VERCEL_URL;
   if (!vercelUrl) {
     throw new Error("VERCEL_URL is not set");
   }
   if (vercelUrl.startsWith("http")) {
     return vercelUrl;
   }
-  return `https://${process.env.VERCEL_URL}`;
+  return `https://${vercelUrl}`;
 };
 
 export const auth = betterAuth({
