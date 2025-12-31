@@ -2,6 +2,7 @@ import { waitUntil } from "@vercel/functions";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { emailOTP } from "better-auth/plugins";
 
 import { db } from "@/db/db";
 import * as schema from "@/db/schema";
@@ -77,7 +78,21 @@ export const auth = betterAuth({
       refreshCache: true, // auto-refresh at 80% of maxAge
     },
   },
-  plugins: [nextCookies()],
+  plugins: [
+    nextCookies(),
+    emailOTP({
+      async sendVerificationOTP({ email, otp, type }) {
+        if (type !== "sign-in") {
+          throw new Error("Only sign-in type is supported for email OTP");
+        }
+        await sendEmail({
+          to: email,
+          subject: "Your GROUPTHERE sign-in code",
+          text: `Your verification code is: ${otp}`,
+        });
+      },
+    }),
+  ],
 });
 
 export type Session = typeof auth.$Infer.Session.session;

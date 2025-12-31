@@ -15,13 +15,15 @@ function SignedInDetails({ user }: { user: User }) {
   return (
     <>
       <div className="flex items-center gap-3">
-        <Image
-          src={user.image ?? ""}
-          alt={user.name ?? "User"}
-          width={32}
-          height={32}
-          className="rounded-full ring-2 ring-border"
-        />
+        {user.image && (
+          <Image
+            src={user.image}
+            alt={user.name ?? "User"}
+            width={32}
+            height={32}
+            className="rounded-full ring-2 ring-border"
+          />
+        )}
         <div className="hidden sm:block text-sm">
           <div className="font-medium">{user.name}</div>
           <div className="text-muted-foreground text-xs">{user.email}</div>
