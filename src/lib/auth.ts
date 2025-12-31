@@ -16,6 +16,9 @@ const getBaseURL = () => {
   return `https://${process.env.VERCEL_URL}`;
 };
 
+const baseURL = getBaseURL();
+console.log("baseURL", baseURL);
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -28,7 +31,7 @@ export const auth = betterAuth({
     },
   }),
   secret: process.env.BETTER_AUTH_SECRET,
-  baseURL: getBaseURL(),
+  baseURL,
   trustedOrigins: [
     "http://localhost:3000",
     ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
