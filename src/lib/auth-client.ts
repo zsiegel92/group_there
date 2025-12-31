@@ -9,7 +9,7 @@ const getBaseURL = () => {
   if (vercelUrl.startsWith("http")) {
     return vercelUrl;
   }
-  return `https://${process.env.VERCEL_URL}`;
+  return `https://${vercelUrl}`;
 };
 
 const baseURL = getBaseURL();
