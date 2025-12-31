@@ -8,9 +8,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file="../../.env",
         env_file_encoding="utf-8",
+        extra="allow",
     )
     GROUPTHERE_SOLVER_API_KEY: str | None = None
     GOOGLE_ROUTES_API_KEY: str | None = None
+
 
 settings = Settings()
 

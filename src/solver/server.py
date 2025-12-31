@@ -9,5 +9,5 @@ def read_root():
 
 
 @app.post("/solve")
-def solve(problem: Problem)-> Solution:
+def solve(problem: Problem) -> Solution:
     return solve_problem(problem)

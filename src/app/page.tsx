@@ -1,4 +1,4 @@
-import { solveSolvePost } from "@/python-client/sdk.gen";
+import { solveSolvePost } from "@/lib/python-client";
 
 export default async function Home() {
   const response = await solveSolvePost({
@@ -7,7 +7,6 @@ export default async function Home() {
       trippers: [],
       tripper_origin_distances_seconds: {},
     },
-    auth: process.env.GROUPTHERE_SOLVER_API_KEY,
   });
   if (response.error) {
     return (
