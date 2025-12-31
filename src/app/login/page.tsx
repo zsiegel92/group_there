@@ -1,6 +1,6 @@
 import { SignIn } from "@/components/sign-in";
 
-export default function LoginPage() {
+export default async function LoginPage() {
   return (
     <div className="flex justify-center items-center h-screen">
       <SignIn />

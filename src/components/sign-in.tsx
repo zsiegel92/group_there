@@ -1,5 +1,5 @@
 import { signIn } from "@/lib/auth";
-
+import { Button } from "@/components/ui/button";
 export function SignIn() {
   return (
     <form
@@ -8,9 +8,7 @@ export function SignIn() {
         await signIn("github");
       }}
     >
-      <button className="bg-blue-500 text-white p-2 rounded-md" type="submit">
-        Signin with GitHub
-      </button>
+      <Button type="submit">Signin with GitHub</Button>
     </form>
   );
 }
