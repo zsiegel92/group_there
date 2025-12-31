@@ -1,9 +1,11 @@
+import { waitUntil } from "@vercel/functions";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 
 import { db } from "@/db/db";
 import * as schema from "@/db/schema";
+import { sendEmail } from "@/lib/resend";
 
 const getBaseURL = () => {
   if (process.env.VERCEL_ENV === "production" && !!process.env.PRODUCTION_URL) {
@@ -23,6 +25,23 @@ const getBaseURL = () => {
 };
 
 export const auth = betterAuth({
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url, token: _token }, _request) => {
+      void waitUntil(
+        sendEmail({
+          to: user.email,
+          subject: "Verify your email address",
+          text: `Click the link to verify your email: ${url}`,
+        })
+      );
+    },
+    async afterEmailVerification(user, _request) {
+      // may want to add to db here!
+      console.log(`${user.email} has been successfully verified!`);
+    },
+  },
   database: drizzleAdapter(db, {
     provider: "pg",
     usePlural: true,
