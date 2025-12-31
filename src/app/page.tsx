@@ -1,6 +1,7 @@
 import { solveSolvePost } from "@/lib/python-client";
 
 export default async function Home() {
+  console.log(`GROUPTHERE_SOLVER_API_URL: ${process.env.GROUPTHERE_SOLVER_API_URL}`);
   const response = await solveSolvePost({
     body: {
       event_id: "123",
@@ -19,7 +20,7 @@ export default async function Home() {
   console.log(response.data);
   return (
     <div>
-      <h1>Hello World</h1>
+      <pre>URL: {process.env.GROUPTHERE_SOLVER_API_URL}</pre>
       <h2>Response from local Python API</h2>
       <pre>{JSON.stringify(response.data, null, 2)}</pre>
     </div>

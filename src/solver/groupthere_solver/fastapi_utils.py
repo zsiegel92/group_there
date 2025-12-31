@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -10,8 +11,8 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="allow",
     )
-    GROUPTHERE_SOLVER_API_KEY: str | None = None
-    GOOGLE_ROUTES_API_KEY: str | None = None
+    GROUPTHERE_SOLVER_API_KEY: str | None = os.environ.get("GROUPTHERE_SOLVER_API_KEY")
+    GOOGLE_ROUTES_API_KEY: str | None = os.environ.get("GOOGLE_ROUTES_API_KEY")
 
 
 settings = Settings()
@@ -37,7 +38,7 @@ def authorize_token(
     return True
 
 
-app = FastAPI(
+webapp = FastAPI(
     name="solver",
     dependencies=[
         Depends(authorize_token),

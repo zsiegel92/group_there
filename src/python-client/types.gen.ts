@@ -120,20 +120,6 @@ export type ValidationError = {
     type: string;
 };
 
-export type ReadRootGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/';
-};
-
-export type ReadRootGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
 export type SolveSolvePostData = {
     body: Problem;
     path?: never;

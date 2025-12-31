@@ -60,12 +60,6 @@ export const zHttpValidationError = z.object({
     detail: z.optional(z.array(zValidationError))
 });
 
-export const zReadRootGetData = z.object({
-    body: z.optional(z.never()),
-    path: z.optional(z.never()),
-    query: z.optional(z.never())
-});
-
 export const zSolveSolvePostData = z.object({
     body: zProblem,
     path: z.optional(z.never()),

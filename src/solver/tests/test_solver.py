@@ -1,5 +1,5 @@
-from solve import solve_problem
-from models import Problem, Solution, Tripper, Party
+from groupthere_solver.solve import solve_problem
+from groupthere_solver.models import Problem, Solution, Tripper, Party
 
 
 def solutions_are_equivalent(sol1: Solution, sol2: Solution) -> bool:

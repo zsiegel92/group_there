@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "GROUPTHERE_SOLVER_API_URL=http://localhost:8000 next dev",
+    "dev:stage": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -12,9 +13,12 @@
     "python:format": "uv run --directory src/solver ruff format --check",
     "python:format-fix": "uv run --directory src/solver ruff format",
     "python:test": "uv run --directory src/solver/tests pytest",
+    "python:test-server": "uv run --directory src/solver modal run server.py",
     "python:check-all": "pnpm run python:type-check && pnpm run python:lint && pnpm run python:format && pnpm run python:test",
-    "python:dev": "uv run --directory src/solver uvicorn server:app --reload --port 8000",
+    "python:dev": "uv run --directory src/solver uvicorn server:webapp --reload --port 8000",
     "python:dev2": "uv run --directory src/solver fastapi run server.py --reload --port 8000",
+    "python:stage": "uv run --directory src/solver modal serve server.py",
+    "python:deploy": "uv run --directory src/solver modal deploy server.py",
     "python:dump-openapi": "src/solver/.venv/bin/python src/solver/dump_openapi.py",
     "generate-openapi-ts-from-openapi-json": "openapi-ts",
     "gen-client": "src/solver/.venv/bin/python src/solver/dump_openapi.py && openapi-ts"
