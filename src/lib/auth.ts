@@ -34,6 +34,7 @@ export const auth = betterAuth({
   baseURL,
   trustedOrigins: [
     "http://localhost:3000",
+    "https://www.grouptherenow.com",
     ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
   ],
   socialProviders: {
