@@ -16,11 +16,8 @@ const getBaseURL = () => {
   return `https://${vercelUrl}`;
 };
 
-const baseURL = getBaseURL();
-console.log("baseURL client", baseURL);
-
 export const authClient = createAuthClient({
-  baseURL,
+  baseURL: getBaseURL(),
 });
 
 export const { useSession, signIn, signOut } = authClient;
