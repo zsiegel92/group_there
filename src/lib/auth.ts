@@ -37,6 +37,7 @@ export const auth = betterAuth({
   baseURL: getBaseURL(),
   trustedOrigins: [
     "http://localhost:3000",
+    "https://grouptherenow.com",
     "https://www.grouptherenow.com",
     ...(process.env.VERCEL_URL
       ? [`https://${process.env.VERCEL_URL}`, process.env.VERCEL_URL]
