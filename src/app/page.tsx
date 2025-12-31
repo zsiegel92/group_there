@@ -1,7 +1,6 @@
 import { solveSolvePost } from "@/lib/python-client";
 
 export default async function Home() {
-  console.log(`GROUPTHERE_SOLVER_API_URL: ${process.env.GROUPTHERE_SOLVER_API_URL}`);
   const response = await solveSolvePost({
     body: {
       event_id: "123",
