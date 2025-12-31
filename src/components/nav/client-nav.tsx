@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Spinner } from "@/components/ui/spinner";
+import { useSession } from "@/lib/auth-client";
 import type { User } from "@/lib/auth";
 
 import { SignIn } from "../sign-in";
@@ -31,15 +32,10 @@ function SignedInDetails({ user }: { user: User }) {
   );
 }
 
-export function ClientNav({
-  user,
-  loading,
-}: {
-  user: User | null;
-  loading?: boolean;
-}) {
+export function ClientNav() {
   const pathname = usePathname();
   const isLoginPage = pathname === "/login";
+  const { data: session, isPending } = useSession();
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -52,13 +48,13 @@ export function ClientNav({
           </div>
 
           <div className="flex items-center gap-4">
-            {loading ? (
+            {isPending ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Spinner />
                 <span>Loading...</span>
               </div>
-            ) : user ? (
-              <SignedInDetails user={user} />
+            ) : session?.user ? (
+              <SignedInDetails user={session.user} />
             ) : isLoginPage ? null : (
               <SignIn />
             )}

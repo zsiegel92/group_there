@@ -1,14 +1,20 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { signOutAction } from "@/lib/auth-actions";
+import { signOut } from "@/lib/auth-client";
 
 export function SignOut() {
   return (
-    <form action={signOutAction}>
-      <Button type="submit" variant="outline" size="sm">
-        Sign out
-      </Button>
-    </form>
+    <Button
+      onClick={() => {
+        signOut().then(() => {
+          window.location.reload();
+        });
+      }}
+      variant="outline"
+      size="sm"
+    >
+      Sign out
+    </Button>
   );
 }

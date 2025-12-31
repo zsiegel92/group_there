@@ -2,11 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { auth } from "@/lib/auth";
 
-export { auth as middleware } from "@/lib/auth";
-
 export async function proxy(request: NextRequest) {
-  const user = await auth();
-  if (!user) {
+  const session = await auth.api.getSession({
+    headers: request.headers,
+  });
+
+  if (!session) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 }
