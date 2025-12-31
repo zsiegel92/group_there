@@ -47,6 +47,18 @@ export function ClientNav() {
             <Link href="/" className="flex items-center gap-2">
               <span className="text-xl font-bold">GROUPTHERE</span>
             </Link>
+            {session?.user && (
+              <Link
+                href="/teams"
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  pathname.startsWith("/teams")
+                    ? "text-foreground"
+                    : "text-muted-foreground"
+                }`}
+              >
+                Teams
+              </Link>
+            )}
           </div>
 
           <div className="flex items-center gap-4">

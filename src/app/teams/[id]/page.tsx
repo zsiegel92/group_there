@@ -7,10 +7,12 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { useSession } from "@/lib/auth-client";
 
 import {
   useDeleteTeam,
   useInviteToTeam,
+  useLeaveTeam,
   usePromoteToAdmin,
   useTeamDetails,
 } from "../../api/teams/client";
@@ -21,15 +23,18 @@ export default function TeamDetailPage(props: {
   const params = use(props.params);
   const router = useRouter();
   const teamId = params.id;
+  const { data: session } = useSession();
 
   const { data, isLoading, error, refetch } = useTeamDetails(teamId);
   const deleteTeam = useDeleteTeam();
+  const leaveTeam = useLeaveTeam();
   const inviteToTeam = useInviteToTeam();
   const promoteToAdmin = usePromoteToAdmin();
 
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [inviteEmails, setInviteEmails] = useState<string[]>([""]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [sendingInvites, setSendingInvites] = useState(false);
 
   const handleEmailChange = (index: number, value: string) => {
@@ -82,6 +87,16 @@ export default function TeamDetailPage(props: {
     }
   };
 
+  const handleLeave = async () => {
+    try {
+      await leaveTeam.mutateAsync(teamId);
+      router.push("/teams");
+    } catch (error) {
+      console.error("Failed to leave team:", error);
+      alert("Failed to leave team. Please try again.");
+    }
+  };
+
   const handlePromote = async (userId: string) => {
     try {
       await promoteToAdmin.mutateAsync({ teamId, userId });
@@ -111,24 +126,42 @@ export default function TeamDetailPage(props: {
   const team = data?.team;
   if (!team) return null;
 
+  // Check if the current user is the only admin
+  const adminCount = team.members.filter((m) => m.isAdmin).length;
+  const isOnlyAdmin = team.isAdmin && adminCount === 1;
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-6">
         <div className="flex justify-between items-start mb-2">
           <h1 className="text-3xl font-bold">{team.name}</h1>
-          {team.isAdmin && (
-            <div className="flex gap-2">
-              <Button onClick={() => setShowInviteDialog(true)}>
-                Invite Members
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => setShowDeleteConfirm(true)}
-              >
-                Delete Team
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            {team.isAdmin && (
+              <>
+                <Button onClick={() => setShowInviteDialog(true)}>
+                  Invite Members
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  Delete Team
+                </Button>
+              </>
+            )}
+            <Button
+              variant="destructive"
+              onClick={() => setShowLeaveConfirm(true)}
+              disabled={isOnlyAdmin}
+              title={
+                isOnlyAdmin
+                  ? "You cannot leave the team as the only admin. Promote another member to admin first or delete the team."
+                  : undefined
+              }
+            >
+              Leave Team
+            </Button>
+          </div>
         </div>
         {team.isAdmin && (
           <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
@@ -142,47 +175,61 @@ export default function TeamDetailPage(props: {
           Members ({team.members.length})
         </h2>
         <div className="space-y-3">
-          {team.members.map((member) => (
-            <div
-              key={member.id}
-              className="flex items-center justify-between p-4 border rounded-lg"
-            >
-              <div className="flex items-center gap-3">
-                {member.image && (
-                  <Image
-                    src={member.image}
-                    alt={member.name}
-                    width={40}
-                    height={40}
-                    className="w-10 h-10 rounded-full"
-                  />
-                )}
-                <div>
-                  <div className="font-medium">{member.name}</div>
-                  <div className="text-sm text-gray-600">{member.email}</div>
-                  <div className="text-xs text-gray-500">
-                    Joined {member.joinedAt.toLocaleDateString()}
+          {team.members.map((member) => {
+            const isCurrentUser = session?.user?.id === member.id;
+            return (
+              <div
+                key={member.id}
+                className={`flex items-center justify-between p-4 border rounded-lg ${
+                  isCurrentUser
+                    ? "bg-blue-50 border-blue-300"
+                    : "border-gray-200"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  {member.image && (
+                    <Image
+                      src={member.image}
+                      alt={member.name}
+                      width={40}
+                      height={40}
+                      className="w-10 h-10 rounded-full"
+                    />
+                  )}
+                  <div>
+                    <div className="font-medium">
+                      {member.name}
+                      {isCurrentUser && (
+                        <span className="ml-2 px-2 py-0.5 bg-blue-200 text-blue-800 rounded text-xs font-normal">
+                          You
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-600">{member.email}</div>
+                    <div className="text-xs text-gray-500">
+                      Joined {member.joinedAt.toLocaleDateString()}
+                    </div>
                   </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  {member.isAdmin ? (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
+                      Admin
+                    </span>
+                  ) : team.isAdmin ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handlePromote(member.id)}
+                      disabled={promoteToAdmin.isPending}
+                    >
+                      Promote to Admin
+                    </Button>
+                  ) : null}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                {member.isAdmin ? (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
-                    Admin
-                  </span>
-                ) : team.isAdmin ? (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handlePromote(member.id)}
-                    disabled={promoteToAdmin.isPending}
-                  >
-                    Promote to Admin
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -252,6 +299,35 @@ export default function TeamDetailPage(props: {
                 disabled={deleteTeam.isPending}
               >
                 {deleteTeam.isPending ? "Deleting..." : "Delete Team"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+            <h2 className="text-xl font-bold mb-4">Leave Team</h2>
+            <p className="mb-6">
+              Are you sure you want to leave this team? You will need to be
+              re-invited to rejoin.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowLeaveConfirm(false)}
+                disabled={leaveTeam.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleLeave}
+                disabled={leaveTeam.isPending}
+              >
+                {leaveTeam.isPending ? "Leaving..." : "Leave Team"}
               </Button>
             </div>
           </div>

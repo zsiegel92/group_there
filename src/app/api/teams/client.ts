@@ -128,6 +128,17 @@ export async function acceptInvite(token: string) {
   return acceptInviteResponseSchema.parse(data);
 }
 
+export async function leaveTeam(teamId: string) {
+  const response = await fetch(`/api/teams/${teamId}/leave`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to leave team");
+  }
+  const data = await response.json();
+  return successResponseSchema.parse(data);
+}
+
 // React Query hooks
 export function useTeams() {
   return useQuery({
@@ -185,6 +196,16 @@ export function useAcceptInvite() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: acceptInvite,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+    },
+  });
+}
+
+export function useLeaveTeam() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: leaveTeam,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teams"] });
     },
