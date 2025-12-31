@@ -1,7 +1,35 @@
-import type { User } from "@/lib/auth";
-import { Spinner } from "@/components/ui/spinner";
+"use client";
+
 import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+import { Spinner } from "@/components/ui/spinner";
+import type { User } from "@/lib/auth";
+
 import { SignIn } from "../sign-in";
+import { SignOut } from "../sign-out";
+
+function SignedInDetails({ user }: { user: User }) {
+  return (
+    <>
+      <div className="flex items-center gap-3">
+        <Image
+          src={user.image ?? ""}
+          alt={user.name ?? "User"}
+          width={32}
+          height={32}
+          className="rounded-full ring-2 ring-border"
+        />
+        <div className="hidden sm:block text-sm">
+          <div className="font-medium">{user.name}</div>
+          <div className="text-muted-foreground text-xs">{user.email}</div>
+        </div>
+      </div>
+      <SignOut />
+    </>
+  );
+}
 
 export function ClientNav({
   user,
@@ -10,22 +38,33 @@ export function ClientNav({
   user: User | null;
   loading?: boolean;
 }) {
-  if (!user) {
-    return (
-      <div>
-        {loading ? <Spinner /> : null}Not logged in <SignIn />
-      </div>
-    );
-  }
+  const pathname = usePathname();
+  const isLoginPage = pathname === "/login";
+
   return (
-    <div>
-      <Image
-        src={user?.image ?? ""}
-        alt={user?.name ?? ""}
-        width={32}
-        height={32}
-      />
-      Logged in as {user?.name} ({user?.email})
-    </div>
+    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
+          <div className="flex items-center gap-8">
+            <Link href="/" className="flex items-center gap-2">
+              <span className="text-xl font-bold">GROUPTHERE</span>
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {loading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Spinner />
+                <span>Loading...</span>
+              </div>
+            ) : user ? (
+              <SignedInDetails user={user} />
+            ) : isLoginPage ? null : (
+              <SignIn />
+            )}
+          </div>
+        </div>
+      </div>
+    </nav>
   );
 }

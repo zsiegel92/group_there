@@ -1,5 +1,7 @@
 import "server-only";
+
 import { getUser } from "@/lib/auth";
+
 import { ClientNav } from "./client-nav";
 
 export async function Nav() {

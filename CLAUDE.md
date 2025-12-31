@@ -1,6 +1,7 @@
 # Project Description
 
 This is a revamp of GROUPTHERE, an application in which users join teams, join team-wide events, and input:
+
 - their origin location
 - whether they have a car, how many seats they have to share if so
 - how early before the event start time they can leave
@@ -16,6 +17,7 @@ The core setup will be a Python service that does the optimization, we will use 
 
 - Always activate the venv with `./activate` before running Python and uv commands
 - Always type-check and lint Python code with:
+
 ```sh
 uv run --directory src/solver ty check
 uv run --directory src/solver ruff check
@@ -31,7 +33,6 @@ uv run --directory src/solver/tests pytest
 ```
 
 Everything in my IDE should be type-aware, but don't add extra type annotations where the type can be inferred. Sometimes return types are appropriate, sometimes inferring it is best - use taste!
-
 
 # Typescript guidelines
 
