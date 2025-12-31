@@ -133,17 +133,19 @@ export default function TeamDetailPage(props: {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-6">
-        <div className="flex justify-between items-start mb-2">
-          <h1 className="text-3xl font-bold">{team.name}</h1>
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold">{team.name}</h1>
+          <div className="flex flex-wrap gap-2">
             {team.isAdmin && (
               <>
-                <Button onClick={() => setShowInviteDialog(true)}>
+                <Button onClick={() => setShowInviteDialog(true)} size="sm" className="sm:h-10">
                   Invite Members
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={() => setShowDeleteConfirm(true)}
+                  size="sm"
+                  className="sm:h-10"
                 >
                   Delete Team
                 </Button>
@@ -153,6 +155,8 @@ export default function TeamDetailPage(props: {
               variant="destructive"
               onClick={() => setShowLeaveConfirm(true)}
               disabled={isOnlyAdmin}
+              size="sm"
+              className="sm:h-10"
               title={
                 isOnlyAdmin
                   ? "You cannot leave the team as the only admin. Promote another member to admin first or delete the team."
@@ -180,7 +184,7 @@ export default function TeamDetailPage(props: {
             return (
               <div
                 key={member.id}
-                className={`flex items-center justify-between p-4 border rounded-lg ${
+                className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border rounded-lg ${
                   isCurrentUser
                     ? "bg-blue-50 border-blue-300"
                     : "border-gray-200"
@@ -205,13 +209,13 @@ export default function TeamDetailPage(props: {
                         </span>
                       )}
                     </div>
-                    <div className="text-sm text-gray-600">{member.email}</div>
+                    <div className="text-sm text-gray-600 break-all">{member.email}</div>
                     <div className="text-xs text-gray-500">
                       Joined {member.joinedAt.toLocaleDateString()}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 sm:shrink-0">
                   {member.isAdmin ? (
                     <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
                       Admin

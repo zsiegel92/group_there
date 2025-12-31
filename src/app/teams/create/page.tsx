@@ -27,7 +27,7 @@ export default function CreateTeamPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-md">
-      <h1 className="text-3xl font-bold mb-6">Create a Team</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold mb-6">Create a Team</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -52,7 +52,7 @@ export default function CreateTeamPage() {
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button type="submit" disabled={createTeam.isPending || !name.trim()}>
             {createTeam.isPending ? "Creating..." : "Create Team"}
           </Button>

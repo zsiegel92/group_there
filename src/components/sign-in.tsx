@@ -94,73 +94,78 @@ export function SignIn({ callbackUrl = "/" }: SignInProps) {
 
   if (showEmailForm) {
     return (
-      <div className="flex items-center gap-2">
-        {!otpSent ? (
-          <>
-            <Input
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              className="w-64"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  void handleSendOTP();
-                }
-              }}
-            />
-            <Button onClick={() => void handleSendOTP()} disabled={loading}>
-              {loading ? "Sending..." : "Send code"}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setShowEmailForm(false);
-                setEmail("");
-                setError("");
-              }}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            {error && <p className="text-sm text-red-500 ml-2">{error}</p>}
-          </>
-        ) : (
-          <>
-            <Input
-              type="text"
-              placeholder="Enter 6-digit code"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              disabled={loading}
-              maxLength={6}
-              className="w-48"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  void handleVerifyOTP();
-                }
-              }}
-            />
-            <Button onClick={() => void handleVerifyOTP()} disabled={loading}>
-              {loading ? "Verifying..." : "Verify"}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setOtpSent(false);
-                setOtp("");
-                setError("");
-              }}
-              disabled={loading}
-            >
-              Back
-            </Button>
-            {error && <p className="text-sm text-red-500 ml-2">{error}</p>}
-          </>
-        )}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {!otpSent ? (
+            <>
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                className="w-full sm:w-64"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    void handleSendOTP();
+                  }
+                }}
+              />
+              <div className="flex gap-2">
+                <Button onClick={() => void handleSendOTP()} disabled={loading}>
+                  {loading ? "Sending..." : "Send code"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowEmailForm(false);
+                    setEmail("");
+                    setError("");
+                  }}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <Input
+                type="text"
+                placeholder="Enter 6-digit code"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                disabled={loading}
+                maxLength={6}
+                className="w-full sm:w-48"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    void handleVerifyOTP();
+                  }
+                }}
+              />
+              <div className="flex gap-2">
+                <Button onClick={() => void handleVerifyOTP()} disabled={loading}>
+                  {loading ? "Verifying..." : "Verify"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setOtpSent(false);
+                    setOtp("");
+                    setError("");
+                  }}
+                  disabled={loading}
+                >
+                  Back
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+        {error && <p className="text-sm text-red-500">{error}</p>}
       </div>
     );
   }

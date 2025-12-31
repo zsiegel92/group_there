@@ -42,10 +42,10 @@ export function ClientNav() {
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center gap-8">
+        <div className="flex h-16 items-center justify-between gap-2">
+          <div className="flex items-center gap-3 sm:gap-8">
             <Link href="/" className="flex items-center gap-2">
-              <span className="text-xl font-bold">GROUPTHERE</span>
+              <span className="text-lg sm:text-xl font-bold">GROUPTHERE</span>
             </Link>
             {session?.user && (
               <Link
@@ -61,11 +61,11 @@ export function ClientNav() {
             )}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {isPending ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Spinner />
-                <span>Loading...</span>
+                <span className="hidden sm:inline">Loading...</span>
               </div>
             ) : session?.user ? (
               <SignedInDetails user={session.user} />
