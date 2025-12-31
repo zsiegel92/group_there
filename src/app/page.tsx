@@ -12,6 +12,7 @@ export default async function Home() {
   if (response.error) {
     return (
       <div>
+        <pre>URL: {process.env.GROUPTHERE_SOLVER_API_URL}</pre>
         <h1>Error</h1>
         <pre>{JSON.stringify(response.error, null, 2)}</pre>
       </div>
