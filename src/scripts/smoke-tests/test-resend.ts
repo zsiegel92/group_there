@@ -7,11 +7,12 @@ async function main() {
   if (!process.env.TEST_RECIPIENT_EMAIL_ADDRESS) {
     throw new Error("TEST_RECIPIENT_EMAIL_ADDRESS is not set");
   }
-  const { data, error } = await sendEmail(
-    process.env.TEST_RECIPIENT_EMAIL_ADDRESS,
-    "hello world",
-    "<p>it works!</p>"
-  );
+  const { data, error } = await sendEmail({
+    to: process.env.TEST_RECIPIENT_EMAIL_ADDRESS,
+    subject: "hello world",
+    html: "<p>it works!</p>",
+    text: "it works!",
+  });
   console.log(data);
   console.log(error);
 }
