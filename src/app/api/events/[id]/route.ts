@@ -86,6 +86,7 @@ export async function GET(request: NextRequest, props: Params) {
             passengersCount: userAttendance.passengersCount,
             earliestLeaveTime: userAttendance.earliestLeaveTime?.toISOString(),
             originLocation: userAttendance.originLocation,
+            joinedAt: userAttendance.createdAt.toISOString(),
           }
         : null,
       attendees: event.eventsToUsers.map((att) => ({
@@ -93,11 +94,13 @@ export async function GET(request: NextRequest, props: Params) {
         userName: att.user.name,
         userEmail: att.user.email,
         userImage: att.user.image,
-        drivingStatus: att.drivingStatus,
-        passengersCount: att.passengersCount,
-        earliestLeaveTime: att.earliestLeaveTime?.toISOString(),
-        originLocation: att.originLocation,
-        joinedAt: att.createdAt.toISOString(),
+        userAttendance: {
+          drivingStatus: att.drivingStatus,
+          passengersCount: att.passengersCount,
+          earliestLeaveTime: att.earliestLeaveTime?.toISOString(),
+          originLocation: att.originLocation,
+          joinedAt: att.createdAt.toISOString(),
+        },
       })),
     },
   });

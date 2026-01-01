@@ -35,11 +35,7 @@ const eventsResponseSchema = z.object({
   events: z.array(denormalizedEventSchema),
 });
 
-const attendeeSchema = z.object({
-  userId: z.string(),
-  userName: z.string(),
-  userEmail: z.string(),
-  userImage: z.string().nullable(),
+const userAttendanceSchema = z.object({
   drivingStatus: z.enum(drivingStatusEnumValues),
   passengersCount: z.number().nullable(),
   earliestLeaveTime: z.string().nullable(),
@@ -47,14 +43,15 @@ const attendeeSchema = z.object({
   joinedAt: z.string(),
 });
 
-const userAttendanceSchema = z.object({
-  drivingStatus: z.enum(drivingStatusEnumValues),
-  passengersCount: z.number().nullable(),
-  earliestLeaveTime: z.string().nullable(),
-  originLocation: z.string(),
-});
-
 type UserAttendance = z.infer<typeof userAttendanceSchema>;
+
+const attendeeSchema = z.object({
+  userId: z.string(),
+  userName: z.string(),
+  userEmail: z.string(),
+  userImage: z.string().nullable(),
+  userAttendance: userAttendanceSchema,
+});
 
 const eventDetailSchema = z.object({
   id: z.string(),

@@ -70,6 +70,7 @@ export default function EventDetailPage(props: {
       earliestLeaveTime:
         drivingStatus !== "cannot_drive" ? earliestLeaveTime : null,
       originLocation,
+      joinedAt: new Date().toISOString(),
     };
 
     try {
@@ -497,29 +498,31 @@ export default function EventDetailPage(props: {
                       <div className="text-sm text-gray-600 space-y-1 mt-2">
                         <div>
                           <span className="font-medium">Status:</span>{" "}
-                          {attendee.drivingStatus === "cannot_drive"
+                          {attendee.userAttendance.drivingStatus ===
+                          "cannot_drive"
                             ? "Cannot Drive"
-                            : attendee.drivingStatus === "must_drive"
+                            : attendee.userAttendance.drivingStatus ===
+                                "must_drive"
                               ? "Must Drive"
                               : "Can Drive or Not Drive"}
                         </div>
-                        {attendee.passengersCount && (
+                        {attendee.userAttendance.passengersCount && (
                           <div>
                             <span className="font-medium">Passengers:</span>{" "}
-                            {attendee.passengersCount}
+                            {attendee.userAttendance.passengersCount}
                           </div>
                         )}
-                        {attendee.earliestLeaveTime && (
+                        {attendee.userAttendance.earliestLeaveTime && (
                           <div>
                             <span className="font-medium">Can leave at:</span>{" "}
                             {new Date(
-                              attendee.earliestLeaveTime
+                              attendee.userAttendance.earliestLeaveTime
                             ).toLocaleString()}
                           </div>
                         )}
                         <div>
                           <span className="font-medium">Coming from:</span>{" "}
-                          {attendee.originLocation}
+                          {attendee.userAttendance.originLocation}
                         </div>
                       </div>
                     </div>
