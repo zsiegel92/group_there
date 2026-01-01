@@ -40,3 +40,5 @@ Everything in my IDE should be type-aware, but don't add extra type annotations 
 - Do not annotate with explicit `any` - `unknown` can be okay for a super brief pre-validation state, but otherwise we should use `zod` to validate as soon as possible
 - type guards can be lies too - don't do that!
 - use `satisfies X` after something to keep types consistent when necessary
+
+DO NOT EDIT MY .env!!! I WILL EDIT THAT IF NEED BE!
