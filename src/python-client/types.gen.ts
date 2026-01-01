@@ -100,6 +100,10 @@ export type Tripper = {
      * Seconds Before Event Start Can Leave
      */
     seconds_before_event_start_can_leave: number;
+    /**
+     * Distance To Destination Seconds
+     */
+    distance_to_destination_seconds: number;
 };
 
 /**
