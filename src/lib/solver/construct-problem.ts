@@ -1,17 +1,8 @@
-// import { eq } from "drizzle-orm";
 import { db } from "@/db/db";
 import { drivingStatusEnumValuesForDrivers } from "@/db/schema";
 import type { Problem } from "@/python-client";
 
-// import {
-//   events,
-//   eventsToUsers,
-//   groups,
-//   groupsToUsers,
-//   users,
-// } from "@/db/schema";
-
-export async function constructProblem(eventId: string) {
+export async function constructProblem(eventId: string): Promise<Problem> {
   const event = await db.query.events.findFirst({
     where: (events, { eq }) => eq(events.id, eventId),
     with: {

@@ -195,7 +195,7 @@ def solve_problem(problem: Problem) -> Solution:
         id=f"solution-{problem.id}",
         successfully_completed=True,
         feasible=True,
-        optimal=False,
+        optimal=True,
         parties=best_solution,
         total_drive_seconds=best_total_drive_time,
     )
