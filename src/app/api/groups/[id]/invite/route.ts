@@ -71,8 +71,10 @@ export async function POST(request: NextRequest, props: Params) {
   });
 
   // Create the invite URL
-  const baseUrl =
+  let baseUrl =
     process.env.VERCEL_URL || process.env.PRODUCTION_URL || "localhost:3000";
+  // Strip any existing protocol from baseUrl
+  baseUrl = baseUrl.replace(/^https?:\/\//, "");
   const protocol = baseUrl.includes("localhost") ? "http" : "https";
   const inviteUrl = `${protocol}://${baseUrl}/groups/invite/accept?token=${inviteToken}`;
 
