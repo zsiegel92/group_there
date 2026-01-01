@@ -29,6 +29,7 @@ def solutions_are_equivalent(sol1: Solution, sol2: Solution) -> bool:
 def test_solve_empty_problem():
     """Test that solve_problem can handle a trivial empty problem."""
     problem = Problem(
+        id="test-problem-1",
         event_id="test-event-1",
         trippers=[],
         tripper_origin_distances_seconds={},
@@ -73,6 +74,7 @@ def test_solve_simple_driver_and_rider():
     )
 
     problem = Problem(
+        id="test-problem-1",
         event_id="event-1",
         trippers=[tripper_a, tripper_b],
         tripper_origin_distances_seconds={

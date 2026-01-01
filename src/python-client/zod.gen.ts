@@ -15,6 +15,14 @@ export const zParty = z.object({
 });
 
 /**
+ * ProblemReceivedResponse
+ */
+export const zProblemReceivedResponse = z.object({
+    problem_id: z.string(),
+    successfully_received: z.boolean()
+});
+
+/**
  * Solution
  */
 export const zSolution = z.object({
@@ -40,6 +48,7 @@ export const zTripper = z.object({
  * Problem
  */
 export const zProblem = z.object({
+    id: z.string(),
     event_id: z.string(),
     trippers: z.array(zTripper),
     tripper_origin_distances_seconds: z.record(z.string(), z.number())
@@ -71,3 +80,14 @@ export const zSolveSolvePostData = z.object({
  * Successful Response
  */
 export const zSolveSolvePostResponse = zSolution;
+
+export const zSolveAsyncSolveAsyncPostData = z.object({
+    body: zProblem,
+    path: z.optional(z.never()),
+    query: z.optional(z.never())
+});
+
+/**
+ * Successful Response
+ */
+export const zSolveAsyncSolveAsyncPostResponse = zProblemReceivedResponse;

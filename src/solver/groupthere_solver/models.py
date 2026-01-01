@@ -54,12 +54,18 @@ class Tripper(BaseModel):
 
 
 class Problem(BaseModel):
+    id: str
     event_id: str
     trippers: list[Tripper]
     tripper_origin_distances_seconds: dict[tuple[str, str], float] = Field(
         ...,
         description="Tuples of tripper_ids mapped to the distance in seconds between the tripper's origins",
     )
+
+
+class ProblemReceivedResponse(BaseModel):
+    problem_id: str
+    successfully_received: bool
 
 
 class Party(BaseModel):

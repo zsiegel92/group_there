@@ -37,6 +37,10 @@ export type Party = {
  */
 export type Problem = {
     /**
+     * Id
+     */
+    id: string;
+    /**
      * Event Id
      */
     event_id: string;
@@ -52,6 +56,20 @@ export type Problem = {
     tripper_origin_distances_seconds: {
         [key: string]: number;
     };
+};
+
+/**
+ * ProblemReceivedResponse
+ */
+export type ProblemReceivedResponse = {
+    /**
+     * Problem Id
+     */
+    problem_id: string;
+    /**
+     * Successfully Received
+     */
+    successfully_received: boolean;
 };
 
 /**
@@ -148,3 +166,28 @@ export type SolveSolvePostResponses = {
 };
 
 export type SolveSolvePostResponse = SolveSolvePostResponses[keyof SolveSolvePostResponses];
+
+export type SolveAsyncSolveAsyncPostData = {
+    body: Problem;
+    path?: never;
+    query?: never;
+    url: '/solve-async';
+};
+
+export type SolveAsyncSolveAsyncPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SolveAsyncSolveAsyncPostError = SolveAsyncSolveAsyncPostErrors[keyof SolveAsyncSolveAsyncPostErrors];
+
+export type SolveAsyncSolveAsyncPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProblemReceivedResponse;
+};
+
+export type SolveAsyncSolveAsyncPostResponse = SolveAsyncSolveAsyncPostResponses[keyof SolveAsyncSolveAsyncPostResponses];

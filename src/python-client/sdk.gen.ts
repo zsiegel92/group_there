@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { SolveSolvePostData, SolveSolvePostErrors, SolveSolvePostResponses } from './types.gen';
-import { zSolveSolvePostData, zSolveSolvePostResponse } from './zod.gen';
+import type { SolveAsyncSolveAsyncPostData, SolveAsyncSolveAsyncPostErrors, SolveAsyncSolveAsyncPostResponses, SolveSolvePostData, SolveSolvePostErrors, SolveSolvePostResponses } from './types.gen';
+import { zSolveAsyncSolveAsyncPostData, zSolveAsyncSolveAsyncPostResponse, zSolveSolvePostData, zSolveSolvePostResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -27,6 +27,21 @@ export const solveSolvePost = <ThrowOnError extends boolean = false>(options: Op
     responseValidator: async (data) => await zSolveSolvePostResponse.parseAsync(data),
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/solve',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Solve Async
+ */
+export const solveAsyncSolveAsyncPost = <ThrowOnError extends boolean = false>(options: Options<SolveAsyncSolveAsyncPostData, ThrowOnError>) => (options.client ?? client).post<SolveAsyncSolveAsyncPostResponses, SolveAsyncSolveAsyncPostErrors, ThrowOnError>({
+    requestValidator: async (data) => await zSolveAsyncSolveAsyncPostData.parseAsync(data),
+    responseValidator: async (data) => await zSolveAsyncSolveAsyncPostResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/solve-async',
     ...options,
     headers: {
         'Content-Type': 'application/json',

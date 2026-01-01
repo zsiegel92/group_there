@@ -24,6 +24,7 @@ export default async function TestApiPage() {
 async function ApiOutput() {
   const response = await solveSolvePost({
     body: {
+      id: "test-problem-1",
       event_id: "123",
       trippers: [],
       tripper_origin_distances_seconds: {},
