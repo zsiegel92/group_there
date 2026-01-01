@@ -27,6 +27,9 @@ export const zProblemReceivedResponse = z.object({
  */
 export const zSolution = z.object({
     id: z.string(),
+    successfully_completed: z.boolean(),
+    feasible: z.boolean(),
+    optimal: z.boolean(),
     parties: z.array(zParty),
     total_drive_seconds: z.number()
 });

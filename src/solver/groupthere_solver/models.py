@@ -120,5 +120,8 @@ class Party(BaseModel):
 
 class Solution(BaseModel):
     id: str
+    successfully_completed: bool
+    feasible: bool
+    optimal: bool
     parties: list[Party]
     total_drive_seconds: float

@@ -79,6 +79,18 @@ export type Solution = {
      */
     id: string;
     /**
+     * Successfully Completed
+     */
+    successfully_completed: boolean;
+    /**
+     * Feasible
+     */
+    feasible: boolean;
+    /**
+     * Optimal
+     */
+    optimal: boolean;
+    /**
      * Parties
      */
     parties: Array<Party>;

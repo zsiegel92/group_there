@@ -1,5 +1,5 @@
 from groupthere_solver.solve import solve_problem
-from groupthere_solver.models import Problem, Solution, Tripper, Party
+from groupthere_solver.models import Problem, Solution, Tripper, Party, TripperDistance
 
 
 def solutions_are_equivalent(sol1: Solution, sol2: Solution) -> bool:
@@ -32,7 +32,7 @@ def test_solve_empty_problem():
         id="test-problem-1",
         event_id="test-event-1",
         trippers=[],
-        tripper_origin_distances_seconds={},
+        tripper_distances=[],
     )
 
     solution = solve_problem(problem)
@@ -77,10 +77,18 @@ def test_solve_simple_driver_and_rider():
         id="test-problem-1",
         event_id="event-1",
         trippers=[tripper_a, tripper_b],
-        tripper_origin_distances_seconds={
-            ("tripper-a", "tripper-b"): 5.0,
-            ("tripper-b", "tripper-a"): 5.0,
-        },
+        tripper_distances=[
+            TripperDistance(
+                origin_user_id="tripper-a",
+                destination_user_id="tripper-b",
+                distance_seconds=5.0,
+            ),
+            TripperDistance(
+                origin_user_id="tripper-b",
+                destination_user_id="tripper-a",
+                distance_seconds=5.0,
+            ),
+        ],
     )
 
     solution = solve_problem(problem)
@@ -88,6 +96,9 @@ def test_solve_simple_driver_and_rider():
     # Expected solution: one party with A driving and B as passenger
     expected_solution = Solution(
         id="expected",
+        successfully_completed=True,
+        feasible=True,
+        optimal=False,
         parties=[
             Party(
                 id="party-1",
