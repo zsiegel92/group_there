@@ -45,13 +45,22 @@ export const zTripper = z.object({
 });
 
 /**
+ * TripperDistance
+ */
+export const zTripperDistance = z.object({
+    origin_user_id: z.string(),
+    destination_user_id: z.string(),
+    distance_seconds: z.number()
+});
+
+/**
  * Problem
  */
 export const zProblem = z.object({
     id: z.string(),
     event_id: z.string(),
     trippers: z.array(zTripper),
-    tripper_origin_distances_seconds: z.record(z.string(), z.number())
+    tripper_distances: z.array(zTripperDistance)
 });
 
 /**

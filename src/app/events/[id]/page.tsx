@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { type DrivingStatus } from "@/db/schema";
 import { useSession } from "@/lib/auth-client";
+import type { Solution } from "@/python-client";
 
 import {
   useAttendEvent,
@@ -19,6 +20,7 @@ import {
   useUpdateAttendance,
   useUpdateEvent,
 } from "../../api/events/client";
+import { solveProblem } from "./solve-action";
 
 export default function EventDetailPage(props: {
   params: Promise<{ id: string }>;
@@ -43,6 +45,8 @@ export default function EventDetailPage(props: {
   const [showUnscheduleConfirm, setShowUnscheduleConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [isEditingAttendance, setIsEditingAttendance] = useState(false);
+  const [solution, setSolution] = useState<Solution | null>(null);
+  const [isSolving, setIsSolving] = useState(false);
 
   // Edit form state
   const [editName, setEditName] = useState("");
@@ -185,6 +189,24 @@ export default function EventDetailPage(props: {
       }
     }
   }, [eventId, leaveEvent]);
+
+  const handleSolveProblem = useCallback(async () => {
+    setIsSolving(true);
+    setSolution(null);
+    try {
+      const result = await solveProblem(eventId);
+      setSolution(result);
+    } catch (error) {
+      console.error("Failed to solve problem:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate solution. Please try again."
+      );
+    } finally {
+      setIsSolving(false);
+    }
+  }, [eventId]);
 
   const openEditForm = useCallback(() => {
     if (!event) return;
@@ -550,6 +572,35 @@ export default function EventDetailPage(props: {
                     </div>
                   );
                 })}
+            </div>
+          </div>
+        )}
+
+        {event.isAdmin && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Solutions</h2>
+            <div className="space-y-4">
+              <Button
+                onClick={handleSolveProblem}
+                disabled={isSolving}
+                size="default"
+              >
+                {isSolving ? "Generating Solution..." : "Generate Solution"}
+              </Button>
+              {isSolving && (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Spinner />
+                  <span>Solving the problem...</span>
+                </div>
+              )}
+              {solution && (
+                <div className="bg-gray-50 p-4 rounded-lg border">
+                  <h3 className="font-medium mb-2">Solution:</h3>
+                  <pre className="text-xs overflow-auto whitespace-pre-wrap">
+                    {JSON.stringify(solution, null, 2)}
+                  </pre>
+                </div>
+              )}
             </div>
           </div>
         )}

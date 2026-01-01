@@ -52,6 +52,6 @@ export async function constructProblem(eventId: string) {
       distance_to_destination_seconds: 0,
       must_drive: eventToUser.drivingStatus === "must_drive",
     })),
-    tripper_origin_distances_seconds: {},
+    tripper_distances: [],
   } satisfies Problem;
 }

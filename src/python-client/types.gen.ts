@@ -49,13 +49,11 @@ export type Problem = {
      */
     trippers: Array<Tripper>;
     /**
-     * Tripper Origin Distances Seconds
+     * Tripper Distances
      *
      * Tuples of tripper_ids mapped to the distance in seconds between the tripper's origins
      */
-    tripper_origin_distances_seconds: {
-        [key: string]: number;
-    };
+    tripper_distances: Array<TripperDistance>;
 };
 
 /**
@@ -122,6 +120,24 @@ export type Tripper = {
      * Distance To Destination Seconds
      */
     distance_to_destination_seconds: number;
+};
+
+/**
+ * TripperDistance
+ */
+export type TripperDistance = {
+    /**
+     * Origin User Id
+     */
+    origin_user_id: string;
+    /**
+     * Destination User Id
+     */
+    destination_user_id: string;
+    /**
+     * Distance Seconds
+     */
+    distance_seconds: number;
 };
 
 /**
