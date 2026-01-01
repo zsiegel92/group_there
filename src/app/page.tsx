@@ -4,8 +4,8 @@ export default async function Home() {
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold mb-4">Welcome to GROUPTHERE</h1>
         <p className="text-lg text-muted-foreground mb-8">
-          Optimize carpooling for your group events. Join groups, share rides, and
-          minimize total drive time with intelligent route planning.
+          Optimize carpooling for your group events. Join groups, share rides,
+          and minimize total drive time with intelligent route planning.
         </p>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <div className="border rounded-lg p-6">

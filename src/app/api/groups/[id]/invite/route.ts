@@ -5,8 +5,8 @@ import { z } from "zod";
 import { db } from "@/db/db";
 import { groups, groupsToUsers } from "@/db/schema";
 import { getUser } from "@/lib/auth";
-import { sendEmail } from "@/lib/resend";
 import { createInviteToken } from "@/lib/group-invite";
+import { sendEmail } from "@/lib/resend";
 
 const inviteSchema = z.object({
   email: z.string().email(),

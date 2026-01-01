@@ -2,6 +2,7 @@
 
 import { use, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -11,10 +12,10 @@ import { useSession } from "@/lib/auth-client";
 
 import {
   useDeleteGroup,
+  useGroupDetails,
   useInviteToGroup,
   useLeaveGroup,
   usePromoteToAdmin,
-  useGroupDetails,
 } from "../../api/groups/client";
 
 export default function GroupDetailPage(props: {
@@ -60,7 +61,9 @@ export default function GroupDetailPage(props: {
     try {
       // Send all invites in parallel
       await Promise.all(
-        validEmails.map((email) => inviteToGroup.mutateAsync({ groupId, email }))
+        validEmails.map((email) =>
+          inviteToGroup.mutateAsync({ groupId, email })
+        )
       );
       setInviteEmails([""]);
       setShowInviteDialog(false);
@@ -136,6 +139,11 @@ export default function GroupDetailPage(props: {
           <div className="flex flex-wrap gap-2">
             {group.isAdmin && (
               <>
+                <Link href={`/events/create?groupId=${groupId}`}>
+                  <Button size="sm" className="sm:h-10">
+                    Create Event
+                  </Button>
+                </Link>
                 <Button
                   onClick={() => setShowInviteDialog(true)}
                   size="sm"

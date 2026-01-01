@@ -53,7 +53,10 @@ export default function CreateGroupPage() {
         )}
 
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={createGroup.isPending || !name.trim()}>
+          <Button
+            type="submit"
+            disabled={createGroup.isPending || !name.trim()}
+          >
             {createGroup.isPending ? "Creating..." : "Create Group"}
           </Button>
           <Button

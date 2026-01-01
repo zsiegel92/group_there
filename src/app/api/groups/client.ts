@@ -187,7 +187,9 @@ export function usePromoteToAdmin() {
     mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
       promoteToAdmin(groupId, userId),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["groups", variables.groupId] });
+      queryClient.invalidateQueries({
+        queryKey: ["groups", variables.groupId],
+      });
     },
   });
 }

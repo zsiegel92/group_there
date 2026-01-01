@@ -21,7 +21,9 @@ export default function GroupsPage() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="text-red-600">Error loading groups: {error.message}</div>
+        <div className="text-red-600">
+          Error loading groups: {error.message}
+        </div>
       </div>
     );
   }
