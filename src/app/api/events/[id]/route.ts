@@ -83,8 +83,10 @@ export async function GET(request: NextRequest, props: Params) {
       userAttendance: userAttendance
         ? {
             drivingStatus: userAttendance.drivingStatus,
-            passengersCount: userAttendance.passengersCount,
-            earliestLeaveTime: userAttendance.earliestLeaveTime?.toISOString(),
+            carFits: userAttendance.carFits,
+            earliestLeaveTime: userAttendance.earliestLeaveTime
+              ? userAttendance.earliestLeaveTime.toISOString()
+              : null,
             originLocation: userAttendance.originLocation,
             joinedAt: userAttendance.createdAt.toISOString(),
           }
@@ -96,8 +98,10 @@ export async function GET(request: NextRequest, props: Params) {
         userImage: att.user.image,
         userAttendance: {
           drivingStatus: att.drivingStatus,
-          passengersCount: att.passengersCount,
-          earliestLeaveTime: att.earliestLeaveTime?.toISOString(),
+          carFits: att.carFits,
+          earliestLeaveTime: att.earliestLeaveTime
+            ? att.earliestLeaveTime.toISOString()
+            : null,
           originLocation: att.originLocation,
           joinedAt: att.createdAt.toISOString(),
         },

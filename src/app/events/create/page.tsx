@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { useGroups } from "@/app/api/groups/client";
@@ -26,24 +26,27 @@ export default function CreateEventPage() {
   // Filter to only show groups where user is admin
   const adminGroups = groupsData?.groups.filter((gm) => gm.isAdmin) || [];
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!groupId || !name.trim() || !location.trim() || !time) return;
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!groupId || !name.trim() || !location.trim() || !time) return;
 
-    try {
-      const result = await createEvent.mutateAsync({
-        groupId,
-        name: name.trim(),
-        location: location.trim(),
-        time,
-        message: message.trim() || undefined,
-      });
-      router.push(`/events/${result.event.id}`);
-    } catch (error) {
-      console.error("Failed to create event:", error);
-      alert("Failed to create event. Please try again.");
-    }
-  };
+      try {
+        const result = await createEvent.mutateAsync({
+          groupId,
+          name: name.trim(),
+          location: location.trim(),
+          time,
+          message: message.trim() || undefined,
+        });
+        router.push(`/events/${result.event.id}`);
+      } catch (error) {
+        console.error("Failed to create event:", error);
+        alert("Failed to create event. Please try again.");
+      }
+    },
+    [groupId, name, location, time, message, createEvent, router]
+  );
 
   if (groupsLoading) {
     return (
@@ -86,7 +89,10 @@ export default function CreateEventPage() {
           >
             <option value="">Select a group</option>
             {adminGroups.map((groupMembership) => (
-              <option key={groupMembership.group.id} value={groupMembership.group.id}>
+              <option
+                key={groupMembership.group.id}
+                value={groupMembership.group.id}
+              >
                 {groupMembership.group.name}
               </option>
             ))}

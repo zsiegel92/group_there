@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,16 @@ export default function AcceptInvitePage() {
     groupId: string;
     groupName: string;
   } | null>(null);
+
+  const handleGoToGroups = useCallback(() => {
+    router.push("/groups");
+  }, [router]);
+
+  const handleViewGroup = useCallback(() => {
+    if (groupInfo) {
+      router.push(`/groups/${groupInfo.groupId}`);
+    }
+  }, [router, groupInfo]);
 
   useEffect(() => {
     if (!token || attemptedRef.current) {
@@ -37,7 +47,7 @@ export default function AcceptInvitePage() {
       <div className="container mx-auto px-4 py-8 max-w-md text-center">
         <h1 className="text-2xl font-bold mb-4 text-red-600">Invalid Link</h1>
         <p className="mb-4">This invite link is invalid or incomplete.</p>
-        <Button onClick={() => router.push("/groups")}>Go to Groups</Button>
+        <Button onClick={handleGoToGroups}>Go to Groups</Button>
       </div>
     );
   }
@@ -56,7 +66,7 @@ export default function AcceptInvitePage() {
       <div className="container mx-auto px-4 py-8 max-w-md text-center">
         <h1 className="text-2xl font-bold mb-4 text-red-600">Error</h1>
         <p className="mb-4">{acceptInvite.error.message}</p>
-        <Button onClick={() => router.push("/groups")}>Go to Groups</Button>
+        <Button onClick={handleGoToGroups}>Go to Groups</Button>
       </div>
     );
   }
@@ -69,10 +79,8 @@ export default function AcceptInvitePage() {
         </h1>
         <p className="mb-6">You&apos;ve successfully joined the group.</p>
         <div className="flex gap-2 justify-center">
-          <Button onClick={() => router.push(`/groups/${groupInfo.groupId}`)}>
-            View Group
-          </Button>
-          <Button variant="secondary" onClick={() => router.push("/groups")}>
+          <Button onClick={handleViewGroup}>View Group</Button>
+          <Button variant="secondary" onClick={handleGoToGroups}>
             All Groups
           </Button>
         </div>

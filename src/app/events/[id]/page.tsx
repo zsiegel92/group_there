@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -59,68 +59,86 @@ export default function EventDetailPage(props: {
 
   const event = data?.event;
 
-  const handleAttendanceSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!event) return;
+  const handleAttendanceSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!event) return;
 
-    const attendanceData = {
+      // Convert passengersCount (form field, excludes driver) to carFits (API field, includes driver)
+      const attendanceData = {
+        drivingStatus,
+        carFits: drivingStatus !== "cannot_drive" ? passengersCount + 1 : 0,
+        earliestLeaveTime:
+          drivingStatus !== "cannot_drive" && earliestLeaveTime
+            ? earliestLeaveTime
+            : null,
+        originLocation,
+        joinedAt: new Date().toISOString(),
+      };
+
+      try {
+        if (event.hasJoined) {
+          await updateAttendance.mutateAsync({
+            eventId,
+            input: attendanceData,
+          });
+          setIsEditingAttendance(false);
+          alert("Attendance updated successfully!");
+        } else {
+          await attendEvent.mutateAsync({
+            eventId,
+            input: attendanceData,
+          });
+          setIsEditingAttendance(false);
+          alert("Joined event successfully!");
+        }
+      } catch (error) {
+        console.error("Failed to submit attendance:", error);
+        if (error instanceof Error) {
+          alert(error.message);
+        }
+      }
+    },
+    [
+      event,
       drivingStatus,
-      passengersCount:
-        drivingStatus !== "cannot_drive" ? passengersCount : null,
-      earliestLeaveTime:
-        drivingStatus !== "cannot_drive" ? earliestLeaveTime : null,
+      passengersCount,
+      earliestLeaveTime,
       originLocation,
-      joinedAt: new Date().toISOString(),
-    };
+      eventId,
+      updateAttendance,
+      attendEvent,
+    ]
+  );
 
-    try {
-      if (event.hasJoined) {
-        await updateAttendance.mutateAsync({
+  const handleEditSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!event) return;
+
+      try {
+        await updateEvent.mutateAsync({
           eventId,
-          input: attendanceData,
+          input: {
+            name: editName !== event.name ? editName : undefined,
+            location:
+              editLocation !== event.location ? editLocation : undefined,
+            time: editTime !== event.time ? editTime : undefined,
+            message:
+              editMessage !== (event.message || "") ? editMessage : undefined,
+          },
         });
-        setIsEditingAttendance(false);
-        alert("Attendance updated successfully!");
-      } else {
-        await attendEvent.mutateAsync({
-          eventId,
-          input: attendanceData,
-        });
-        setIsEditingAttendance(false);
-        alert("Joined event successfully!");
+        setShowEditForm(false);
+        alert("Event updated successfully!");
+      } catch (error) {
+        console.error("Failed to update event:", error);
+        alert("Failed to update event. Please try again.");
       }
-    } catch (error) {
-      console.error("Failed to submit attendance:", error);
-      if (error instanceof Error) {
-        alert(error.message);
-      }
-    }
-  };
+    },
+    [event, eventId, editName, editLocation, editTime, editMessage, updateEvent]
+  );
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!event) return;
-
-    try {
-      await updateEvent.mutateAsync({
-        eventId,
-        input: {
-          name: editName !== event.name ? editName : undefined,
-          location: editLocation !== event.location ? editLocation : undefined,
-          time: editTime !== event.time ? editTime : undefined,
-          message:
-            editMessage !== (event.message || "") ? editMessage : undefined,
-        },
-      });
-      setShowEditForm(false);
-      alert("Event updated successfully!");
-    } catch (error) {
-      console.error("Failed to update event:", error);
-      alert("Failed to update event. Please try again.");
-    }
-  };
-
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     try {
       await deleteEvent.mutateAsync(eventId);
       router.push("/events");
@@ -130,9 +148,9 @@ export default function EventDetailPage(props: {
         alert(error.message);
       }
     }
-  };
+  }, [eventId, deleteEvent, router]);
 
-  const handleSchedule = async () => {
+  const handleSchedule = useCallback(async () => {
     try {
       await scheduleEvent.mutateAsync(eventId);
       setShowScheduleConfirm(false);
@@ -141,9 +159,9 @@ export default function EventDetailPage(props: {
       console.error("Failed to schedule event:", error);
       alert("Failed to schedule event. Please try again.");
     }
-  };
+  }, [eventId, scheduleEvent]);
 
-  const handleUnschedule = async () => {
+  const handleUnschedule = useCallback(async () => {
     try {
       await unscheduleEvent.mutateAsync(eventId);
       setShowUnscheduleConfirm(false);
@@ -152,9 +170,9 @@ export default function EventDetailPage(props: {
       console.error("Failed to unschedule event:", error);
       alert("Failed to unschedule event. Please try again.");
     }
-  };
+  }, [eventId, unscheduleEvent]);
 
-  const handleLeave = async () => {
+  const handleLeave = useCallback(async () => {
     try {
       await leaveEvent.mutateAsync(eventId);
       setShowLeaveConfirm(false);
@@ -166,9 +184,9 @@ export default function EventDetailPage(props: {
         alert(error.message);
       }
     }
-  };
+  }, [eventId, leaveEvent]);
 
-  const openEditForm = () => {
+  const openEditForm = useCallback(() => {
     if (!event) return;
     setEditName(event.name);
     setEditLocation(event.location);
@@ -182,12 +200,14 @@ export default function EventDetailPage(props: {
     setEditTime(`${year}-${month}-${day}T${hours}:${minutes}`);
     setEditMessage(event.message || "");
     setShowEditForm(true);
-  };
+  }, [event]);
 
-  const openAttendanceForm = () => {
+  const openAttendanceForm = useCallback(() => {
     if (!event?.userAttendance) return;
     setDrivingStatus(event.userAttendance.drivingStatus);
-    setPassengersCount(event.userAttendance.passengersCount || 1);
+    // Convert carFits (from API, includes driver) to passengersCount (form field, excludes driver)
+    const carFits = event.userAttendance.carFits;
+    setPassengersCount(carFits != null && carFits > 0 ? carFits - 1 : 1);
     if (event.userAttendance.earliestLeaveTime) {
       const leaveDate = new Date(event.userAttendance.earliestLeaveTime);
       const year = leaveDate.getFullYear();
@@ -199,13 +219,23 @@ export default function EventDetailPage(props: {
     }
     setOriginLocation(event.userAttendance.originLocation);
     setIsEditingAttendance(true);
-  };
+  }, [event]);
 
   // Show attendance form if user hasn't joined yet OR is editing their attendance
   const showAttendanceForm = useMemo(() => {
     if (!event) return false;
     return !event.hasJoined || isEditingAttendance;
   }, [event, isEditingAttendance]);
+
+  // Calculate time difference for display
+  const getTimeBefore = useCallback(() => {
+    if (!earliestLeaveTime || !event) return "";
+    const eventDate = new Date(event.time);
+    const leaveDate = new Date(earliestLeaveTime);
+    const diffMs = eventDate.getTime() - leaveDate.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+    return `${diffMinutes} minutes before the event`;
+  }, [earliestLeaveTime, event]);
 
   if (isLoading) {
     return (
@@ -227,15 +257,6 @@ export default function EventDetailPage(props: {
 
   const eventDate = new Date(event.time);
   const canDrive = drivingStatus !== "cannot_drive";
-
-  // Calculate time difference for display
-  const getTimeBefore = () => {
-    if (!earliestLeaveTime) return "";
-    const leaveDate = new Date(earliestLeaveTime);
-    const diffMs = eventDate.getTime() - leaveDate.getTime();
-    const diffMinutes = Math.floor(diffMs / 60000);
-    return `${diffMinutes} minutes before the event`;
-  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -506,12 +527,13 @@ export default function EventDetailPage(props: {
                               ? "Must Drive"
                               : "Can Drive or Not Drive"}
                         </div>
-                        {attendee.userAttendance.passengersCount && (
+                        {attendee.userAttendance.carFits &&
+                        attendee.userAttendance.carFits > 0 ? (
                           <div>
                             <span className="font-medium">Passengers:</span>{" "}
-                            {attendee.userAttendance.passengersCount}
+                            {attendee.userAttendance.carFits - 1}
                           </div>
-                        )}
+                        ) : null}
                         {attendee.userAttendance.earliestLeaveTime && (
                           <div>
                             <span className="font-medium">Can leave at:</span>{" "}

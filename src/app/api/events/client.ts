@@ -37,7 +37,7 @@ const eventsResponseSchema = z.object({
 
 const userAttendanceSchema = z.object({
   drivingStatus: z.enum(drivingStatusEnumValues),
-  passengersCount: z.number().nullable(),
+  carFits: z.number().nullable(),
   earliestLeaveTime: z.string().nullable(),
   originLocation: z.string(),
   joinedAt: z.string(),
@@ -111,7 +111,7 @@ const attendanceResponseSchema = z.object({
     eventId: z.string(),
     userId: z.string(),
     drivingStatus: z.enum(drivingStatusEnumValues),
-    passengersCount: z.number().nullable(),
+    carFits: z.number().nullable(),
     earliestLeaveTime: z.string().nullable(),
     originLocation: z.string(),
   }),

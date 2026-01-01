@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -13,17 +13,20 @@ export default function CreateGroupPage() {
   const [name, setName] = useState("");
   const createGroup = useCreateGroup();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!name.trim()) return;
 
-    try {
-      const result = await createGroup.mutateAsync(name.trim());
-      router.push(`/groups/${result.group.id}`);
-    } catch (error) {
-      console.error("Failed to create group:", error);
-    }
-  };
+      try {
+        const result = await createGroup.mutateAsync(name.trim());
+        router.push(`/groups/${result.group.id}`);
+      } catch (error) {
+        console.error("Failed to create group:", error);
+      }
+    },
+    [name, createGroup, router]
+  );
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-md">

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useCallback, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -38,47 +38,53 @@ export default function GroupDetailPage(props: {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [sendingInvites, setSendingInvites] = useState(false);
 
-  const handleEmailChange = (index: number, value: string) => {
-    const newEmails = [...inviteEmails];
-    newEmails[index] = value;
+  const handleEmailChange = useCallback(
+    (index: number, value: string) => {
+      const newEmails = [...inviteEmails];
+      newEmails[index] = value;
 
-    // Filter out all empty strings and add exactly one at the end
-    const nonEmpty = newEmails.filter((email) => email.trim() !== "");
-    setInviteEmails([...nonEmpty, ""]);
-  };
+      // Filter out all empty strings and add exactly one at the end
+      const nonEmpty = newEmails.filter((email) => email.trim() !== "");
+      setInviteEmails([...nonEmpty, ""]);
+    },
+    [inviteEmails]
+  );
 
-  const handleInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleInvite = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
 
-    // Filter out empty emails
-    const validEmails = inviteEmails
-      .map((email) => email.trim())
-      .filter((email) => email !== "");
+      // Filter out empty emails
+      const validEmails = inviteEmails
+        .map((email) => email.trim())
+        .filter((email) => email !== "");
 
-    if (validEmails.length === 0) return;
+      if (validEmails.length === 0) return;
 
-    setSendingInvites(true);
-    try {
-      // Send all invites in parallel
-      await Promise.all(
-        validEmails.map((email) =>
-          inviteToGroup.mutateAsync({ groupId, email })
-        )
-      );
-      setInviteEmails([""]);
-      setShowInviteDialog(false);
-      alert(
-        `Invite${validEmails.length > 1 ? "s" : ""} sent successfully to ${validEmails.length} email${validEmails.length > 1 ? "s" : ""}!`
-      );
-    } catch (error) {
-      console.error("Failed to send invites:", error);
-      alert("Failed to send some invites. Please try again.");
-    } finally {
-      setSendingInvites(false);
-    }
-  };
+      setSendingInvites(true);
+      try {
+        // Send all invites in parallel
+        await Promise.all(
+          validEmails.map((email) =>
+            inviteToGroup.mutateAsync({ groupId, email })
+          )
+        );
+        setInviteEmails([""]);
+        setShowInviteDialog(false);
+        alert(
+          `Invite${validEmails.length > 1 ? "s" : ""} sent successfully to ${validEmails.length} email${validEmails.length > 1 ? "s" : ""}!`
+        );
+      } catch (error) {
+        console.error("Failed to send invites:", error);
+        alert("Failed to send some invites. Please try again.");
+      } finally {
+        setSendingInvites(false);
+      }
+    },
+    [inviteEmails, inviteToGroup, groupId]
+  );
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     try {
       await deleteGroup.mutateAsync(groupId);
       router.push("/groups");
@@ -86,9 +92,9 @@ export default function GroupDetailPage(props: {
       console.error("Failed to delete group:", error);
       alert("Failed to delete group. Please try again.");
     }
-  };
+  }, [groupId, deleteGroup, router]);
 
-  const handleLeave = async () => {
+  const handleLeave = useCallback(async () => {
     try {
       await leaveGroup.mutateAsync(groupId);
       router.push("/groups");
@@ -96,17 +102,20 @@ export default function GroupDetailPage(props: {
       console.error("Failed to leave group:", error);
       alert("Failed to leave group. Please try again.");
     }
-  };
+  }, [groupId, leaveGroup, router]);
 
-  const handlePromote = async (userId: string) => {
-    try {
-      await promoteToAdmin.mutateAsync({ groupId, userId });
-      refetch();
-    } catch (error) {
-      console.error("Failed to promote user:", error);
-      alert("Failed to promote user. Please try again.");
-    }
-  };
+  const handlePromote = useCallback(
+    async (userId: string) => {
+      try {
+        await promoteToAdmin.mutateAsync({ groupId, userId });
+        refetch();
+      } catch (error) {
+        console.error("Failed to promote user:", error);
+        alert("Failed to promote user. Please try again.");
+      }
+    },
+    [groupId, promoteToAdmin, refetch]
+  );
 
   if (isLoading) {
     return (
@@ -141,7 +150,9 @@ export default function GroupDetailPage(props: {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-2">
-          <h1 className="text-2xl sm:text-3xl font-bold">{groupDetail.group.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">
+            {groupDetail.group.name}
+          </h1>
           <div className="flex flex-wrap gap-2">
             {isAdmin && (
               <>

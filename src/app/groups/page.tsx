@@ -56,7 +56,9 @@ export default function GroupsPage() {
               href={`/groups/${groupMembership.group.id}`}
               className="block p-6 border rounded-lg hover:border-gray-400 transition-colors"
             >
-              <h2 className="text-xl font-semibold mb-2">{groupMembership.group.name}</h2>
+              <h2 className="text-xl font-semibold mb-2">
+                {groupMembership.group.name}
+              </h2>
               <div className="flex gap-2 text-sm text-gray-600">
                 {groupMembership.isAdmin && (
                   <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
