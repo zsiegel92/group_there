@@ -10,7 +10,7 @@ const createEventSchema = z.object({
   groupId: z.string(),
   name: z.string().min(1).max(200),
   location: z.string().min(1).max(500),
-  time: z.string().datetime(),
+  time: z.string(),
   message: z.string().max(2000).optional(),
 });
 

@@ -14,7 +14,7 @@ const attendanceSchema = z
   .object({
     drivingStatus: z.enum(["cannot_drive", "must_drive", "can_drive_or_not"]),
     passengersCount: z.number().int().min(1).optional(),
-    earliestLeaveTime: z.string().datetime().optional(),
+    earliestLeaveTime: z.string().optional(),
     originLocation: z.string().min(1).max(500),
   })
   .refine(

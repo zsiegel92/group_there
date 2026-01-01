@@ -13,7 +13,7 @@ type Params = {
 const updateEventSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   location: z.string().min(1).max(500).optional(),
-  time: z.string().datetime().optional(),
+  time: z.string().optional(),
   message: z.string().max(2000).optional(),
 });
 
