@@ -34,45 +34,55 @@ function SignedInDetails({ user }: { user: User }) {
   );
 }
 
-export function ClientNav() {
+function LoggedInNavParts({ user }: { user: User }) {
+  const pathname = usePathname();
+
+  return (
+    <>
+      <Link
+        href="/teams"
+        className={`text-sm font-medium transition-colors hover:text-primary ${
+          pathname.startsWith("/teams")
+            ? "text-foreground"
+            : "text-muted-foreground"
+        }`}
+      >
+        Teams
+      </Link>
+      <div className="ml-auto flex items-center gap-2 sm:gap-4">
+        <SignedInDetails user={user} />
+      </div>
+    </>
+  );
+}
+
+function LoggedOutNavParts({ isPending }: { isPending: boolean }) {
   const pathname = usePathname();
   const isLoginPage = pathname === "/login";
+
+  return (
+    <div className="ml-auto flex items-center gap-2 sm:gap-4">
+      {!isLoginPage && !isPending && <SignIn />}
+      {isPending && <Spinner />}
+    </div>
+  );
+}
+
+export function ClientNav() {
   const { data: session, isPending } = useSession();
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between gap-2">
-          <div className="flex items-center gap-3 sm:gap-8">
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-lg sm:text-xl font-bold">GROUPTHERE</span>
-            </Link>
-            {session?.user && (
-              <Link
-                href="/teams"
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  pathname.startsWith("/teams")
-                    ? "text-foreground"
-                    : "text-muted-foreground"
-                }`}
-              >
-                Teams
-              </Link>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-4">
-            {isPending ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Spinner />
-                <span className="hidden sm:inline">Loading...</span>
-              </div>
-            ) : session?.user ? (
-              <SignedInDetails user={session.user} />
-            ) : isLoginPage ? null : (
-              <SignIn />
-            )}
-          </div>
+        <div className="flex h-16 items-center gap-3 sm:gap-8">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="text-lg sm:text-xl font-bold">GROUPTHERE</span>
+          </Link>
+          {!session?.user || isPending ? (
+            <LoggedOutNavParts isPending={isPending} />
+          ) : (
+            <LoggedInNavParts user={session.user} />
+          )}
         </div>
       </div>
     </nav>
