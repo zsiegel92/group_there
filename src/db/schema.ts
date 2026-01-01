@@ -8,6 +8,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable(
@@ -121,11 +122,28 @@ export const groupsToUsers = pgTable(
   ]
 );
 
-export const drivingStatusEnum = pgEnum("drivingStatus", [
+const drivingStatusEnumValues = [
   "cannot_drive",
   "must_drive",
   "can_drive_or_not",
-]);
+] as const;
+
+type DrivingStatus = (typeof drivingStatusEnumValues)[number];
+
+export const drivingStatusEnumValuesForDrivers: DrivingStatus[] = [
+  "must_drive",
+  "can_drive_or_not",
+] as const;
+
+export const drivingStatusEnumValuesForPassengers: DrivingStatus[] = [
+  "can_drive_or_not",
+  "cannot_drive",
+] as const;
+
+export const drivingStatusEnum = pgEnum(
+  "drivingStatus",
+  drivingStatusEnumValues
+);
 
 export const events = pgTable(
   "events",
@@ -157,6 +175,7 @@ export const events = pgTable(
 export const eventsToUsers = pgTable(
   "eventsToUsers",
   {
+    id: text("id").primaryKey(),
     eventId: text("eventId")
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
@@ -164,13 +183,16 @@ export const eventsToUsers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     drivingStatus: drivingStatusEnum("drivingStatus").notNull(),
-    passengersCount: integer("passengersCount"), // null if cannot drive
+    passengersCount: integer("passengersCount").notNull(), // includes driver!
     earliestLeaveTime: timestamp("earliestLeaveTime"), // null if cannot drive
     originLocation: text("originLocation").notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.eventId, table.userId] }),
+    uniqueIndex("eventsToUsers_eventId_userId_unique").on(
+      table.eventId,
+      table.userId
+    ),
     index("eventsToUsers_eventId_idx").on(table.eventId),
     index("eventsToUsers_userId_idx").on(table.userId),
   ]

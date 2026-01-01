@@ -43,6 +43,7 @@ class Tripper(BaseModel):
         ge=0,
         le=5,
     )
+    must_drive: bool
     seconds_before_event_start_can_leave: int = Field(
         ...,
         ge=0,

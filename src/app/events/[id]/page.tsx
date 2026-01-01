@@ -356,7 +356,8 @@ export default function EventDetailPage(props: {
                 <>
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Number of Passengers You Can Bring *
+                      Number of Passengers You Can Bring (not including
+                      yourself) *
                     </label>
                     <Input
                       type="number"

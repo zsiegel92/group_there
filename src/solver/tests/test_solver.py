@@ -59,6 +59,7 @@ def test_solve_simple_driver_and_rider():
         origin_id="origin-a",
         event_id="event-1",
         car_fits=2,
+        must_drive=True,
         seconds_before_event_start_can_leave=60,
         distance_to_destination_seconds=5.0,
     )
@@ -69,6 +70,7 @@ def test_solve_simple_driver_and_rider():
         origin_id="origin-b",
         event_id="event-1",
         car_fits=0,  # No car
+        must_drive=False,
         seconds_before_event_start_can_leave=60,
         distance_to_destination_seconds=5.0,
     )

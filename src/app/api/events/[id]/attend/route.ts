@@ -139,10 +139,11 @@ export async function POST(request: NextRequest, props: Params) {
 
   // Create attendance record
   await db.insert(eventsToUsers).values({
+    id: crypto.randomUUID(),
     eventId,
     userId: user.id,
     drivingStatus,
-    passengersCount: passengersCount || null,
+    passengersCount: passengersCount ?? 0,
     earliestLeaveTime: earliestLeaveTime ? new Date(earliestLeaveTime) : null,
     originLocation,
   });
@@ -153,8 +154,8 @@ export async function POST(request: NextRequest, props: Params) {
       eventId,
       userId: user.id,
       drivingStatus,
-      passengersCount: passengersCount || null,
-      earliestLeaveTime: earliestLeaveTime || null,
+      passengersCount,
+      earliestLeaveTime: earliestLeaveTime ?? null,
       originLocation,
     },
   });
@@ -226,7 +227,7 @@ export async function PATCH(request: NextRequest, props: Params) {
     .update(eventsToUsers)
     .set({
       drivingStatus,
-      passengersCount: passengersCount || null,
+      passengersCount: passengersCount ?? 0,
       earliestLeaveTime: earliestLeaveTime ? new Date(earliestLeaveTime) : null,
       originLocation,
     })

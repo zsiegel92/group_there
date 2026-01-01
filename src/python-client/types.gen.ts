@@ -115,6 +115,10 @@ export type Tripper = {
      */
     car_fits: number;
     /**
+     * Must Drive
+     */
+    must_drive: boolean;
+    /**
      * Seconds Before Event Start Can Leave
      */
     seconds_before_event_start_can_leave: number;

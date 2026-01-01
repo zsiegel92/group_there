@@ -40,6 +40,7 @@ export const zTripper = z.object({
     origin_id: z.string(),
     event_id: z.string(),
     car_fits: z.int().gte(0).lte(5),
+    must_drive: z.boolean(),
     seconds_before_event_start_can_leave: z.int().gte(0),
     distance_to_destination_seconds: z.number().gte(0)
 });
