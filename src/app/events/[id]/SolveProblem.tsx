@@ -1,7 +1,9 @@
 import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import type { Solution } from "@/python-client";
+
 import { solveProblem } from "./solve-action";
 
 interface SolveProblemProps {
