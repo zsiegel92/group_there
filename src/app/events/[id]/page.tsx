@@ -25,7 +25,6 @@ export default function EventDetailPage(props: {
   const deleteEvent = useDeleteEvent();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isEditingAttendance, setIsEditingAttendance] = useState(false);
 
   const event = data?.event;
 
@@ -132,16 +131,7 @@ export default function EventDetailPage(props: {
           </div>
         </div>
 
-        {!event.hasJoined && (
-          <AttendanceForm
-            event={event}
-            eventId={eventId}
-            isCurrentUser={true}
-            isEditingAttendance={isEditingAttendance}
-            setIsEditingAttendance={setIsEditingAttendance}
-            mode="form-only"
-          />
-        )}
+        {!event.hasJoined && <AttendanceForm event={event} eventId={eventId} />}
 
         {event.attendees.length > 0 && (() => {
           const currentUserId = session?.user?.id;
@@ -160,7 +150,7 @@ export default function EventDetailPage(props: {
                     Your Attendance
                   </h2>
                   <div className="space-y-3">
-                    <div className="p-4 border rounded-lg bg-blue-50 border-blue-300">
+                    <div className="p-4 border rounded-lg bg-blue-50 border-blue-300 relative">
                       <div className="flex justify-between items-start gap-2">
                         <div className="font-medium">
                           {currentUserAttendee.userName}
@@ -168,16 +158,11 @@ export default function EventDetailPage(props: {
                             You
                           </span>
                         </div>
-                        {event.scheduled && (
-                          <AttendanceForm
-                            event={event}
-                            eventId={eventId}
-                            isCurrentUser={true}
-                            isEditingAttendance={isEditingAttendance}
-                            setIsEditingAttendance={setIsEditingAttendance}
-                            mode="button-only"
-                          />
-                        )}
+                        <AttendanceForm
+                          event={event}
+                          eventId={eventId}
+                          renderAsButton={true}
+                        />
                       </div>
                       <div className="text-sm text-gray-600 space-y-1 mt-2">
                         <div>
@@ -213,17 +198,6 @@ export default function EventDetailPage(props: {
                     </div>
                   </div>
                 </div>
-              )}
-
-              {currentUserAttendee && event.scheduled && isEditingAttendance && (
-                <AttendanceForm
-                  event={event}
-                  eventId={eventId}
-                  isCurrentUser={true}
-                  isEditingAttendance={isEditingAttendance}
-                  setIsEditingAttendance={setIsEditingAttendance}
-                  mode="form-only"
-                />
               )}
 
               {otherAttendees.length > 0 && (
