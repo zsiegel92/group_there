@@ -34,21 +34,30 @@ function SignedInDetails({ user }: { user: User }) {
   );
 }
 
+const navLinks: { href: string; text: string }[] = [
+  { href: "/teams", text: "Teams" },
+];
+
 function LoggedInNavParts({ user }: { user: User }) {
   const pathname = usePathname();
-
   return (
     <>
-      <Link
-        href="/teams"
-        className={`text-sm font-medium transition-colors hover:text-primary ${
-          pathname.startsWith("/teams")
-            ? "text-foreground"
-            : "text-muted-foreground"
-        }`}
-      >
-        Teams
-      </Link>
+      {navLinks.map((link) => {
+        const isActive = pathname.startsWith(link.href);
+        return (
+          <Link
+            key={link.href}
+            href={link.href}
+            className={`text-sm font-medium transition-colors hover:text-primary ${
+              isActive
+                ? "text-foreground font-semibold underline underline-offset-4"
+                : "text-muted-foreground"
+            }`}
+          >
+            {link.text}
+          </Link>
+        );
+      })}
       <div className="ml-auto flex items-center gap-2 sm:gap-4">
         <SignedInDetails user={user} />
       </div>
