@@ -47,6 +47,10 @@ class Tripper(BaseModel):
         ...,
         ge=0,
     )
+    distance_to_destination_seconds: float = Field(
+        ...,
+        ge=0,
+    )
 
 
 class Problem(BaseModel):

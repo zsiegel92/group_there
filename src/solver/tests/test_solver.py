@@ -59,6 +59,7 @@ def test_solve_simple_driver_and_rider():
         event_id="event-1",
         car_fits=2,
         seconds_before_event_start_can_leave=60,
+        distance_to_destination_seconds=5.0,
     )
 
     tripper_b = Tripper(
@@ -68,6 +69,7 @@ def test_solve_simple_driver_and_rider():
         event_id="event-1",
         car_fits=0,  # No car
         seconds_before_event_start_can_leave=60,
+        distance_to_destination_seconds=5.0,
     )
 
     problem = Problem(
