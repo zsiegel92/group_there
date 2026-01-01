@@ -406,7 +406,9 @@ export default function EventDetailPage(props: {
                 <div className="flex gap-2">
                   <Button
                     type="submit"
-                    disabled={attendEvent.isPending || updateAttendance.isPending}
+                    disabled={
+                      attendEvent.isPending || updateAttendance.isPending
+                    }
                   >
                     {attendEvent.isPending || updateAttendance.isPending
                       ? "Submitting..."
@@ -419,7 +421,9 @@ export default function EventDetailPage(props: {
                       type="button"
                       variant="secondary"
                       onClick={() => setIsEditingAttendance(false)}
-                      disabled={attendEvent.isPending || updateAttendance.isPending}
+                      disabled={
+                        attendEvent.isPending || updateAttendance.isPending
+                      }
                     >
                       Cancel
                     </Button>
@@ -430,7 +434,11 @@ export default function EventDetailPage(props: {
                     type="button"
                     variant="destructive"
                     onClick={() => setShowLeaveConfirm(true)}
-                    disabled={attendEvent.isPending || updateAttendance.isPending || leaveEvent.isPending}
+                    disabled={
+                      attendEvent.isPending ||
+                      updateAttendance.isPending ||
+                      leaveEvent.isPending
+                    }
                     className="w-full"
                   >
                     Leave Event
@@ -461,7 +469,9 @@ export default function EventDetailPage(props: {
                     <div
                       key={attendee.userId}
                       className={`p-4 border rounded-lg ${
-                        isCurrentUser ? "bg-blue-50 border-blue-300" : "bg-gray-50"
+                        isCurrentUser
+                          ? "bg-blue-50 border-blue-300"
+                          : "bg-gray-50"
                       }`}
                     >
                       <div className="flex justify-between items-start gap-2">
@@ -501,7 +511,9 @@ export default function EventDetailPage(props: {
                         {attendee.earliestLeaveTime && (
                           <div>
                             <span className="font-medium">Can leave at:</span>{" "}
-                            {new Date(attendee.earliestLeaveTime).toLocaleString()}
+                            {new Date(
+                              attendee.earliestLeaveTime
+                            ).toLocaleString()}
                           </div>
                         )}
                         <div>
