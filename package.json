@@ -30,7 +30,8 @@
     "gen-client": "src/solver/.venv/bin/python src/solver/dump_openapi.py && openapi-ts",
     "dbshell": "dotenv -e .env -- sh -c 'psql \"$DATABASE_URL\"'",
     "migrations:push": "drizzle-kit push --config drizzle.config.ts",
-    "script": "NODE_ENV=development tsx --env-file .env --conditions=react-server"
+    "script": "NODE_ENV=development tsx --env-file .env --conditions=react-server",
+    "smoke-test-solver-service": "dotenv -e .env -- sh -c 'GROUPTHERE_SOLVER_API_URL=$PRODUCTION_GROUPTHERE_SOLVER_API_URL pnpm run script src/scripts/smoke-tests/test-solver-service.ts'"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
