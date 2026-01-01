@@ -9,7 +9,10 @@ async function main() {
     throw new Error("GROUPTHERE_SOLVER_API_URL is not set");
   }
 
-  console.log("Testing solver service at:", process.env.GROUPTHERE_SOLVER_API_URL);
+  console.log(
+    "Testing solver service at:",
+    process.env.GROUPTHERE_SOLVER_API_URL
+  );
   console.log();
 
   // Test 1: Empty problem

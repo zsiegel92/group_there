@@ -19,10 +19,7 @@ type EditEventButtonProps = {
   eventId: string;
 };
 
-export function EditEventButton({
-  event,
-  eventId,
-}: EditEventButtonProps) {
+export function EditEventButton({ event, eventId }: EditEventButtonProps) {
   const updateEvent = useUpdateEvent();
 
   const [showEditForm, setShowEditForm] = useState(false);

@@ -183,9 +183,7 @@ export function AttendanceForm({
               >
                 <option value="cannot_drive">Cannot Drive</option>
                 <option value="must_drive">Must Drive</option>
-                <option value="can_drive_or_not">
-                  Can Drive or Not Drive
-                </option>
+                <option value="can_drive_or_not">Can Drive or Not Drive</option>
               </select>
             </div>
 
@@ -200,7 +198,9 @@ export function AttendanceForm({
                     type="number"
                     min="1"
                     value={passengersCount}
-                    onChange={(e) => setPassengersCount(parseInt(e.target.value))}
+                    onChange={(e) =>
+                      setPassengersCount(parseInt(e.target.value))
+                    }
                     required
                   />
                 </div>
@@ -255,7 +255,9 @@ export function AttendanceForm({
                     type="button"
                     variant="secondary"
                     onClick={() => setIsEditingAttendance(false)}
-                    disabled={attendEvent.isPending || updateAttendance.isPending}
+                    disabled={
+                      attendEvent.isPending || updateAttendance.isPending
+                    }
                   >
                     Cancel
                   </Button>
@@ -338,9 +340,7 @@ export function AttendanceForm({
               >
                 <option value="cannot_drive">Cannot Drive</option>
                 <option value="must_drive">Must Drive</option>
-                <option value="can_drive_or_not">
-                  Can Drive or Not Drive
-                </option>
+                <option value="can_drive_or_not">Can Drive or Not Drive</option>
               </select>
             </div>
 
@@ -355,7 +355,9 @@ export function AttendanceForm({
                     type="number"
                     min="1"
                     value={passengersCount}
-                    onChange={(e) => setPassengersCount(parseInt(e.target.value))}
+                    onChange={(e) =>
+                      setPassengersCount(parseInt(e.target.value))
+                    }
                     required
                   />
                 </div>
@@ -393,10 +395,7 @@ export function AttendanceForm({
               />
             </div>
 
-            <Button
-              type="submit"
-              disabled={attendEvent.isPending}
-            >
+            <Button type="submit" disabled={attendEvent.isPending}>
               {attendEvent.isPending ? "Submitting..." : "Join Event"}
             </Button>
           </form>

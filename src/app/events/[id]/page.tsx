@@ -6,11 +6,11 @@ import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/lib/auth-client";
 
 import { useEventDetails } from "../../api/events/client";
-import { AttendanceForm } from "./AttendanceForm";
-import { DeleteEventButton } from "./DeleteEventButton";
-import { EditEventButton } from "./EditEventButton";
-import { ScheduleEventButtons } from "./ScheduleEventButtons";
-import { SolveProblem } from "./SolveProblem";
+import { AttendanceForm } from "./attendance-form";
+import { DeleteEventButton } from "./delete-event-button";
+import { EditEventButton } from "./edit-event-button";
+import { ScheduleEventButtons } from "./schedule-event-button";
+import { SolveProblem } from "./solve-problem";
 
 export default function EventDetailPage(props: {
   params: Promise<{ id: string }>;

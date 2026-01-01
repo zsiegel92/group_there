@@ -4,10 +4,7 @@ import { useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
-import {
-  useScheduleEvent,
-  useUnscheduleEvent,
-} from "../../api/events/client";
+import { useScheduleEvent, useUnscheduleEvent } from "../../api/events/client";
 
 type ScheduleEventButtonsProps = {
   eventId: string;
