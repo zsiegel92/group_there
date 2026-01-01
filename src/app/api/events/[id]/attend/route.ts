@@ -246,3 +246,41 @@ export async function PATCH(request: NextRequest, props: Params) {
     },
   });
 }
+
+// DELETE /api/events/[id]/attend - Leave event (remove attendance)
+export async function DELETE(request: NextRequest, props: Params) {
+  const params = await props.params;
+  const user = await getUser(request);
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const eventId = params.id;
+
+  // Check if user is attending
+  const existingAttendance = await db.query.eventsToUsers.findFirst({
+    where: and(
+      eq(eventsToUsers.eventId, eventId),
+      eq(eventsToUsers.userId, user.id)
+    ),
+  });
+
+  if (!existingAttendance) {
+    return NextResponse.json(
+      { error: "Not attending this event" },
+      { status: 400 }
+    );
+  }
+
+  // Remove attendance record
+  await db
+    .delete(eventsToUsers)
+    .where(
+      and(eq(eventsToUsers.eventId, eventId), eq(eventsToUsers.userId, user.id))
+    );
+
+  return NextResponse.json({
+    success: true,
+  });
+}

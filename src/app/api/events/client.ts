@@ -236,6 +236,18 @@ export async function updateAttendance(
   return attendanceResponseSchema.parse(data);
 }
 
+export async function leaveEvent(eventId: string) {
+  const response = await fetch(`/api/events/${eventId}/attend`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to leave event");
+  }
+  const data = await response.json();
+  return successResponseSchema.parse(data);
+}
+
 export async function scheduleEvent(eventId: string) {
   const response = await fetch(`/api/events/${eventId}/schedule`, {
     method: "POST",
@@ -361,6 +373,17 @@ export function useUpdateAttendance() {
       queryClient.invalidateQueries({
         queryKey: ["events", variables.eventId],
       });
+    },
+  });
+}
+
+export function useLeaveEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: leaveEvent,
+    onSuccess: (_, eventId) => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: ["events", eventId] });
     },
   });
 }

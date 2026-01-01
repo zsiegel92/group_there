@@ -1,16 +1,18 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { useSession } from "@/lib/auth-client";
 
 import {
   useAttendEvent,
   useDeleteEvent,
   useEventDetails,
+  useLeaveEvent,
   useScheduleEvent,
   useUnscheduleEvent,
   useUpdateAttendance,
@@ -23,10 +25,12 @@ export default function EventDetailPage(props: {
   const params = use(props.params);
   const router = useRouter();
   const eventId = params.id;
+  const { data: session } = useSession();
 
   const { data, isLoading, error } = useEventDetails(eventId);
   const attendEvent = useAttendEvent();
   const updateAttendance = useUpdateAttendance();
+  const leaveEvent = useLeaveEvent();
   const updateEvent = useUpdateEvent();
   const deleteEvent = useDeleteEvent();
   const scheduleEvent = useScheduleEvent();
@@ -36,6 +40,8 @@ export default function EventDetailPage(props: {
   const [showEditForm, setShowEditForm] = useState(false);
   const [showScheduleConfirm, setShowScheduleConfirm] = useState(false);
   const [showUnscheduleConfirm, setShowUnscheduleConfirm] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [isEditingAttendance, setIsEditingAttendance] = useState(false);
 
   // Edit form state
   const [editName, setEditName] = useState("");
@@ -72,12 +78,14 @@ export default function EventDetailPage(props: {
           eventId,
           input: attendanceData,
         });
+        setIsEditingAttendance(false);
         alert("Attendance updated successfully!");
       } else {
         await attendEvent.mutateAsync({
           eventId,
           input: attendanceData,
         });
+        setIsEditingAttendance(false);
         alert("Joined event successfully!");
       }
     } catch (error) {
@@ -145,6 +153,20 @@ export default function EventDetailPage(props: {
     }
   };
 
+  const handleLeave = async () => {
+    try {
+      await leaveEvent.mutateAsync(eventId);
+      setShowLeaveConfirm(false);
+      setIsEditingAttendance(false);
+      alert("You have left the event.");
+    } catch (error) {
+      console.error("Failed to leave event:", error);
+      if (error instanceof Error) {
+        alert(error.message);
+      }
+    }
+  };
+
   const openEditForm = () => {
     if (!event) return;
     setEditName(event.name);
@@ -161,23 +183,28 @@ export default function EventDetailPage(props: {
     setShowEditForm(true);
   };
 
-  // Initialize attendance form with existing data if available
-  useState(() => {
-    if (event?.userAttendance) {
-      setDrivingStatus(event.userAttendance.drivingStatus);
-      setPassengersCount(event.userAttendance.passengersCount || 1);
-      if (event.userAttendance.earliestLeaveTime) {
-        const leaveDate = new Date(event.userAttendance.earliestLeaveTime);
-        const year = leaveDate.getFullYear();
-        const month = String(leaveDate.getMonth() + 1).padStart(2, "0");
-        const day = String(leaveDate.getDate()).padStart(2, "0");
-        const hours = String(leaveDate.getHours()).padStart(2, "0");
-        const minutes = String(leaveDate.getMinutes()).padStart(2, "0");
-        setEarliestLeaveTime(`${year}-${month}-${day}T${hours}:${minutes}`);
-      }
-      setOriginLocation(event.userAttendance.originLocation);
+  const openAttendanceForm = () => {
+    if (!event?.userAttendance) return;
+    setDrivingStatus(event.userAttendance.drivingStatus);
+    setPassengersCount(event.userAttendance.passengersCount || 1);
+    if (event.userAttendance.earliestLeaveTime) {
+      const leaveDate = new Date(event.userAttendance.earliestLeaveTime);
+      const year = leaveDate.getFullYear();
+      const month = String(leaveDate.getMonth() + 1).padStart(2, "0");
+      const day = String(leaveDate.getDate()).padStart(2, "0");
+      const hours = String(leaveDate.getHours()).padStart(2, "0");
+      const minutes = String(leaveDate.getMinutes()).padStart(2, "0");
+      setEarliestLeaveTime(`${year}-${month}-${day}T${hours}:${minutes}`);
     }
-  });
+    setOriginLocation(event.userAttendance.originLocation);
+    setIsEditingAttendance(true);
+  };
+
+  // Show attendance form if user hasn't joined yet OR is editing their attendance
+  const showAttendanceForm = useMemo(() => {
+    if (!event) return false;
+    return !event.hasJoined || isEditingAttendance;
+  }, [event, isEditingAttendance]);
 
   if (isLoading) {
     return (
@@ -294,10 +321,10 @@ export default function EventDetailPage(props: {
           </div>
         </div>
 
-        {event.scheduled && (
+        {event.scheduled && showAttendanceForm && (
           <div className="bg-white p-6 rounded-lg border">
             <h2 className="text-xl font-semibold mb-4">
-              {event.hasJoined ? "Your Attendance" : "Join Event"}
+              {event.hasJoined ? "Edit Your Attendance" : "Join Event"}
             </h2>
             <form onSubmit={handleAttendanceSubmit} className="space-y-4">
               <div>
@@ -375,16 +402,41 @@ export default function EventDetailPage(props: {
                 />
               </div>
 
-              <Button
-                type="submit"
-                disabled={attendEvent.isPending || updateAttendance.isPending}
-              >
-                {attendEvent.isPending || updateAttendance.isPending
-                  ? "Submitting..."
-                  : event.hasJoined
-                    ? "Update Attendance"
-                    : "Join Event"}
-              </Button>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <Button
+                    type="submit"
+                    disabled={attendEvent.isPending || updateAttendance.isPending}
+                  >
+                    {attendEvent.isPending || updateAttendance.isPending
+                      ? "Submitting..."
+                      : event.hasJoined
+                        ? "Update Attendance"
+                        : "Join Event"}
+                  </Button>
+                  {event.hasJoined && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setIsEditingAttendance(false)}
+                      disabled={attendEvent.isPending || updateAttendance.isPending}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+                {event.hasJoined && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => setShowLeaveConfirm(true)}
+                    disabled={attendEvent.isPending || updateAttendance.isPending || leaveEvent.isPending}
+                    className="w-full"
+                  >
+                    Leave Event
+                  </Button>
+                )}
+              </div>
             </form>
           </div>
         )}
@@ -395,40 +447,71 @@ export default function EventDetailPage(props: {
               Attendees ({event.attendees.length})
             </h2>
             <div className="space-y-3">
-              {event.attendees.map((attendee) => (
-                <div
-                  key={attendee.userId}
-                  className="p-4 border rounded-lg bg-gray-50"
-                >
-                  <div className="font-medium">{attendee.userName}</div>
-                  <div className="text-sm text-gray-600 space-y-1 mt-2">
-                    <div>
-                      <span className="font-medium">Status:</span>{" "}
-                      {attendee.drivingStatus === "cannot_drive"
-                        ? "Cannot Drive"
-                        : attendee.drivingStatus === "must_drive"
-                          ? "Must Drive"
-                          : "Can Drive or Not Drive"}
-                    </div>
-                    {attendee.passengersCount && (
-                      <div>
-                        <span className="font-medium">Passengers:</span>{" "}
-                        {attendee.passengersCount}
+              {event.attendees
+                .sort((a, b) => {
+                  // Put current user first
+                  const currentUserId = session?.user?.id;
+                  if (a.userId === currentUserId) return -1;
+                  if (b.userId === currentUserId) return 1;
+                  return 0;
+                })
+                .map((attendee) => {
+                  const isCurrentUser = session?.user?.id === attendee.userId;
+                  return (
+                    <div
+                      key={attendee.userId}
+                      className={`p-4 border rounded-lg ${
+                        isCurrentUser ? "bg-blue-50 border-blue-300" : "bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="font-medium">
+                          {attendee.userName}
+                          {isCurrentUser && (
+                            <span className="ml-2 px-2 py-0.5 bg-blue-200 text-blue-800 rounded text-xs font-normal">
+                              You
+                            </span>
+                          )}
+                        </div>
+                        {isCurrentUser && event.scheduled && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={openAttendanceForm}
+                          >
+                            Edit Attendance
+                          </Button>
+                        )}
                       </div>
-                    )}
-                    {attendee.earliestLeaveTime && (
-                      <div>
-                        <span className="font-medium">Can leave at:</span>{" "}
-                        {new Date(attendee.earliestLeaveTime).toLocaleString()}
+                      <div className="text-sm text-gray-600 space-y-1 mt-2">
+                        <div>
+                          <span className="font-medium">Status:</span>{" "}
+                          {attendee.drivingStatus === "cannot_drive"
+                            ? "Cannot Drive"
+                            : attendee.drivingStatus === "must_drive"
+                              ? "Must Drive"
+                              : "Can Drive or Not Drive"}
+                        </div>
+                        {attendee.passengersCount && (
+                          <div>
+                            <span className="font-medium">Passengers:</span>{" "}
+                            {attendee.passengersCount}
+                          </div>
+                        )}
+                        {attendee.earliestLeaveTime && (
+                          <div>
+                            <span className="font-medium">Can leave at:</span>{" "}
+                            {new Date(attendee.earliestLeaveTime).toLocaleString()}
+                          </div>
+                        )}
+                        <div>
+                          <span className="font-medium">Coming from:</span>{" "}
+                          {attendee.originLocation}
+                        </div>
                       </div>
-                    )}
-                    <div>
-                      <span className="font-medium">Coming from:</span>{" "}
-                      {attendee.originLocation}
                     </div>
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
             </div>
           </div>
         )}
@@ -578,6 +661,35 @@ export default function EventDetailPage(props: {
                 {unscheduleEvent.isPending
                   ? "Unscheduling..."
                   : "Unschedule Event"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+            <h2 className="text-xl font-bold mb-4">Leave Event</h2>
+            <p className="mb-6">
+              Are you sure you want to leave this event? Your attendance
+              information will be removed.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowLeaveConfirm(false)}
+                disabled={leaveEvent.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleLeave}
+                disabled={leaveEvent.isPending}
+              >
+                {leaveEvent.isPending ? "Leaving..." : "Leave Event"}
               </Button>
             </div>
           </div>
