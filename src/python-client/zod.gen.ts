@@ -35,7 +35,6 @@ export const zSolution = z.object({
  * Tripper
  */
 export const zTripper = z.object({
-    id: z.string(),
     user_id: z.string(),
     origin_id: z.string(),
     event_id: z.string(),

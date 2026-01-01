@@ -34,7 +34,6 @@ class Event(BaseModel):
 
 
 class Tripper(BaseModel):
-    id: str
     user_id: str
     origin_id: str
     event_id: str

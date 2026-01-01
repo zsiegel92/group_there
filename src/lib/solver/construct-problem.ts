@@ -38,7 +38,6 @@ export async function constructProblem(eventId: string) {
     id: `problem-${event.id}`, // TODO: nanoid? Get ID from db? Note: hashing problem should always EXCLUDE problem ID!
     event_id: event.id,
     trippers: event.eventsToUsers.map((eventToUser) => ({
-      id: `${eventToUser.eventId}-${eventToUser.userId}`,
       user_id: eventToUser.user.id,
       origin_id: eventToUser.originLocation,
       event_id: event.id,

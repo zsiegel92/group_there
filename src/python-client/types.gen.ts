@@ -95,10 +95,6 @@ export type Solution = {
  */
 export type Tripper = {
     /**
-     * Id
-     */
-    id: string;
-    /**
      * User Id
      */
     user_id: string;

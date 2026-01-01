@@ -54,7 +54,6 @@ def test_solve_simple_driver_and_rider():
     Expected solution: A picks up B (5 minutes total drive time)
     """
     tripper_a = Tripper(
-        id="tripper-a",
         user_id="user-a",
         origin_id="origin-a",
         event_id="event-1",
@@ -65,7 +64,6 @@ def test_solve_simple_driver_and_rider():
     )
 
     tripper_b = Tripper(
-        id="tripper-b",
         user_id="user-b",
         origin_id="origin-b",
         event_id="event-1",
