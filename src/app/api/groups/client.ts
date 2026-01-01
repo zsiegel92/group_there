@@ -4,15 +4,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
 // Response schemas
-const teamSchema = z.object({
+const groupSchema = z.object({
   id: z.string(),
   name: z.string(),
   isAdmin: z.boolean(),
   createdAt: z.coerce.date(),
 });
 
-const teamsResponseSchema = z.object({
-  teams: z.array(teamSchema),
+const groupsResponseSchema = z.object({
+  groups: z.array(groupSchema),
 });
 
 const memberSchema = z.object({
@@ -24,19 +24,19 @@ const memberSchema = z.object({
   joinedAt: z.coerce.date(),
 });
 
-const teamDetailSchema = z.object({
+const groupDetailSchema = z.object({
   id: z.string(),
   name: z.string(),
   isAdmin: z.boolean(),
   members: z.array(memberSchema),
 });
 
-const teamDetailResponseSchema = z.object({
-  team: teamDetailSchema,
+const groupDetailResponseSchema = z.object({
+  group: groupDetailSchema,
 });
 
-const createTeamResponseSchema = z.object({
-  team: teamSchema,
+const createGroupResponseSchema = z.object({
+  group: groupSchema,
 });
 
 const successResponseSchema = z.object({
@@ -45,55 +45,55 @@ const successResponseSchema = z.object({
 
 const acceptInviteResponseSchema = z.object({
   success: z.boolean(),
-  teamId: z.string(),
-  teamName: z.string(),
+  groupId: z.string(),
+  groupName: z.string(),
 });
 
 // Client functions
-export async function fetchTeams() {
-  const response = await fetch("/api/teams");
+export async function fetchGroups() {
+  const response = await fetch("/api/groups");
   if (!response.ok) {
-    throw new Error("Failed to fetch teams");
+    throw new Error("Failed to fetch groups");
   }
   const data = await response.json();
-  return teamsResponseSchema.parse(data);
+  return groupsResponseSchema.parse(data);
 }
 
-export async function createTeam(name: string) {
-  const response = await fetch("/api/teams", {
+export async function createGroup(name: string) {
+  const response = await fetch("/api/groups", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name }),
   });
   if (!response.ok) {
-    throw new Error("Failed to create team");
+    throw new Error("Failed to create group");
   }
   const data = await response.json();
-  return createTeamResponseSchema.parse(data);
+  return createGroupResponseSchema.parse(data);
 }
 
-export async function fetchTeamDetails(teamId: string) {
-  const response = await fetch(`/api/teams/${teamId}`);
+export async function fetchGroupDetails(groupId: string) {
+  const response = await fetch(`/api/groups/${groupId}`);
   if (!response.ok) {
-    throw new Error("Failed to fetch team details");
+    throw new Error("Failed to fetch group details");
   }
   const data = await response.json();
-  return teamDetailResponseSchema.parse(data);
+  return groupDetailResponseSchema.parse(data);
 }
 
-export async function deleteTeam(teamId: string) {
-  const response = await fetch(`/api/teams/${teamId}`, {
+export async function deleteGroup(groupId: string) {
+  const response = await fetch(`/api/groups/${groupId}`, {
     method: "DELETE",
   });
   if (!response.ok) {
-    throw new Error("Failed to delete team");
+    throw new Error("Failed to delete group");
   }
   const data = await response.json();
   return successResponseSchema.parse(data);
 }
 
-export async function inviteToTeam(teamId: string, email: string) {
-  const response = await fetch(`/api/teams/${teamId}/invite`, {
+export async function inviteToGroup(groupId: string, email: string) {
+  const response = await fetch(`/api/groups/${groupId}/invite`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
@@ -105,8 +105,8 @@ export async function inviteToTeam(teamId: string, email: string) {
   return successResponseSchema.parse(data);
 }
 
-export async function promoteToAdmin(teamId: string, userId: string) {
-  const response = await fetch(`/api/teams/${teamId}/promote`, {
+export async function promoteToAdmin(groupId: string, userId: string) {
+  const response = await fetch(`/api/groups/${groupId}/promote`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ userId }),
@@ -119,7 +119,7 @@ export async function promoteToAdmin(teamId: string, userId: string) {
 }
 
 export async function acceptInvite(token: string) {
-  const response = await fetch(`/api/teams/invite/accept?token=${token}`);
+  const response = await fetch(`/api/groups/invite/accept?token=${token}`);
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || "Failed to accept invite");
@@ -128,66 +128,66 @@ export async function acceptInvite(token: string) {
   return acceptInviteResponseSchema.parse(data);
 }
 
-export async function leaveTeam(teamId: string) {
-  const response = await fetch(`/api/teams/${teamId}/leave`, {
+export async function leaveGroup(groupId: string) {
+  const response = await fetch(`/api/groups/${groupId}/leave`, {
     method: "POST",
   });
   if (!response.ok) {
-    throw new Error("Failed to leave team");
+    throw new Error("Failed to leave group");
   }
   const data = await response.json();
   return successResponseSchema.parse(data);
 }
 
 // React Query hooks
-export function useTeams() {
+export function useGroups() {
   return useQuery({
-    queryKey: ["teams"],
-    queryFn: fetchTeams,
+    queryKey: ["groups"],
+    queryFn: fetchGroups,
   });
 }
 
-export function useTeamDetails(teamId: string) {
+export function useGroupDetails(groupId: string) {
   return useQuery({
-    queryKey: ["teams", teamId],
-    queryFn: () => fetchTeamDetails(teamId),
+    queryKey: ["groups", groupId],
+    queryFn: () => fetchGroupDetails(groupId),
   });
 }
 
-export function useCreateTeam() {
+export function useCreateGroup() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: createTeam,
+    mutationFn: createGroup,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
     },
   });
 }
 
-export function useDeleteTeam() {
+export function useDeleteGroup() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: deleteTeam,
+    mutationFn: deleteGroup,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
     },
   });
 }
 
-export function useInviteToTeam() {
+export function useInviteToGroup() {
   return useMutation({
-    mutationFn: ({ teamId, email }: { teamId: string; email: string }) =>
-      inviteToTeam(teamId, email),
+    mutationFn: ({ groupId, email }: { groupId: string; email: string }) =>
+      inviteToGroup(groupId, email),
   });
 }
 
 export function usePromoteToAdmin() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ teamId, userId }: { teamId: string; userId: string }) =>
-      promoteToAdmin(teamId, userId),
+    mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
+      promoteToAdmin(groupId, userId),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["teams", variables.teamId] });
+      queryClient.invalidateQueries({ queryKey: ["groups", variables.groupId] });
     },
   });
 }
@@ -197,17 +197,17 @@ export function useAcceptInvite() {
   return useMutation({
     mutationFn: acceptInvite,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
     },
   });
 }
 
-export function useLeaveTeam() {
+export function useLeaveGroup() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: leaveTeam,
+    mutationFn: leaveGroup,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
     },
   });
 }

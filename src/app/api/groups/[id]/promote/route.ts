@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db/db";
-import { teamsToUsers } from "@/db/schema";
+import { groupsToUsers } from "@/db/schema";
 import { getUser } from "@/lib/auth";
 
 const promoteSchema = z.object({
@@ -14,7 +14,7 @@ type Params = {
   params: Promise<{ id: string }>;
 };
 
-// POST /api/teams/[id]/promote - Promote a user to admin (admin only)
+// POST /api/groups/[id]/promote - Promote a user to admin (admin only)
 export async function POST(request: NextRequest, props: Params) {
   const params = await props.params;
   const user = await getUser(request);
@@ -23,13 +23,13 @@ export async function POST(request: NextRequest, props: Params) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const teamId = params.id;
+  const groupId = params.id;
 
-  // Check if requester is an admin of this team
-  const membership = await db.query.teamsToUsers.findFirst({
+  // Check if requester is an admin of this group
+  const membership = await db.query.groupsToUsers.findFirst({
     where: and(
-      eq(teamsToUsers.teamId, teamId),
-      eq(teamsToUsers.userId, user.id)
+      eq(groupsToUsers.groupId, groupId),
+      eq(groupsToUsers.userId, user.id)
     ),
   });
 
@@ -50,10 +50,10 @@ export async function POST(request: NextRequest, props: Params) {
   const { userId } = result.data;
 
   // Check if the target user is a member
-  const targetMembership = await db.query.teamsToUsers.findFirst({
+  const targetMembership = await db.query.groupsToUsers.findFirst({
     where: and(
-      eq(teamsToUsers.teamId, teamId),
-      eq(teamsToUsers.userId, userId)
+      eq(groupsToUsers.groupId, groupId),
+      eq(groupsToUsers.userId, userId)
     ),
   });
 
@@ -63,10 +63,10 @@ export async function POST(request: NextRequest, props: Params) {
 
   // Promote the user to admin
   await db
-    .update(teamsToUsers)
+    .update(groupsToUsers)
     .set({ isAdmin: true })
     .where(
-      and(eq(teamsToUsers.teamId, teamId), eq(teamsToUsers.userId, userId))
+      and(eq(groupsToUsers.groupId, groupId), eq(groupsToUsers.userId, userId))
     );
 
   return NextResponse.json({ success: true });

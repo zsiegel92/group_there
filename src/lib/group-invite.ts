@@ -5,43 +5,43 @@ import {
   randomBytes,
 } from "crypto";
 
-const SITE_SECRET = process.env.APP_TEAM_ENCRYPTION_SECRET;
+const SITE_SECRET = process.env.APP_GROUP_ENCRYPTION_SECRET;
 if (!SITE_SECRET) {
   throw new Error(
-    "APP_TEAM_ENCRYPTION_SECRET environment variable is required for team invites"
+    "APP_GROUP_ENCRYPTION_SECRET environment variable is required for group invites"
   );
 }
 
 const ALGORITHM = "aes-256-gcm";
 
 /**
- * Generate a random team secret (unhashed) for a new team
+ * Generate a random group secret (unhashed) for a new group
  */
-export function generateTeamSecret(): string {
+export function generateGroupSecret(): string {
   return randomBytes(32).toString("base64");
 }
 
 /**
- * Hash a team secret for storage in the database
+ * Hash a group secret for storage in the database
  */
-export function hashTeamSecret(teamSecret: string): string {
-  return createHash("sha256").update(teamSecret).digest("hex");
+export function hashGroupSecret(groupSecret: string): string {
+  return createHash("sha256").update(groupSecret).digest("hex");
 }
 
 /**
- * Create an invite token that encrypts team ID and user email
- * salted with the team secret and site-wide secret
+ * Create an invite token that encrypts group ID and user email
+ * salted with the group secret and site-wide secret
  */
 export function createInviteToken(params: {
-  teamId: string;
+  groupId: string;
   email: string;
-  teamSecret: string; // unhashed team secret
+  groupSecret: string; // unhashed group secret
 }): string {
-  const { teamId, email, teamSecret } = params;
+  const { groupId, email, groupSecret } = params;
 
-  // Create a salt combining team secret and site secret
+  // Create a salt combining group secret and site secret
   const salt = createHash("sha256")
-    .update(teamSecret + SITE_SECRET)
+    .update(groupSecret + SITE_SECRET)
     .digest();
 
   // Use first 32 bytes for key
@@ -52,7 +52,7 @@ export function createInviteToken(params: {
 
   // Encrypt the payload
   const cipher = createCipheriv(ALGORITHM, key, iv);
-  const payload = JSON.stringify({ teamId, email });
+  const payload = JSON.stringify({ groupId, email });
   const encrypted = Buffer.concat([
     cipher.update(payload, "utf8"),
     cipher.final(),
@@ -69,16 +69,16 @@ export function createInviteToken(params: {
 
 /**
  * Verify and decrypt an invite token
- * Returns the decrypted teamId and email if valid, or null if invalid
+ * Returns the decrypted groupId and email if valid, or null if invalid
  */
 export function verifyInviteToken(params: {
   token: string;
-  teamSecret: string; // unhashed team secret
+  groupSecret: string; // unhashed group secret
 }): {
-  teamId: string;
+  groupId: string;
   email: string;
 } | null {
-  const { token, teamSecret } = params;
+  const { token, groupSecret } = params;
 
   try {
     // Decode the token
@@ -91,7 +91,7 @@ export function verifyInviteToken(params: {
 
     // Create the same salt
     const salt = createHash("sha256")
-      .update(teamSecret + SITE_SECRET)
+      .update(groupSecret + SITE_SECRET)
       .digest();
 
     const key = salt.subarray(0, 32);
@@ -108,7 +108,7 @@ export function verifyInviteToken(params: {
     const payload = JSON.parse(decrypted.toString("utf8"));
 
     return {
-      teamId: payload.teamId,
+      groupId: payload.groupId,
       email: payload.email,
     };
   } catch {

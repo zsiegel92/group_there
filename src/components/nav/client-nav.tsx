@@ -35,7 +35,7 @@ function SignedInDetails({ user }: { user: User }) {
 }
 
 const navLinks: { href: string; text: string }[] = [
-  { href: "/teams", text: "Teams" },
+  { href: "/groups", text: "Groups" },
 ];
 
 function LoggedInNavParts({ user }: { user: User }) {

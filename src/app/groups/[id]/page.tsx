@@ -10,25 +10,25 @@ import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/lib/auth-client";
 
 import {
-  useDeleteTeam,
-  useInviteToTeam,
-  useLeaveTeam,
+  useDeleteGroup,
+  useInviteToGroup,
+  useLeaveGroup,
   usePromoteToAdmin,
-  useTeamDetails,
-} from "../../api/teams/client";
+  useGroupDetails,
+} from "../../api/groups/client";
 
-export default function TeamDetailPage(props: {
+export default function GroupDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const params = use(props.params);
   const router = useRouter();
-  const teamId = params.id;
+  const groupId = params.id;
   const { data: session } = useSession();
 
-  const { data, isLoading, error, refetch } = useTeamDetails(teamId);
-  const deleteTeam = useDeleteTeam();
-  const leaveTeam = useLeaveTeam();
-  const inviteToTeam = useInviteToTeam();
+  const { data, isLoading, error, refetch } = useGroupDetails(groupId);
+  const deleteGroup = useDeleteGroup();
+  const leaveGroup = useLeaveGroup();
+  const inviteToGroup = useInviteToGroup();
   const promoteToAdmin = usePromoteToAdmin();
 
   const [showInviteDialog, setShowInviteDialog] = useState(false);
@@ -60,7 +60,7 @@ export default function TeamDetailPage(props: {
     try {
       // Send all invites in parallel
       await Promise.all(
-        validEmails.map((email) => inviteToTeam.mutateAsync({ teamId, email }))
+        validEmails.map((email) => inviteToGroup.mutateAsync({ groupId, email }))
       );
       setInviteEmails([""]);
       setShowInviteDialog(false);
@@ -77,27 +77,27 @@ export default function TeamDetailPage(props: {
 
   const handleDelete = async () => {
     try {
-      await deleteTeam.mutateAsync(teamId);
-      router.push("/teams");
+      await deleteGroup.mutateAsync(groupId);
+      router.push("/groups");
     } catch (error) {
-      console.error("Failed to delete team:", error);
-      alert("Failed to delete team. Please try again.");
+      console.error("Failed to delete group:", error);
+      alert("Failed to delete group. Please try again.");
     }
   };
 
   const handleLeave = async () => {
     try {
-      await leaveTeam.mutateAsync(teamId);
-      router.push("/teams");
+      await leaveGroup.mutateAsync(groupId);
+      router.push("/groups");
     } catch (error) {
-      console.error("Failed to leave team:", error);
-      alert("Failed to leave team. Please try again.");
+      console.error("Failed to leave group:", error);
+      alert("Failed to leave group. Please try again.");
     }
   };
 
   const handlePromote = async (userId: string) => {
     try {
-      await promoteToAdmin.mutateAsync({ teamId, userId });
+      await promoteToAdmin.mutateAsync({ groupId, userId });
       refetch();
     } catch (error) {
       console.error("Failed to promote user:", error);
@@ -116,25 +116,25 @@ export default function TeamDetailPage(props: {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="text-red-600">Error loading team: {error.message}</div>
+        <div className="text-red-600">Error loading group: {error.message}</div>
       </div>
     );
   }
 
-  const team = data?.team;
-  if (!team) return null;
+  const group = data?.group;
+  if (!group) return null;
 
   // Check if the current user is the only admin
-  const adminCount = team.members.filter((m) => m.isAdmin).length;
-  const isOnlyAdmin = team.isAdmin && adminCount === 1;
+  const adminCount = group.members.filter((m) => m.isAdmin).length;
+  const isOnlyAdmin = group.isAdmin && adminCount === 1;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-2">
-          <h1 className="text-2xl sm:text-3xl font-bold">{team.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">{group.name}</h1>
           <div className="flex flex-wrap gap-2">
-            {team.isAdmin && (
+            {group.isAdmin && (
               <>
                 <Button
                   onClick={() => setShowInviteDialog(true)}
@@ -149,7 +149,7 @@ export default function TeamDetailPage(props: {
                   size="sm"
                   className="sm:h-10"
                 >
-                  Delete Team
+                  Delete Group
                 </Button>
               </>
             )}
@@ -161,15 +161,15 @@ export default function TeamDetailPage(props: {
               className="sm:h-10"
               title={
                 isOnlyAdmin
-                  ? "You cannot leave the team as the only admin. Promote another member to admin first or delete the team."
+                  ? "You cannot leave the group as the only admin. Promote another member to admin first or delete the group."
                   : undefined
               }
             >
-              Leave Team
+              Leave Group
             </Button>
           </div>
         </div>
-        {team.isAdmin && (
+        {group.isAdmin && (
           <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
             You are an admin
           </span>
@@ -178,10 +178,10 @@ export default function TeamDetailPage(props: {
 
       <div>
         <h2 className="text-xl font-semibold mb-4">
-          Members ({team.members.length})
+          Members ({group.members.length})
         </h2>
         <div className="space-y-3">
-          {team.members.map((member) => {
+          {group.members.map((member) => {
             const isCurrentUser = session?.user?.id === member.id;
             return (
               <div
@@ -224,7 +224,7 @@ export default function TeamDetailPage(props: {
                     <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
                       Admin
                     </span>
-                  ) : team.isAdmin ? (
+                  ) : group.isAdmin ? (
                     <Button
                       size="sm"
                       variant="secondary"
@@ -287,9 +287,9 @@ export default function TeamDetailPage(props: {
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold mb-4">Delete Team</h2>
+            <h2 className="text-xl font-bold mb-4">Delete Group</h2>
             <p className="mb-6">
-              Are you sure you want to delete this team? This action cannot be
+              Are you sure you want to delete this group? This action cannot be
               undone.
             </p>
             <div className="flex gap-2 justify-end">
@@ -297,16 +297,16 @@ export default function TeamDetailPage(props: {
                 type="button"
                 variant="secondary"
                 onClick={() => setShowDeleteConfirm(false)}
-                disabled={deleteTeam.isPending}
+                disabled={deleteGroup.isPending}
               >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleDelete}
-                disabled={deleteTeam.isPending}
+                disabled={deleteGroup.isPending}
               >
-                {deleteTeam.isPending ? "Deleting..." : "Delete Team"}
+                {deleteGroup.isPending ? "Deleting..." : "Delete Group"}
               </Button>
             </div>
           </div>
@@ -316,9 +316,9 @@ export default function TeamDetailPage(props: {
       {showLeaveConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold mb-4">Leave Team</h2>
+            <h2 className="text-xl font-bold mb-4">Leave Group</h2>
             <p className="mb-6">
-              Are you sure you want to leave this team? You will need to be
+              Are you sure you want to leave this group? You will need to be
               re-invited to rejoin.
             </p>
             <div className="flex gap-2 justify-end">
@@ -326,16 +326,16 @@ export default function TeamDetailPage(props: {
                 type="button"
                 variant="secondary"
                 onClick={() => setShowLeaveConfirm(false)}
-                disabled={leaveTeam.isPending}
+                disabled={leaveGroup.isPending}
               >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleLeave}
-                disabled={leaveTeam.isPending}
+                disabled={leaveGroup.isPending}
               >
-                {leaveTeam.isPending ? "Leaving..." : "Leave Team"}
+                {leaveGroup.isPending ? "Leaving..." : "Leave Group"}
               </Button>
             </div>
           </div>

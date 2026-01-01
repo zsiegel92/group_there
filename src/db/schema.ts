@@ -89,10 +89,10 @@ export const verifications = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)]
 );
 
-export const teams = pgTable("teams", {
+export const groups = pgTable("groups", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  secret: text("secret").notNull(), // hashed team secret for invite verification
+  secret: text("secret").notNull(), // hashed group secret for invite verification
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt")
     .defaultNow()
@@ -100,12 +100,12 @@ export const teams = pgTable("teams", {
     .notNull(),
 });
 
-export const teamsToUsers = pgTable(
-  "teamsToUsers",
+export const groupsToUsers = pgTable(
+  "groupsToUsers",
   {
-    teamId: text("teamId")
+    groupId: text("groupId")
       .notNull()
-      .references(() => teams.id, { onDelete: "cascade" }),
+      .references(() => groups.id, { onDelete: "cascade" }),
     userId: text("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -113,16 +113,16 @@ export const teamsToUsers = pgTable(
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.teamId, table.userId] }),
-    index("teamsToUsers_teamId_idx").on(table.teamId),
-    index("teamsToUsers_userId_idx").on(table.userId),
+    primaryKey({ columns: [table.groupId, table.userId] }),
+    index("groupsToUsers_groupId_idx").on(table.groupId),
+    index("groupsToUsers_userId_idx").on(table.userId),
   ]
 );
 
 export const userRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   accounts: many(accounts),
-  teamsToUsers: many(teamsToUsers),
+  groupsToUsers: many(groupsToUsers),
 }));
 
 export const sessionRelations = relations(sessions, ({ one }) => ({
@@ -139,17 +139,17 @@ export const accountRelations = relations(accounts, ({ one }) => ({
   }),
 }));
 
-export const teamRelations = relations(teams, ({ many }) => ({
-  teamsToUsers: many(teamsToUsers),
+export const groupRelations = relations(groups, ({ many }) => ({
+  groupsToUsers: many(groupsToUsers),
 }));
 
-export const teamsToUsersRelations = relations(teamsToUsers, ({ one }) => ({
-  team: one(teams, {
-    fields: [teamsToUsers.teamId],
-    references: [teams.id],
+export const groupsToUsersRelations = relations(groupsToUsers, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupsToUsers.groupId],
+    references: [groups.id],
   }),
   user: one(users, {
-    fields: [teamsToUsers.userId],
+    fields: [groupsToUsers.userId],
     references: [users.id],
   }),
 }));

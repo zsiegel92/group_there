@@ -14,7 +14,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <h1 className="text-2xl sm:text-3xl font-bold">Sign In</h1>
           <p className="text-sm sm:text-base text-muted-foreground">
             Sign in to access GROUPTHERE and start coordinating rides with your
-            team
+            group
           </p>
         </div>
         <div className="flex justify-center">

@@ -3,10 +3,10 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db/db";
-import { teams, teamsToUsers } from "@/db/schema";
+import { groups, groupsToUsers } from "@/db/schema";
 import { getUser } from "@/lib/auth";
 import { sendEmail } from "@/lib/resend";
-import { createInviteToken } from "@/lib/team-invite";
+import { createInviteToken } from "@/lib/group-invite";
 
 const inviteSchema = z.object({
   email: z.string().email(),
@@ -16,7 +16,7 @@ type Params = {
   params: Promise<{ id: string }>;
 };
 
-// POST /api/teams/[id]/invite - Send an invite to join the team (admin only)
+// POST /api/groups/[id]/invite - Send an invite to join the group (admin only)
 export async function POST(request: NextRequest, props: Params) {
   const params = await props.params;
   const user = await getUser(request);
@@ -25,13 +25,13 @@ export async function POST(request: NextRequest, props: Params) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const teamId = params.id;
+  const groupId = params.id;
 
-  // Check if user is an admin of this team
-  const membership = await db.query.teamsToUsers.findFirst({
+  // Check if user is an admin of this group
+  const membership = await db.query.groupsToUsers.findFirst({
     where: and(
-      eq(teamsToUsers.teamId, teamId),
-      eq(teamsToUsers.userId, user.id)
+      eq(groupsToUsers.groupId, groupId),
+      eq(groupsToUsers.userId, user.id)
     ),
   });
 
@@ -51,39 +51,39 @@ export async function POST(request: NextRequest, props: Params) {
 
   const { email } = result.data;
 
-  // Get the team with its secret
-  const team = await db.query.teams.findFirst({
-    where: eq(teams.id, teamId),
+  // Get the group with its secret
+  const group = await db.query.groups.findFirst({
+    where: eq(groups.id, groupId),
   });
 
-  if (!team) {
-    return NextResponse.json({ error: "Team not found" }, { status: 404 });
+  if (!group) {
+    return NextResponse.json({ error: "Group not found" }, { status: 404 });
   }
 
-  // The team.secret is already hashed in the DB
+  // The group.secret is already hashed in the DB
   // We need the unhashed secret to create the invite token
   // Since we don't store the unhashed secret, we'll need to modify our approach
   // Instead, we'll use the hashed secret as the salt (it's still a secret value)
   const inviteToken = createInviteToken({
-    teamId,
+    groupId,
     email,
-    teamSecret: team.secret, // Using hashed secret as the salt
+    groupSecret: group.secret, // Using hashed secret as the salt
   });
 
   // Create the invite URL
   const baseUrl =
     process.env.VERCEL_URL || process.env.PRODUCTION_URL || "localhost:3000";
   const protocol = baseUrl.includes("localhost") ? "http" : "https";
-  const inviteUrl = `${protocol}://${baseUrl}/teams/invite/accept?token=${inviteToken}`;
+  const inviteUrl = `${protocol}://${baseUrl}/groups/invite/accept?token=${inviteToken}`;
 
   // Send the invite email
   await sendEmail({
     to: email,
-    subject: `You've been invited to join ${team.name} on GROUPTHERE`,
-    text: `You've been invited to join the team "${team.name}" on GROUPTHERE.\n\nClick the link below to accept the invitation:\n${inviteUrl}\n\nIf you don't have an account yet, you'll need to sign up first.`,
+    subject: `You've been invited to join ${group.name} on GROUPTHERE`,
+    text: `You've been invited to join the group "${group.name}" on GROUPTHERE.\n\nClick the link below to accept the invitation:\n${inviteUrl}\n\nIf you don't have an account yet, you'll need to sign up first.`,
     html: `
-      <h2>Team Invitation</h2>
-      <p>You've been invited to join the team <strong>${team.name}</strong> on GROUPTHERE.</p>
+      <h2>Group Invitation</h2>
+      <p>You've been invited to join the group <strong>${group.name}</strong> on GROUPTHERE.</p>
       <p><a href="${inviteUrl}">Click here to accept the invitation</a></p>
       <p>If you don't have an account yet, you'll need to sign up first.</p>
     `,

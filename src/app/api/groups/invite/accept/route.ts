@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db/db";
-import { teams, teamsToUsers } from "@/db/schema";
+import { groups, groupsToUsers } from "@/db/schema";
 import { getUser } from "@/lib/auth";
-import { verifyInviteToken } from "@/lib/team-invite";
+import { verifyInviteToken } from "@/lib/group-invite";
 
-// GET /api/teams/invite/accept?token=... - Accept a team invitation
+// GET /api/groups/invite/accept?token=... - Accept a group invitation
 export async function GET(request: NextRequest) {
   const user = await getUser(request);
 
@@ -20,27 +20,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Token required" }, { status: 400 });
   }
 
-  // First, try to find the team (we'll need to check all teams)
+  // First, try to find the group (we'll need to check all groups)
   // This is not ideal but necessary since we can't decrypt without the secret
-  const allTeams = await db.query.teams.findMany();
+  const allGroups = await db.query.groups.findMany();
 
-  let teamId: string | null = null;
+  let groupId: string | null = null;
   let inviteEmail: string | null = null;
 
-  for (const team of allTeams) {
+  for (const group of allGroups) {
     const result = verifyInviteToken({
       token,
-      teamSecret: team.secret, // hashed secret
+      groupSecret: group.secret, // hashed secret
     });
 
-    if (result && result.teamId === team.id) {
-      teamId = result.teamId;
+    if (result && result.groupId === group.id) {
+      groupId = result.groupId;
       inviteEmail = result.email;
       break;
     }
   }
 
-  if (!teamId || !inviteEmail) {
+  if (!groupId || !inviteEmail) {
     return NextResponse.json(
       { error: "Invalid or expired invite token" },
       { status: 400 }
@@ -55,40 +55,40 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Verify the team exists
-  const team = await db.query.teams.findFirst({
-    where: eq(teams.id, teamId),
+  // Verify the group exists
+  const group = await db.query.groups.findFirst({
+    where: eq(groups.id, groupId),
   });
 
-  if (!team) {
-    return NextResponse.json({ error: "Team not found" }, { status: 404 });
+  if (!group) {
+    return NextResponse.json({ error: "Group not found" }, { status: 404 });
   }
 
   // Check if user is already a member
-  const existingMembership = await db.query.teamsToUsers.findFirst({
+  const existingMembership = await db.query.groupsToUsers.findFirst({
     where: and(
-      eq(teamsToUsers.teamId, teamId),
-      eq(teamsToUsers.userId, user.id)
+      eq(groupsToUsers.groupId, groupId),
+      eq(groupsToUsers.userId, user.id)
     ),
   });
 
   if (existingMembership) {
     return NextResponse.json(
-      { error: "Already a member", teamId },
+      { error: "Already a member", groupId },
       { status: 200 }
     );
   }
 
-  // Add the user to the team
-  await db.insert(teamsToUsers).values({
-    teamId,
+  // Add the user to the group
+  await db.insert(groupsToUsers).values({
+    groupId,
     userId: user.id,
     isAdmin: false,
   });
 
   return NextResponse.json({
     success: true,
-    teamId,
-    teamName: team.name,
+    groupId,
+    groupName: group.name,
   });
 }
