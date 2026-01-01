@@ -79,13 +79,13 @@ def test_solve_simple_driver_and_rider():
         trippers=[tripper_a, tripper_b],
         tripper_distances=[
             TripperDistance(
-                origin_user_id="tripper-a",
-                destination_user_id="tripper-b",
+                origin_user_id="user-a",
+                destination_user_id="user-b",
                 distance_seconds=5.0,
             ),
             TripperDistance(
-                origin_user_id="tripper-b",
-                destination_user_id="tripper-a",
+                origin_user_id="user-b",
+                destination_user_id="user-a",
                 distance_seconds=5.0,
             ),
         ],
@@ -102,8 +102,8 @@ def test_solve_simple_driver_and_rider():
         parties=[
             Party(
                 id="party-1",
-                driver_tripper_id="tripper-a",
-                passenger_tripper_ids=["tripper-b"],
+                driver_tripper_id="user-a",
+                passenger_tripper_ids=["user-b"],
             )
         ],
         total_drive_seconds=5.0,
