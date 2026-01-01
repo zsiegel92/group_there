@@ -85,7 +85,7 @@ export default function EventsPage() {
 
   const totalEvents = data?.events.length || 0;
   const isAdminOfAnyGroup =
-    groupsData?.groups.some((group) => group.isAdmin) || false;
+    groupsData?.groups.some((gm) => gm.isAdmin) || false;
 
   return (
     <div className="container mx-auto px-4 py-8">

@@ -24,7 +24,7 @@ export default function CreateEventPage() {
   const [message, setMessage] = useState("");
 
   // Filter to only show groups where user is admin
-  const adminGroups = groupsData?.groups.filter((group) => group.isAdmin) || [];
+  const adminGroups = groupsData?.groups.filter((gm) => gm.isAdmin) || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,9 +85,9 @@ export default function CreateEventPage() {
             disabled={createEvent.isPending}
           >
             <option value="">Select a group</option>
-            {adminGroups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.name}
+            {adminGroups.map((groupMembership) => (
+              <option key={groupMembership.group.id} value={groupMembership.group.id}>
+                {groupMembership.group.name}
               </option>
             ))}
           </select>

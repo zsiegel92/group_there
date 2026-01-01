@@ -124,20 +124,26 @@ export default function GroupDetailPage(props: {
     );
   }
 
-  const group = data?.group;
-  if (!group) return null;
+  const groupDetail = data?.group;
+  if (!groupDetail) return null;
+
+  // Find current user's membership to determine admin status
+  const currentUserMembership = groupDetail.members.find(
+    (m) => m.user.id === session?.user?.id
+  );
+  const isAdmin = currentUserMembership?.isAdmin ?? false;
 
   // Check if the current user is the only admin
-  const adminCount = group.members.filter((m) => m.isAdmin).length;
-  const isOnlyAdmin = group.isAdmin && adminCount === 1;
+  const adminCount = groupDetail.members.filter((m) => m.isAdmin).length;
+  const isOnlyAdmin = isAdmin && adminCount === 1;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-2">
-          <h1 className="text-2xl sm:text-3xl font-bold">{group.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">{groupDetail.group.name}</h1>
           <div className="flex flex-wrap gap-2">
-            {group.isAdmin && (
+            {isAdmin && (
               <>
                 <Link href={`/events/create?groupId=${groupId}`}>
                   <Button size="sm" className="sm:h-10">
@@ -177,7 +183,7 @@ export default function GroupDetailPage(props: {
             </Button>
           </div>
         </div>
-        {group.isAdmin && (
+        {isAdmin && (
           <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
             You are an admin
           </span>
@@ -186,14 +192,14 @@ export default function GroupDetailPage(props: {
 
       <div>
         <h2 className="text-xl font-semibold mb-4">
-          Members ({group.members.length})
+          Members ({groupDetail.members.length})
         </h2>
         <div className="space-y-3">
-          {group.members.map((member) => {
-            const isCurrentUser = session?.user?.id === member.id;
+          {groupDetail.members.map((membershipInfo) => {
+            const isCurrentUser = session?.user?.id === membershipInfo.user.id;
             return (
               <div
-                key={member.id}
+                key={membershipInfo.user.id}
                 className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border rounded-lg ${
                   isCurrentUser
                     ? "bg-blue-50 border-blue-300"
@@ -201,10 +207,10 @@ export default function GroupDetailPage(props: {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  {member.image && (
+                  {membershipInfo.user.image && (
                     <Image
-                      src={member.image}
-                      alt={member.name}
+                      src={membershipInfo.user.image}
+                      alt={membershipInfo.user.name}
                       width={40}
                       height={40}
                       className="w-10 h-10 rounded-full"
@@ -212,7 +218,7 @@ export default function GroupDetailPage(props: {
                   )}
                   <div>
                     <div className="font-medium">
-                      {member.name}
+                      {membershipInfo.user.name}
                       {isCurrentUser && (
                         <span className="ml-2 px-2 py-0.5 bg-blue-200 text-blue-800 rounded text-xs font-normal">
                           You
@@ -220,23 +226,23 @@ export default function GroupDetailPage(props: {
                       )}
                     </div>
                     <div className="text-sm text-gray-600 break-all">
-                      {member.email}
+                      {membershipInfo.user.email}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Joined {member.joinedAt.toLocaleDateString()}
+                      Joined {membershipInfo.joinedAt.toLocaleDateString()}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 sm:shrink-0">
-                  {member.isAdmin ? (
+                  {membershipInfo.isAdmin ? (
                     <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
                       Admin
                     </span>
-                  ) : group.isAdmin ? (
+                  ) : isAdmin ? (
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => handlePromote(member.id)}
+                      onClick={() => handlePromote(membershipInfo.user.id)}
                       disabled={promoteToAdmin.isPending}
                     >
                       Promote to Admin

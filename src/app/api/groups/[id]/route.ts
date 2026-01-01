@@ -50,14 +50,18 @@ export async function GET(request: NextRequest, props: Params) {
 
   return NextResponse.json({
     group: {
-      id: group.id,
-      name: group.name,
-      isAdmin: membership.isAdmin,
+      group: {
+        id: group.id,
+        name: group.name,
+        createdAt: group.createdAt,
+      },
       members: group.groupsToUsers.map((gu) => ({
-        id: gu.user.id,
-        name: gu.user.name,
-        email: gu.user.email,
-        image: gu.user.image,
+        user: {
+          id: gu.user.id,
+          name: gu.user.name,
+          email: gu.user.email,
+          image: gu.user.image,
+        },
         isAdmin: gu.isAdmin,
         joinedAt: gu.createdAt,
       })),

@@ -50,21 +50,21 @@ export default function GroupsPage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {groups.map((group) => (
+          {groups.map((groupMembership) => (
             <Link
-              key={group.id}
-              href={`/groups/${group.id}`}
+              key={groupMembership.group.id}
+              href={`/groups/${groupMembership.group.id}`}
               className="block p-6 border rounded-lg hover:border-gray-400 transition-colors"
             >
-              <h2 className="text-xl font-semibold mb-2">{group.name}</h2>
+              <h2 className="text-xl font-semibold mb-2">{groupMembership.group.name}</h2>
               <div className="flex gap-2 text-sm text-gray-600">
-                {group.isAdmin && (
+                {groupMembership.isAdmin && (
                   <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
                     Admin
                   </span>
                 )}
                 <span className="text-gray-500">
-                  Created {group.createdAt.toLocaleDateString()}
+                  Created {groupMembership.group.createdAt.toLocaleDateString()}
                 </span>
               </div>
             </Link>

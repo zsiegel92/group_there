@@ -3,32 +3,39 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
-// Response schemas
+// Base schemas
 const groupSchema = z.object({
   id: z.string(),
   name: z.string(),
-  isAdmin: z.boolean(),
   createdAt: z.coerce.date(),
 });
 
-const groupsResponseSchema = z.object({
-  groups: z.array(groupSchema),
-});
-
-const memberSchema = z.object({
+const userSchema = z.object({
   id: z.string(),
   name: z.string(),
   email: z.string(),
   image: z.string().nullable(),
+});
+
+// Response schemas for specific endpoints
+const groupWithMembershipSchema = z.object({
+  group: groupSchema,
+  isAdmin: z.boolean(),
+});
+
+const groupsResponseSchema = z.object({
+  groups: z.array(groupWithMembershipSchema),
+});
+
+const groupMemberSchema = z.object({
+  user: userSchema,
   isAdmin: z.boolean(),
   joinedAt: z.coerce.date(),
 });
 
 const groupDetailSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  isAdmin: z.boolean(),
-  members: z.array(memberSchema),
+  group: groupSchema,
+  members: z.array(groupMemberSchema),
 });
 
 const groupDetailResponseSchema = z.object({

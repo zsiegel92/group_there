@@ -27,10 +27,12 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     groups: userGroups.map((ug) => ({
-      id: ug.group.id,
-      name: ug.group.name,
+      group: {
+        id: ug.group.id,
+        name: ug.group.name,
+        createdAt: ug.group.createdAt,
+      },
       isAdmin: ug.isAdmin,
-      createdAt: ug.group.createdAt,
     })),
   });
 }
@@ -80,7 +82,6 @@ export async function POST(request: NextRequest) {
     group: {
       id: createdGroup.id,
       name: createdGroup.name,
-      isAdmin: true,
       createdAt: createdGroup.createdAt,
     },
   });
