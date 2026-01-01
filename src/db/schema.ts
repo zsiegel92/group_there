@@ -122,13 +122,13 @@ export const groupsToUsers = pgTable(
   ]
 );
 
-const drivingStatusEnumValues = [
+export const drivingStatusEnumValues = [
   "cannot_drive",
   "must_drive",
   "can_drive_or_not",
 ] as const;
 
-type DrivingStatus = (typeof drivingStatusEnumValues)[number];
+export type DrivingStatus = (typeof drivingStatusEnumValues)[number];
 
 export const drivingStatusEnumValuesForDrivers: DrivingStatus[] = [
   "must_drive",

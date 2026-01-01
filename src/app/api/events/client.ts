@@ -3,6 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
+import {
+  drivingStatusEnumValues,
+  // type DrivingStatus,
+} from "@/db/schema";
+
 // Response schemas
 const groupSchema = z.object({
   id: z.string(),
@@ -35,7 +40,7 @@ const attendeeSchema = z.object({
   userName: z.string(),
   userEmail: z.string(),
   userImage: z.string().nullable(),
-  drivingStatus: z.enum(["cannot_drive", "must_drive", "can_drive_or_not"]),
+  drivingStatus: z.enum(drivingStatusEnumValues),
   passengersCount: z.number().nullable(),
   earliestLeaveTime: z.string().nullable(),
   originLocation: z.string(),
@@ -43,11 +48,13 @@ const attendeeSchema = z.object({
 });
 
 const userAttendanceSchema = z.object({
-  drivingStatus: z.enum(["cannot_drive", "must_drive", "can_drive_or_not"]),
+  drivingStatus: z.enum(drivingStatusEnumValues),
   passengersCount: z.number().nullable(),
   earliestLeaveTime: z.string().nullable(),
   originLocation: z.string(),
 });
+
+type UserAttendance = z.infer<typeof userAttendanceSchema>;
 
 const eventDetailSchema = z.object({
   id: z.string(),
@@ -106,7 +113,7 @@ const attendanceResponseSchema = z.object({
   attendance: z.object({
     eventId: z.string(),
     userId: z.string(),
-    drivingStatus: z.enum(["cannot_drive", "must_drive", "can_drive_or_not"]),
+    drivingStatus: z.enum(drivingStatusEnumValues),
     passengersCount: z.number().nullable(),
     earliestLeaveTime: z.string().nullable(),
     originLocation: z.string(),
@@ -192,15 +199,7 @@ export async function deleteEvent(eventId: string) {
   return successResponseSchema.parse(data);
 }
 
-export async function attendEvent(
-  eventId: string,
-  input: {
-    drivingStatus: "cannot_drive" | "must_drive" | "can_drive_or_not";
-    passengersCount?: number;
-    earliestLeaveTime?: string;
-    originLocation: string;
-  }
-) {
+export async function attendEvent(eventId: string, input: UserAttendance) {
   const response = await fetch(`/api/events/${eventId}/attend`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -214,15 +213,7 @@ export async function attendEvent(
   return attendanceResponseSchema.parse(data);
 }
 
-export async function updateAttendance(
-  eventId: string,
-  input: {
-    drivingStatus: "cannot_drive" | "must_drive" | "can_drive_or_not";
-    passengersCount?: number;
-    earliestLeaveTime?: string;
-    originLocation: string;
-  }
-) {
+export async function updateAttendance(eventId: string, input: UserAttendance) {
   const response = await fetch(`/api/events/${eventId}/attend`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -337,12 +328,7 @@ export function useAttendEvent() {
       input,
     }: {
       eventId: string;
-      input: {
-        drivingStatus: "cannot_drive" | "must_drive" | "can_drive_or_not";
-        passengersCount?: number;
-        earliestLeaveTime?: string;
-        originLocation: string;
-      };
+      input: UserAttendance;
     }) => attendEvent(eventId, input),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
@@ -361,12 +347,7 @@ export function useUpdateAttendance() {
       input,
     }: {
       eventId: string;
-      input: {
-        drivingStatus: "cannot_drive" | "must_drive" | "can_drive_or_not";
-        passengersCount?: number;
-        earliestLeaveTime?: string;
-        originLocation: string;
-      };
+      input: UserAttendance;
     }) => updateAttendance(eventId, input),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["events"] });

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { type DrivingStatus } from "@/db/schema";
 import { useSession } from "@/lib/auth-client";
 
 import {
@@ -50,9 +51,8 @@ export default function EventDetailPage(props: {
   const [editMessage, setEditMessage] = useState("");
 
   // Attendance form state
-  const [drivingStatus, setDrivingStatus] = useState<
-    "cannot_drive" | "must_drive" | "can_drive_or_not"
-  >("cannot_drive");
+  const [drivingStatus, setDrivingStatus] =
+    useState<DrivingStatus>("cannot_drive");
   const [passengersCount, setPassengersCount] = useState(1);
   const [earliestLeaveTime, setEarliestLeaveTime] = useState("");
   const [originLocation, setOriginLocation] = useState("");
@@ -66,9 +66,9 @@ export default function EventDetailPage(props: {
     const attendanceData = {
       drivingStatus,
       passengersCount:
-        drivingStatus !== "cannot_drive" ? passengersCount : undefined,
+        drivingStatus !== "cannot_drive" ? passengersCount : null,
       earliestLeaveTime:
-        drivingStatus !== "cannot_drive" ? earliestLeaveTime : undefined,
+        drivingStatus !== "cannot_drive" ? earliestLeaveTime : null,
       originLocation,
     };
 
