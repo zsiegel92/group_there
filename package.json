@@ -17,7 +17,7 @@
     "python:format": "uv run --directory src/solver ruff format --check",
     "python:format-fix": "uv run --directory src/solver ruff format",
     "python:test": "uv run --directory src/solver/tests pytest",
-    "python:test-server": "uv run --directory src/solver modal run server.py",
+    "python:test-server": "uv run --directory src/solver modal run -m test_server",
     "python:check-all": "pnpm run python:type-check && pnpm run python:lint && pnpm run python:format && pnpm run python:test && pnpm run python:test-server",
     "python:dev-fastapi": "uv run --directory src/solver uvicorn server:webapp --reload --port 8000",
     "python:dev-fastapi-2": "uv run --directory src/solver fastapi run server.py --reload --port 8000",

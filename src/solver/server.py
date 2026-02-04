@@ -43,8 +43,3 @@ def serve_webapp():
 def test_remote():
     print("Running on server!")
     return "Returning from server!"
-
-
-@app.local_entrypoint()
-def test_server():
-    print(test_remote.remote())
