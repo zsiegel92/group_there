@@ -16,6 +16,7 @@ TypeScript (Next.js) ←→ Python Solver Service (FastAPI/Modal)
 ## Components
 
 ### 1. Python Solver Service
+
 - **Location**: `src/solver/`
 - **Framework**: FastAPI with Modal deployment
 - **Endpoints**:
@@ -23,12 +24,14 @@ TypeScript (Next.js) ←→ Python Solver Service (FastAPI/Modal)
   - `POST /solve-async` - Async solve (returns ProblemReceivedResponse)
 
 ### 2. TypeScript Client
+
 - **Generated from**: OpenAPI spec (`src/solver/openapi.json`)
 - **Output**: `src/python-client/`
 - **Wrapper**: `src/lib/python-client.ts` (configures auth/URL)
 - **Generator**: `@hey-api/openapi-ts` with Zod validation
 
 ### 3. Integration Tests
+
 - **Location**: `src/scripts/smoke-tests/test-solver-service.ts`
 - **Tests**:
   - Empty problem
@@ -45,10 +48,12 @@ npm run gen-client
 ```
 
 This:
+
 1. Dumps OpenAPI spec from FastAPI app (`dump_openapi.py`)
 2. Generates TypeScript types and SDK (`openapi-ts`)
 
 **Files generated**:
+
 - `src/python-client/types.gen.ts` - TypeScript type definitions
 - `src/python-client/sdk.gen.ts` - API functions
 - `src/python-client/zod.gen.ts` - Zod validators
@@ -63,6 +68,7 @@ npm run dev:fastapi-only
 ```
 
 This runs:
+
 - Python: `uvicorn server:webapp --reload --port 8000`
 - Next.js: `next dev` (with `GROUPTHERE_SOLVER_API_URL=http://localhost:8000`)
 

@@ -7,6 +7,7 @@ Successfully refactored the carpooling solver from brute-force to MILP-based app
 ## What Was Done
 
 ### 1. Subset Enumeration Module (`groupthere_solver/subsets.py`)
+
 - ✓ Implemented `SubsetEnumerator` class with lexicographic ordering
 - ✓ Efficient n-choose-k combinations using combinatorial number system
 - ✓ Bidirectional mapping: generate subset from index, get index from subset
@@ -14,6 +15,7 @@ Successfully refactored the carpooling solver from brute-force to MILP-based app
 - ✓ 11 comprehensive tests
 
 ### 2. Group Generator Module (`groupthere_solver/group_generator.py`)
+
 - ✓ Pre-computes all feasible carpooling groups
 - ✓ Respects capacity constraints (car_fits)
 - ✓ Enforces must_drive constraints
@@ -22,6 +24,7 @@ Successfully refactored the carpooling solver from brute-force to MILP-based app
 - ✓ 8 comprehensive tests
 
 ### 3. MILP Solver Module (`groupthere_solver/milp.py`)
+
 - ✓ Pyomo-based formulation
 - ✓ Binary decision variables for group selection
 - ✓ Constraint: each tripper in exactly one group
@@ -30,6 +33,7 @@ Successfully refactored the carpooling solver from brute-force to MILP-based app
 - ✓ 6 comprehensive tests
 
 ### 4. Main Solver (`groupthere_solver/solve.py`)
+
 - ✓ Refactored from exhaustive partition search to MILP approach
 - ✓ Three-phase architecture:
   1. Generate feasible groups
@@ -39,6 +43,7 @@ Successfully refactored the carpooling solver from brute-force to MILP-based app
 - ✓ All existing tests still pass
 
 ### 5. Dependencies & Tooling
+
 - ✓ Added Pyomo to pyproject.toml
 - ✓ Installed GLPK solver via Homebrew
 - ✓ All Python checks passing:
@@ -51,6 +56,7 @@ Successfully refactored the carpooling solver from brute-force to MILP-based app
 ## Architecture Improvements
 
 ### Before (Brute Force)
+
 ```
 Generate ALL partitions of trippers
   → For each partition:
@@ -59,9 +65,11 @@ Generate ALL partitions of trippers
           → Try all pickup orders
       → Select best partition
 ```
+
 Complexity: Exponential in number of trippers (Bell number)
 
 ### After (MILP)
+
 ```
 1. Generate feasible groups (with constraints)
    → For each group size k (1 to max_capacity):
@@ -76,6 +84,7 @@ Complexity: Exponential in number of trippers (Bell number)
 
 3. Convert result to Solution format
 ```
+
 Complexity: Much better - generates O(n^k) groups, then polynomial MILP solve
 
 ## Code Quality
@@ -89,6 +98,7 @@ Complexity: Much better - generates O(n^k) groups, then polynomial MILP solve
 ## Files Created/Modified
 
 ### New Files
+
 - `src/solver/groupthere_solver/subsets.py`
 - `src/solver/groupthere_solver/group_generator.py`
 - `src/solver/groupthere_solver/milp.py`
@@ -97,6 +107,7 @@ Complexity: Much better - generates O(n^k) groups, then polynomial MILP solve
 - `src/solver/tests/test_milp.py`
 
 ### Modified Files
+
 - `src/solver/groupthere_solver/solve.py` - Complete rewrite using MILP approach
 - `src/solver/pyproject.toml` - Added pyomo dependency
 - `src/solver/uv.lock` - Updated dependencies

@@ -2,6 +2,12 @@
 
 import { use } from "react";
 
+import {
+  AdminBadge,
+  ScheduledBadge,
+  UnscheduledBadge,
+  YouBadge,
+} from "@/components/ui/badges";
 import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/lib/auth-client";
 
@@ -65,20 +71,8 @@ export default function EventDetailPage(props: {
           )}
         </div>
         <div className="flex gap-2">
-          {event.isAdmin && (
-            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
-              Admin
-            </span>
-          )}
-          {event.scheduled ? (
-            <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm">
-              Scheduled
-            </span>
-          ) : (
-            <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-sm">
-              Unscheduled (Not visible to members)
-            </span>
-          )}
+          {event.isAdmin && <AdminBadge />}
+          {event.scheduled ? <ScheduledBadge /> : <UnscheduledBadge />}
         </div>
       </div>
 
@@ -130,8 +124,8 @@ export default function EventDetailPage(props: {
                         <div className="flex justify-between items-start gap-2">
                           <div className="font-medium">
                             {currentUserAttendee.userName}
-                            <span className="ml-2 px-2 py-0.5 bg-blue-200 text-blue-800 rounded text-xs font-normal">
-                              You
+                            <span className="ml-2">
+                              <YouBadge />
                             </span>
                           </div>
                           <AttendanceForm

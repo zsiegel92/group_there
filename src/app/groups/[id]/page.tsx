@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { AdminBadge, YouBadge } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -194,11 +195,7 @@ export default function GroupDetailPage(props: {
             </Button>
           </div>
         </div>
-        {isAdmin && (
-          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
-            You are an admin
-          </span>
-        )}
+        {isAdmin && <AdminBadge>You are an admin</AdminBadge>}
       </div>
 
       <div>
@@ -231,8 +228,8 @@ export default function GroupDetailPage(props: {
                     <div className="font-medium">
                       {membershipInfo.user.name}
                       {isCurrentUser && (
-                        <span className="ml-2 px-2 py-0.5 bg-blue-200 text-blue-800 rounded text-xs font-normal">
-                          You
+                        <span className="ml-2">
+                          <YouBadge />
                         </span>
                       )}
                     </div>
@@ -246,9 +243,7 @@ export default function GroupDetailPage(props: {
                 </div>
                 <div className="flex items-center gap-2 sm:shrink-0">
                   {membershipInfo.isAdmin ? (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
-                      Admin
-                    </span>
+                    <AdminBadge />
                   ) : isAdmin ? (
                     <Button
                       size="sm"

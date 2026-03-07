@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { AdminBadge } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -60,11 +61,7 @@ export default function GroupsPage() {
                 {groupMembership.group.name}
               </h2>
               <div className="flex gap-2 text-sm text-gray-600">
-                {groupMembership.isAdmin && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                    Admin
-                  </span>
-                )}
+                {groupMembership.isAdmin && <AdminBadge />}
                 <span className="text-gray-500">
                   Created {groupMembership.group.createdAt.toLocaleDateString()}
                 </span>

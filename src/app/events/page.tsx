@@ -3,6 +3,11 @@
 import { useMemo } from "react";
 import Link from "next/link";
 
+import {
+  AdminBadge,
+  JoinedBadge,
+  NotJoinedBadge,
+} from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -128,14 +133,11 @@ export default function EventsPage() {
                         <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
                           <h3 className="text-lg font-medium">{event.name}</h3>
                           <div className="flex gap-2">
+                            {event.isGroupAdmin && <AdminBadge />}
                             {event.hasJoined ? (
-                              <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm">
-                                Joined
-                              </span>
+                              <JoinedBadge />
                             ) : (
-                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
-                                Not Joined
-                              </span>
+                              <NotJoinedBadge />
                             )}
                           </div>
                         </div>
