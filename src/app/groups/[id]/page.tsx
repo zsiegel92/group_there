@@ -18,6 +18,7 @@ import {
   useLeaveGroup,
   usePromoteToAdmin,
 } from "../../api/groups/client";
+import { EventsPage } from "../../events/events-page";
 
 export default function GroupDetailPage(props: {
   params: Promise<{ id: string }>;
@@ -259,6 +260,10 @@ export default function GroupDetailPage(props: {
             );
           })}
         </div>
+      </div>
+
+      <div className="mt-8">
+        <EventsPage groupId={groupId} />
       </div>
 
       {showInviteDialog && (

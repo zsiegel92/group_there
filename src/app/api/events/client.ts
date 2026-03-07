@@ -127,8 +127,9 @@ const scheduleResponseSchema = z.object({
 });
 
 // Client functions
-export async function fetchEvents() {
-  const response = await fetch("/api/events");
+export async function fetchEvents(groupId?: string) {
+  const url = groupId ? `/api/events?groupId=${groupId}` : "/api/events";
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error("Failed to fetch events");
   }
@@ -259,10 +260,10 @@ export async function unscheduleEvent(eventId: string) {
 }
 
 // React Query hooks
-export function useEvents() {
+export function useEvents(groupId?: string) {
   return useQuery({
-    queryKey: ["events"],
-    queryFn: fetchEvents,
+    queryKey: groupId ? ["events", { groupId }] : ["events"],
+    queryFn: () => fetchEvents(groupId),
   });
 }
 

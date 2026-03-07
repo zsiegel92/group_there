@@ -21,9 +21,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Get all groups the user is in
+  const groupId = request.nextUrl.searchParams.get("groupId");
+
+  // Get all groups the user is in (optionally filtered to one group)
   const userGroups = await db.query.groupsToUsers.findMany({
-    where: eq(groupsToUsers.userId, user.id),
+    where: groupId
+      ? and(
+          eq(groupsToUsers.userId, user.id),
+          eq(groupsToUsers.groupId, groupId)
+        )
+      : eq(groupsToUsers.userId, user.id),
     with: {
       group: {
         with: {
