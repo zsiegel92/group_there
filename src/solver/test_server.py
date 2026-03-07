@@ -1,18 +1,10 @@
-from server import app
-from groupthere_solver.models import Solution
-from groupthere_solver.solve import solve_problem
-from groupthere_solver.mock_problem import mock_problem
-
-
-
-@app.function()
-def solve_test_problem() -> "Solution":
-    return solve_problem(mock_problem)
+from server import app, solve_test_problem
 
 
 @app.local_entrypoint()
 def test_server():
     solution = solve_test_problem.remote()
+    print(solution)
     assert solution.feasible, "Solution should be feasible"
     assert (
         solution.total_drive_seconds == 5.0

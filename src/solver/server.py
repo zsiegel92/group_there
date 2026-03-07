@@ -3,11 +3,13 @@ from groupthere_solver.fastapi_utils import webapp
 from groupthere_solver.models import Problem, ProblemReceivedResponse, Solution
 from groupthere_solver.solve import solve_problem
 
+
 app = modal.App(
     name="groupthere-solver",
     image=modal.Image.debian_slim(
         python_version="3.12",
     )
+    .apt_install("glpk-utils")
     .uv_sync()
     .add_local_python_source(
         "groupthere_solver",
@@ -32,6 +34,15 @@ async def solve_async(problem: Problem) -> ProblemReceivedResponse:
         successfully_received=True,
     )
 
+
+@app.function()
+def solve_test_problem() -> Solution:
+    from groupthere_solver.mock_problem import mock_problem,solutions_are_equivalent, mock_problem_expected_solution
+    solution = solve_problem(mock_problem)
+    assert solutions_are_equivalent(
+        solution, mock_problem_expected_solution
+    ), f"Expected solution with A driving B (5 min), but got: {solution}"
+    return solution
 
 @app.function()
 @modal.asgi_app()
