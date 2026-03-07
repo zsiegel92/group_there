@@ -1,7 +1,9 @@
-import type {
-  AutocompletePrediction,
-  PlaceDetails,
-  RouteMatrixEntry,
+import { z } from "zod";
+
+import {
+  AutocompletePredictionSchema,
+  PlaceDetailsSchema,
+  RouteMatrixEntrySchema,
 } from "./schema";
 
 function getApiKey() {
@@ -12,9 +14,57 @@ function getApiKey() {
   return key;
 }
 
-export async function googleAutocomplete(
-  query: string
-): Promise<AutocompletePrediction[]> {
+// -- Raw Google API response schemas (internal) --
+
+const googleAutocompleteSuggestionSchema = z.object({
+  placePrediction: z
+    .object({
+      placeId: z.string(),
+      structuredFormat: z.object({
+        mainText: z.object({ text: z.string() }),
+        secondaryText: z.object({ text: z.string() }),
+      }),
+      text: z.object({ text: z.string() }),
+    })
+    .optional(),
+});
+
+const googleAutocompleteResponseSchema = z.object({
+  suggestions: z.array(googleAutocompleteSuggestionSchema).default([]),
+});
+
+const googleAddressComponentSchema = z.object({
+  types: z.array(z.string()),
+  longText: z.string(),
+});
+
+const googlePlaceDetailsResponseSchema = z.object({
+  id: z.string(),
+  displayName: z.object({ text: z.string() }).optional(),
+  formattedAddress: z.string().optional(),
+  addressComponents: z.array(googleAddressComponentSchema).default([]),
+  location: z
+    .object({
+      latitude: z.number(),
+      longitude: z.number(),
+    })
+    .optional(),
+});
+
+const googleRouteMatrixElementSchema = z.object({
+  originIndex: z.number(),
+  destinationIndex: z.number(),
+  duration: z.string().optional(),
+  distanceMeters: z.number().optional(),
+  status: z.object({ code: z.number().optional() }).optional(),
+  condition: z.string().optional(),
+});
+
+const googleRouteMatrixResponseSchema = z.array(googleRouteMatrixElementSchema);
+
+// -- Public API functions --
+
+export async function googleAutocomplete(query: string) {
   const response = await fetch(
     "https://places.googleapis.com/v1/places:autocomplete",
     {
@@ -23,9 +73,7 @@ export async function googleAutocomplete(
         "Content-Type": "application/json",
         "X-Goog-Api-Key": getApiKey(),
       },
-      body: JSON.stringify({
-        input: query,
-      }),
+      body: JSON.stringify({ input: query }),
     }
   );
 
@@ -36,33 +84,23 @@ export async function googleAutocomplete(
     );
   }
 
-  const data = await response.json();
-  const suggestions = data.suggestions ?? [];
+  const data = googleAutocompleteResponseSchema.parse(await response.json());
 
-  return suggestions
-    .filter((s: Record<string, unknown>) => s.placePrediction)
-    .map(
-      (s: {
-        placePrediction: {
-          placeId: string;
-          structuredFormat: {
-            mainText: { text: string };
-            secondaryText: { text: string };
-          };
-          text: { text: string };
-        };
-      }) => ({
-        placeId: s.placePrediction.placeId,
-        mainText: s.placePrediction.structuredFormat.mainText.text,
-        secondaryText: s.placePrediction.structuredFormat.secondaryText.text,
-        description: s.placePrediction.text.text,
-      })
-    );
+  return data.suggestions.flatMap((s) => {
+    if (!s.placePrediction) return [];
+    const p = s.placePrediction;
+    return [
+      AutocompletePredictionSchema.parse({
+        placeId: p.placeId,
+        mainText: p.structuredFormat.mainText.text,
+        secondaryText: p.structuredFormat.secondaryText.text,
+        description: p.text.text,
+      }),
+    ];
+  });
 }
 
-export async function googlePlaceDetails(
-  placeId: string
-): Promise<PlaceDetails> {
+export async function googlePlaceDetails(placeId: string) {
   const response = await fetch(
     `https://places.googleapis.com/v1/places/${placeId}`,
     {
@@ -83,13 +121,13 @@ export async function googlePlaceDetails(
     );
   }
 
-  const data = await response.json();
-
-  const components: Array<{ types: string[]; longText: string }> =
-    data.addressComponents ?? [];
+  const data = googlePlaceDetailsResponseSchema.parse(await response.json());
 
   function findComponent(type: string) {
-    return components.find((c) => c.types.includes(type))?.longText ?? null;
+    return (
+      data.addressComponents.find((c) => c.types.includes(type))?.longText ??
+      null
+    );
   }
 
   const streetNumber = findComponent("street_number") ?? "";
@@ -97,7 +135,7 @@ export async function googlePlaceDetails(
   const street1 =
     streetNumber || route ? `${streetNumber} ${route}`.trim() || null : null;
 
-  return {
+  return PlaceDetailsSchema.parse({
     placeId: data.id,
     name: data.displayName?.text ?? "",
     formattedAddress: data.formattedAddress ?? "",
@@ -108,7 +146,7 @@ export async function googlePlaceDetails(
     zip: findComponent("postal_code"),
     latitude: data.location?.latitude ?? 0,
     longitude: data.location?.longitude ?? 0,
-  };
+  });
 }
 
 /**
@@ -120,7 +158,7 @@ export async function googlePlaceDetails(
  */
 export async function googleRouteMatrix(
   locations: { id: string; latitude: number; longitude: number }[]
-): Promise<RouteMatrixEntry[]> {
+) {
   if (locations.length < 2) return [];
 
   const origins = locations.map((loc) => ({
@@ -165,17 +203,10 @@ export async function googleRouteMatrix(
       `Google Route Matrix API error: ${response.status} ${text}`
     );
   }
+  const rawResponse = await response.json();
+  const data = googleRouteMatrixResponseSchema.parse(rawResponse);
 
-  const data: Array<{
-    originIndex: number;
-    destinationIndex: number;
-    duration?: string;
-    distanceMeters?: number;
-    status?: { code?: number };
-    condition?: string;
-  }> = await response.json();
-
-  const results: RouteMatrixEntry[] = [];
+  const results = [];
   for (const entry of data) {
     const origin = locations[entry.originIndex];
     const destination = locations[entry.destinationIndex];
@@ -192,12 +223,14 @@ export async function googleRouteMatrix(
       ? parseInt(entry.duration.replace("s", ""), 10)
       : 0;
 
-    results.push({
-      originLocationId: origin.id,
-      destinationLocationId: destination.id,
-      durationSeconds,
-      distanceMeters: entry.distanceMeters ?? 0,
-    });
+    results.push(
+      RouteMatrixEntrySchema.parse({
+        originLocationId: origin.id,
+        destinationLocationId: destination.id,
+        durationSeconds,
+        distanceMeters: entry.distanceMeters ?? 0,
+      })
+    );
   }
 
   return results;
