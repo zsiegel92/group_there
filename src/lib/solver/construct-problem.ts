@@ -18,6 +18,7 @@ export async function constructProblem(eventId: string): Promise<Problem> {
       eventsToUsers: {
         with: {
           user: true,
+          originLocation: true,
         },
       },
     },
@@ -28,7 +29,7 @@ export async function constructProblem(eventId: string): Promise<Problem> {
 
   const trippers: Tripper[] = event.eventsToUsers.map((eventToUser) => ({
     user_id: eventToUser.user.id,
-    origin_id: eventToUser.originLocation,
+    origin_id: eventToUser.originLocationId ?? eventToUser.user.id,
     event_id: event.id,
     car_fits: drivingStatusEnumValuesForDrivers.includes(
       eventToUser.drivingStatus

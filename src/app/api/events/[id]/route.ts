@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db/db";
-import { events, groupsToUsers } from "@/db/schema";
+import { events, groupsToUsers, locations } from "@/db/schema";
 import { getUser } from "@/lib/auth";
 
 type Params = {
@@ -12,7 +12,7 @@ type Params = {
 
 const updateEventSchema = z.object({
   name: z.string().min(1).max(200).optional(),
-  location: z.string().min(1).max(500).optional(),
+  locationId: z.string().min(1).optional(),
   time: z.string().optional(),
   message: z.string().max(2000).optional(),
 });
@@ -28,14 +28,16 @@ export async function GET(request: NextRequest, props: Params) {
 
   const eventId = params.id;
 
-  // Get event with group and attendees
+  // Get event with group, location, and attendees
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
     with: {
       group: true,
+      location: true,
       eventsToUsers: {
         with: {
           user: true,
+          originLocation: true,
         },
       },
     },
@@ -67,13 +69,33 @@ export async function GET(request: NextRequest, props: Params) {
     (att) => att.userId === user.id
   );
 
+  const formatLocationObj = (loc: typeof event.location) =>
+    loc
+      ? {
+          id: loc.id,
+          googlePlaceId: loc.googlePlaceId,
+          name: loc.name,
+          addressString: loc.addressString,
+          street1: loc.street1,
+          street2: loc.street2,
+          city: loc.city,
+          state: loc.state,
+          zip: loc.zip,
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          ownerType: loc.ownerType,
+          ownerId: loc.ownerId,
+        }
+      : null;
+
   return NextResponse.json({
     event: {
       id: event.id,
       groupId: event.groupId,
       groupName: event.group.name,
       name: event.name,
-      location: event.location,
+      locationId: event.locationId,
+      location: formatLocationObj(event.location),
       time: event.time.toISOString(),
       message: event.message,
       scheduled: event.scheduled,
@@ -87,7 +109,8 @@ export async function GET(request: NextRequest, props: Params) {
             earliestLeaveTime: userAttendance.earliestLeaveTime
               ? userAttendance.earliestLeaveTime.toISOString()
               : null,
-            originLocation: userAttendance.originLocation,
+            originLocationId: userAttendance.originLocationId,
+            originLocation: formatLocationObj(userAttendance.originLocation),
             joinedAt: userAttendance.createdAt.toISOString(),
           }
         : null,
@@ -102,7 +125,8 @@ export async function GET(request: NextRequest, props: Params) {
           earliestLeaveTime: att.earliestLeaveTime
             ? att.earliestLeaveTime.toISOString()
             : null,
-          originLocation: att.originLocation,
+          originLocationId: att.originLocationId,
+          originLocation: formatLocationObj(att.originLocation),
           joinedAt: att.createdAt.toISOString(),
         },
       })),
@@ -152,11 +176,24 @@ export async function PATCH(request: NextRequest, props: Params) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
+  // If updating locationId, verify the location exists
+  if (result.data.locationId !== undefined) {
+    const location = await db.query.locations.findFirst({
+      where: eq(locations.id, result.data.locationId),
+    });
+    if (!location) {
+      return NextResponse.json(
+        { error: "Location not found" },
+        { status: 400 }
+      );
+    }
+  }
+
   // Update the event
   const updateData: Record<string, unknown> = {};
   if (result.data.name !== undefined) updateData.name = result.data.name;
-  if (result.data.location !== undefined)
-    updateData.location = result.data.location;
+  if (result.data.locationId !== undefined)
+    updateData.locationId = result.data.locationId;
   if (result.data.time !== undefined)
     updateData.time = new Date(result.data.time);
   if (result.data.message !== undefined)
@@ -173,7 +210,7 @@ export async function PATCH(request: NextRequest, props: Params) {
       id: updatedEvent.id,
       groupId: updatedEvent.groupId,
       name: updatedEvent.name,
-      location: updatedEvent.location,
+      locationId: updatedEvent.locationId,
       time: updatedEvent.time.toISOString(),
       message: updatedEvent.message,
       scheduled: updatedEvent.scheduled,

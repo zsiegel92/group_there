@@ -7,6 +7,7 @@ import {
   drivingStatusEnumValues,
   // type DrivingStatus,
 } from "@/db/schema";
+import { LocationSchema } from "@/lib/geo/schema";
 
 // Response schemas
 const groupSchema = z.object({
@@ -14,10 +15,21 @@ const groupSchema = z.object({
   name: z.string(),
 });
 
+const locationSummarySchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    addressString: z.string(),
+    city: z.string().nullable(),
+    state: z.string().nullable(),
+  })
+  .nullable();
+
 const eventDetailsSchema = z.object({
   id: z.string(),
   name: z.string(),
-  location: z.string(),
+  locationId: z.string().nullable(),
+  location: locationSummarySchema,
   time: z.string(),
   message: z.string().nullable(),
   scheduled: z.boolean(),
@@ -35,22 +47,31 @@ const eventsResponseSchema = z.object({
   events: z.array(denormalizedEventSchema),
 });
 
-const userAttendanceSchema = z.object({
+const userAttendanceResponseSchema = z.object({
   drivingStatus: z.enum(drivingStatusEnumValues),
   carFits: z.number().nullable(),
   earliestLeaveTime: z.string().nullable(),
-  originLocation: z.string(),
+  originLocationId: z.string().nullable(),
+  originLocation: LocationSchema.nullable(),
   joinedAt: z.string(),
 });
 
-type UserAttendance = z.infer<typeof userAttendanceSchema>;
+const userAttendanceInputSchema = z.object({
+  drivingStatus: z.enum(drivingStatusEnumValues),
+  carFits: z.number().nullable(),
+  earliestLeaveTime: z.string().nullable(),
+  originLocationId: z.string(),
+  joinedAt: z.string(),
+});
+
+type UserAttendanceInput = z.infer<typeof userAttendanceInputSchema>;
 
 const attendeeSchema = z.object({
   userId: z.string(),
   userName: z.string(),
   userEmail: z.string(),
   userImage: z.string().nullable(),
-  userAttendance: userAttendanceSchema,
+  userAttendance: userAttendanceResponseSchema,
 });
 
 const eventDetailSchema = z.object({
@@ -58,14 +79,15 @@ const eventDetailSchema = z.object({
   groupId: z.string(),
   groupName: z.string(),
   name: z.string(),
-  location: z.string(),
+  locationId: z.string().nullable(),
+  location: LocationSchema.nullable(),
   time: z.string(),
   message: z.string().nullable(),
   scheduled: z.boolean(),
   createdAt: z.string(),
   isAdmin: z.boolean(),
   hasJoined: z.boolean(),
-  userAttendance: userAttendanceSchema.nullable(),
+  userAttendance: userAttendanceResponseSchema.nullable(),
   attendees: z.array(attendeeSchema),
 });
 
@@ -77,7 +99,7 @@ const createEventSchema = z.object({
   id: z.string(),
   groupId: z.string(),
   name: z.string(),
-  location: z.string(),
+  locationId: z.string().nullable(),
   time: z.string(),
   message: z.string().nullable(),
   scheduled: z.boolean(),
@@ -93,7 +115,7 @@ const updateEventResponseSchema = z.object({
     id: z.string(),
     groupId: z.string(),
     name: z.string(),
-    location: z.string(),
+    locationId: z.string().nullable(),
     time: z.string(),
     message: z.string().nullable(),
     scheduled: z.boolean(),
@@ -113,7 +135,7 @@ const attendanceResponseSchema = z.object({
     drivingStatus: z.enum(drivingStatusEnumValues),
     carFits: z.number().nullable(),
     earliestLeaveTime: z.string().nullable(),
-    originLocation: z.string(),
+    originLocationId: z.string(),
   }),
 });
 
@@ -140,7 +162,7 @@ export async function fetchEvents(groupId?: string) {
 export async function createEvent(input: {
   groupId: string;
   name: string;
-  location: string;
+  locationId: string;
   time: string;
   message?: string;
 }) {
@@ -169,7 +191,7 @@ export async function updateEvent(
   eventId: string,
   input: {
     name?: string;
-    location?: string;
+    locationId?: string;
     time?: string;
     message?: string;
   }
@@ -197,7 +219,7 @@ export async function deleteEvent(eventId: string) {
   return successResponseSchema.parse(data);
 }
 
-export async function attendEvent(eventId: string, input: UserAttendance) {
+export async function attendEvent(eventId: string, input: UserAttendanceInput) {
   const response = await fetch(`/api/events/${eventId}/attend`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -211,7 +233,10 @@ export async function attendEvent(eventId: string, input: UserAttendance) {
   return attendanceResponseSchema.parse(data);
 }
 
-export async function updateAttendance(eventId: string, input: UserAttendance) {
+export async function updateAttendance(
+  eventId: string,
+  input: UserAttendanceInput
+) {
   const response = await fetch(`/api/events/${eventId}/attend`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -294,7 +319,7 @@ export function useUpdateEvent() {
       eventId: string;
       input: {
         name?: string;
-        location?: string;
+        locationId?: string;
         time?: string;
         message?: string;
       };
@@ -326,7 +351,7 @@ export function useAttendEvent() {
       input,
     }: {
       eventId: string;
-      input: UserAttendance;
+      input: UserAttendanceInput;
     }) => attendEvent(eventId, input),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
@@ -345,7 +370,7 @@ export function useUpdateAttendance() {
       input,
     }: {
       eventId: string;
-      input: UserAttendance;
+      input: UserAttendanceInput;
     }) => updateAttendance(eventId, input),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["events"] });

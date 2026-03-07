@@ -3,13 +3,13 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db/db";
-import { events, eventsToUsers, groupsToUsers } from "@/db/schema";
+import { events, eventsToUsers, groupsToUsers, locations } from "@/db/schema";
 import { getUser } from "@/lib/auth";
 
 const createEventSchema = z.object({
   groupId: z.string(),
   name: z.string().min(1).max(200),
-  location: z.string().min(1).max(500),
+  locationId: z.string().min(1),
   time: z.string(),
   message: z.string().max(2000).optional(),
 });
@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
         with: {
           events: {
             with: {
+              location: true,
               eventsToUsers: {
                 where: eq(eventsToUsers.userId, user.id),
               },
@@ -62,7 +63,16 @@ export async function GET(request: NextRequest) {
         eventDetails: {
           id: event.id,
           name: event.name,
-          location: event.location,
+          locationId: event.locationId,
+          location: event.location
+            ? {
+                id: event.location.id,
+                name: event.location.name,
+                addressString: event.location.addressString,
+                city: event.location.city,
+                state: event.location.state,
+              }
+            : null,
           time: event.time.toISOString(),
           message: event.message,
           scheduled: event.scheduled,
@@ -95,7 +105,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { groupId, name, location, time, message } = result.data;
+  const { groupId, name, locationId, time, message } = result.data;
 
   // Check if user is admin of the group
   const membership = await db.query.groupsToUsers.findFirst({
@@ -109,6 +119,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
+  // Verify the location exists
+  const location = await db.query.locations.findFirst({
+    where: eq(locations.id, locationId),
+  });
+
+  if (!location) {
+    return NextResponse.json({ error: "Location not found" }, { status: 400 });
+  }
+
   // Create the event with a unique ID
   const eventId = `event_${crypto.randomUUID()}`;
 
@@ -118,7 +137,7 @@ export async function POST(request: NextRequest) {
       id: eventId,
       groupId,
       name,
-      location,
+      locationId,
       time: new Date(time),
       message: message || null,
       scheduled: false,
@@ -131,7 +150,7 @@ export async function POST(request: NextRequest) {
       id: createdEvent.id,
       groupId: createdEvent.groupId,
       name: createdEvent.name,
-      location: createdEvent.location,
+      locationId: createdEvent.locationId,
       time: createdEvent.time.toISOString(),
       message: createdEvent.message,
       scheduled: createdEvent.scheduled,

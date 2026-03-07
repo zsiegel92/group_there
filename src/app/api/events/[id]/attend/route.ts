@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db/db";
-import { events, eventsToUsers, groupsToUsers } from "@/db/schema";
+import { events, eventsToUsers, groupsToUsers, locations } from "@/db/schema";
 import { getUser } from "@/lib/auth";
 
 type Params = {
@@ -15,7 +15,7 @@ const attendanceSchema = z
     drivingStatus: z.enum(["cannot_drive", "must_drive", "can_drive_or_not"]),
     carFits: z.number().int().min(0).nullable(),
     earliestLeaveTime: z.string().nullable(),
-    originLocation: z.string().min(1).max(500),
+    originLocationId: z.string().min(1),
     joinedAt: z.string().optional(),
   })
   .refine(
@@ -120,8 +120,20 @@ export async function POST(request: NextRequest, props: Params) {
     );
   }
 
-  const { drivingStatus, carFits, earliestLeaveTime, originLocation } =
+  const { drivingStatus, carFits, earliestLeaveTime, originLocationId } =
     result.data;
+
+  // Verify the location exists
+  const location = await db.query.locations.findFirst({
+    where: eq(locations.id, originLocationId),
+  });
+
+  if (!location) {
+    return NextResponse.json(
+      { error: "Origin location not found" },
+      { status: 400 }
+    );
+  }
 
   // Validate earliestLeaveTime is not after event time
   if (earliestLeaveTime) {
@@ -146,7 +158,7 @@ export async function POST(request: NextRequest, props: Params) {
     drivingStatus,
     carFits: carFitsValue,
     earliestLeaveTime: earliestLeaveTime ? new Date(earliestLeaveTime) : null,
-    originLocation,
+    originLocationId,
   });
 
   return NextResponse.json({
@@ -157,7 +169,7 @@ export async function POST(request: NextRequest, props: Params) {
       drivingStatus,
       carFits,
       earliestLeaveTime: earliestLeaveTime ?? null,
-      originLocation,
+      originLocationId,
     },
   });
 }
@@ -207,8 +219,20 @@ export async function PATCH(request: NextRequest, props: Params) {
     );
   }
 
-  const { drivingStatus, carFits, earliestLeaveTime, originLocation } =
+  const { drivingStatus, carFits, earliestLeaveTime, originLocationId } =
     result.data;
+
+  // Verify the location exists
+  const location = await db.query.locations.findFirst({
+    where: eq(locations.id, originLocationId),
+  });
+
+  if (!location) {
+    return NextResponse.json(
+      { error: "Origin location not found" },
+      { status: 400 }
+    );
+  }
 
   // Validate earliestLeaveTime is not after event time
   if (earliestLeaveTime) {
@@ -233,7 +257,7 @@ export async function PATCH(request: NextRequest, props: Params) {
       drivingStatus,
       carFits: carFitsValue,
       earliestLeaveTime: earliestLeaveTime ? new Date(earliestLeaveTime) : null,
-      originLocation,
+      originLocationId,
     })
     .where(
       and(eq(eventsToUsers.eventId, eventId), eq(eventsToUsers.userId, user.id))
@@ -247,7 +271,7 @@ export async function PATCH(request: NextRequest, props: Params) {
       drivingStatus,
       carFits,
       earliestLeaveTime: earliestLeaveTime || null,
-      originLocation,
+      originLocationId,
     },
   });
 }

@@ -6,6 +6,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -121,6 +122,37 @@ export const groupsToUsers = pgTable(
   ]
 );
 
+export const locationOwnerTypeValues = ["user", "event"] as const;
+
+export type LocationOwnerType = (typeof locationOwnerTypeValues)[number];
+
+export const locations = pgTable(
+  "locations",
+  {
+    id: text("id").primaryKey(),
+    googlePlaceId: text("google_place_id"),
+    name: text("name").notNull(),
+    addressString: text("address_string").notNull(),
+    street1: text("street1"),
+    street2: text("street2"),
+    city: text("city"),
+    state: text("state"),
+    zip: text("zip"),
+    latitude: real("latitude"),
+    longitude: real("longitude"),
+    ownerType: text("owner_type").notNull(), // 'user' | 'event'
+    ownerId: text("owner_id").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("locations_ownerType_ownerId_idx").on(
+      table.ownerType,
+      table.ownerId
+    ),
+    index("locations_googlePlaceId_idx").on(table.googlePlaceId),
+  ]
+);
+
 export const drivingStatusEnumValues = [
   "cannot_drive",
   "must_drive",
@@ -152,7 +184,7 @@ export const events = pgTable(
       .notNull()
       .references(() => groups.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    location: text("location").notNull(),
+    locationId: text("location_id").references(() => locations.id),
     time: timestamp("time").notNull(),
     message: text("message"),
     scheduled: boolean("scheduled").default(false).notNull(),
@@ -183,7 +215,7 @@ export const eventsToUsers = pgTable(
     drivingStatus: drivingStatusEnum("driving_status").notNull(),
     carFits: integer("car_fits").notNull(), // includes driver!
     earliestLeaveTime: timestamp("earliest_leave_time"), // null if cannot drive
-    originLocation: text("origin_location").notNull(),
+    originLocationId: text("origin_location_id").references(() => locations.id),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
@@ -230,10 +262,21 @@ export const groupsToUsersRelations = relations(groupsToUsers, ({ one }) => ({
   }),
 }));
 
+export const locationRelations = relations(locations, ({ one }) => ({
+  event: one(events, {
+    fields: [locations.ownerId],
+    references: [events.id],
+  }),
+}));
+
 export const eventRelations = relations(events, ({ one, many }) => ({
   group: one(groups, {
     fields: [events.groupId],
     references: [groups.id],
+  }),
+  location: one(locations, {
+    fields: [events.locationId],
+    references: [locations.id],
   }),
   eventsToUsers: many(eventsToUsers),
 }));
@@ -246,5 +289,9 @@ export const eventsToUsersRelations = relations(eventsToUsers, ({ one }) => ({
   user: one(users, {
     fields: [eventsToUsers.userId],
     references: [users.id],
+  }),
+  originLocation: one(locations, {
+    fields: [eventsToUsers.originLocationId],
+    references: [locations.id],
   }),
 }));

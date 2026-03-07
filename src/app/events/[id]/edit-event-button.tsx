@@ -2,14 +2,17 @@
 
 import { useCallback, useState } from "react";
 
+import { AddressSelectorAndCard } from "@/components/address-selector-and-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { Location } from "@/lib/geo/schema";
 
 import { useUpdateEvent } from "../../api/events/client";
 
 type Event = {
   name: string;
-  location: string;
+  locationId: string | null;
+  location: Location | null;
   time: string;
   message: string | null;
 };
@@ -24,7 +27,7 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
 
   const [showEditForm, setShowEditForm] = useState(false);
   const [editName, setEditName] = useState("");
-  const [editLocation, setEditLocation] = useState("");
+  const [editLocation, setEditLocation] = useState<Location | null>(null);
   const [editTime, setEditTime] = useState("");
   const [editMessage, setEditMessage] = useState("");
 
@@ -52,8 +55,10 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
           eventId,
           input: {
             name: editName !== event.name ? editName : undefined,
-            location:
-              editLocation !== event.location ? editLocation : undefined,
+            locationId:
+              editLocation?.id !== event.locationId
+                ? (editLocation?.id ?? undefined)
+                : undefined,
             time: editTime !== event.time ? editTime : undefined,
             message:
               editMessage !== (event.message || "") ? editMessage : undefined,
@@ -92,10 +97,11 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
                 <label className="block text-sm font-medium mb-2">
                   Location
                 </label>
-                <Input
-                  value={editLocation}
-                  onChange={(e) => setEditLocation(e.target.value)}
-                  required
+                <AddressSelectorAndCard
+                  onNewValidatedLocation={setEditLocation}
+                  ownerType="event"
+                  ownerId={eventId}
+                  selectedLocation={editLocation}
                 />
               </div>
               <div>

@@ -14,6 +14,14 @@ import { Spinner } from "@/components/ui/spinner";
 import { useEvents } from "../api/events/client";
 import { useGroups } from "../api/groups/client";
 
+type LocationSummary = {
+  id: string;
+  name: string;
+  addressString: string;
+  city: string | null;
+  state: string | null;
+} | null;
+
 type GroupedEvents = {
   group: {
     id: string;
@@ -22,7 +30,7 @@ type GroupedEvents = {
   eventsForGroup: Array<{
     id: string;
     name: string;
-    location: string;
+    location: LocationSummary;
     time: string;
     message: string | null;
     scheduled: boolean;
@@ -62,7 +70,8 @@ function EventCard({
           })}
         </div>
         <div>
-          <span className="font-medium">Where:</span> {event.location}
+          <span className="font-medium">Where:</span>{" "}
+          {event.location ? event.location.name : "No location set"}
         </div>
         {event.message && (
           <div className="mt-2 text-gray-700">{event.message}</div>

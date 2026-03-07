@@ -4,9 +4,11 @@ import { useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { useGroups } from "@/app/api/groups/client";
+import { AddressSelectorAndCard } from "@/components/address-selector-and-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import type { Location } from "@/lib/geo/schema";
 
 import { useCreateEvent } from "../../api/events/client";
 
@@ -19,7 +21,9 @@ export default function CreateEventPage() {
   const groupIdParam = searchParams.get("groupId");
   const [groupId, setGroupId] = useState(groupIdParam || "");
   const [name, setName] = useState("");
-  const [location, setLocation] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(
+    null
+  );
   const [time, setTime] = useState("");
   const [message, setMessage] = useState("");
 
@@ -29,13 +33,13 @@ export default function CreateEventPage() {
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!groupId || !name.trim() || !location.trim() || !time) return;
+      if (!groupId || !name.trim() || !selectedLocation || !time) return;
 
       try {
         const result = await createEvent.mutateAsync({
           groupId,
           name: name.trim(),
-          location: location.trim(),
+          locationId: selectedLocation.id,
           time,
           message: message.trim() || undefined,
         });
@@ -45,7 +49,7 @@ export default function CreateEventPage() {
         alert("Failed to create event. Please try again.");
       }
     },
-    [groupId, name, location, time, message, createEvent, router]
+    [groupId, name, selectedLocation, time, message, createEvent, router]
   );
 
   if (groupsLoading) {
@@ -116,17 +120,12 @@ export default function CreateEventPage() {
         </div>
 
         <div>
-          <label htmlFor="location" className="block text-sm font-medium mb-2">
-            Location *
-          </label>
-          <Input
-            id="location"
-            type="text"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="Enter event location"
-            required
-            maxLength={500}
+          <label className="block text-sm font-medium mb-2">Location *</label>
+          <AddressSelectorAndCard
+            onNewValidatedLocation={setSelectedLocation}
+            ownerType="event"
+            ownerId={groupId || "pending"}
+            selectedLocation={selectedLocation}
             disabled={createEvent.isPending}
           />
         </div>
@@ -174,7 +173,7 @@ export default function CreateEventPage() {
               createEvent.isPending ||
               !groupId ||
               !name.trim() ||
-              !location.trim() ||
+              !selectedLocation ||
               !time
             }
           >

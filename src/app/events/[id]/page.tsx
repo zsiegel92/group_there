@@ -89,7 +89,19 @@ export default function EventDetailPage(props: {
               })}
             </div>
             <div>
-              <span className="font-medium">Where:</span> {event.location}
+              <span className="font-medium">Where:</span>{" "}
+              {event.location ? (
+                <span>
+                  {event.location.name}
+                  {event.location.addressString && (
+                    <span className="text-gray-500 text-sm ml-1">
+                      ({event.location.addressString})
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-gray-400">No location set</span>
+              )}
             </div>
             {event.message && (
               <div>
@@ -164,7 +176,10 @@ export default function EventDetailPage(props: {
                           )}
                           <div>
                             <span className="font-medium">Coming from:</span>{" "}
-                            {currentUserAttendee.userAttendance.originLocation}
+                            {currentUserAttendee.userAttendance.originLocation
+                              ? currentUserAttendee.userAttendance
+                                  .originLocation.name
+                              : "Unknown"}
                           </div>
                         </div>
                       </div>
@@ -214,7 +229,9 @@ export default function EventDetailPage(props: {
                             )}
                             <div>
                               <span className="font-medium">Coming from:</span>{" "}
-                              {attendee.userAttendance.originLocation}
+                              {attendee.userAttendance.originLocation
+                                ? attendee.userAttendance.originLocation.name
+                                : "Unknown"}
                             </div>
                           </div>
                         </div>
