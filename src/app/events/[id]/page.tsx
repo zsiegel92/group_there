@@ -22,6 +22,7 @@ import {
   type EventDetail,
 } from "../../api/events/client";
 import { AttendanceForm } from "./attendance-form";
+import { BlastControls } from "./blast-controls";
 import { DeleteEventButton } from "./delete-event-button";
 import { DistanceStatus } from "./distance-status";
 import { EditEventButton } from "./edit-event-button";
@@ -113,6 +114,9 @@ export default function EventDetailPage(props: {
           )}
         </div>
         <EventStatus scheduled={event.scheduled} locked={event.locked} />
+        {event.isAdmin && (
+          <BlastControls event={event} eventId={eventId} />
+        )}
       </div>
 
       <div className="space-y-6">

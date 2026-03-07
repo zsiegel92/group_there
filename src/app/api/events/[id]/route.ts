@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { db } from "@/db/db";
 import {
+  blasts,
   events,
   eventsToUsers,
   groupsToUsers,
@@ -216,6 +217,14 @@ export async function GET(request: NextRequest, props: Params) {
       }))
     : [];
 
+  // Load blasts for admins
+  const eventBlasts = membership.isAdmin
+    ? await db.query.blasts.findMany({
+        where: eq(blasts.eventId, eventId),
+        orderBy: (blasts, { desc }) => [desc(blasts.createdAt)],
+      })
+    : [];
+
   return NextResponse.json({
     event: {
       id: event.id,
@@ -247,6 +256,14 @@ export async function GET(request: NextRequest, props: Params) {
       attendeeCount: event.eventsToUsers.length,
       solution: solutionData,
       myParty,
+      blasts: membership.isAdmin
+        ? eventBlasts.map((b) => ({
+            id: b.id,
+            type: b.type,
+            recipientCount: b.recipientCount,
+            createdAt: b.createdAt.toISOString(),
+          }))
+        : [],
     },
   });
 }

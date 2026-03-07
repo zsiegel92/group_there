@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
 import {
+  blastTypeValues,
   drivingStatusEnumValues,
   // type DrivingStatus,
 } from "@/db/schema";
@@ -107,6 +108,13 @@ const myPartySchema = z.object({
   members: z.array(solutionPartyMemberSchema),
 });
 
+const blastSchema = z.object({
+  id: z.string(),
+  type: z.enum(blastTypeValues),
+  recipientCount: z.number(),
+  createdAt: z.string(),
+});
+
 const eventDetailSchema = z.object({
   id: z.string(),
   groupId: z.string(),
@@ -126,6 +134,7 @@ const eventDetailSchema = z.object({
   attendeeCount: z.number(),
   solution: solutionSchema.nullable().optional(),
   myParty: myPartySchema.nullable().optional(),
+  blasts: z.array(blastSchema).optional().default([]),
 });
 
 export type EventDetail = z.infer<typeof eventDetailSchema>;
@@ -361,6 +370,31 @@ export async function unlockEvent(eventId: string) {
   return successResponseSchema.parse(data);
 }
 
+// Blast notifications
+const blastResponseSchema = z.object({
+  success: z.boolean(),
+  recipientCount: z.number(),
+});
+
+export type BlastResponse = z.infer<typeof blastResponseSchema>;
+
+export async function sendBlast(
+  eventId: string,
+  type: (typeof blastTypeValues)[number]
+) {
+  const response = await fetch(`/api/events/${eventId}/blast`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to send notification");
+  }
+  const data = await response.json();
+  return blastResponseSchema.parse(data);
+}
+
 // Distance status
 const distanceStatusSchema = z.object({
   complete: z.boolean(),
@@ -568,6 +602,24 @@ export function useUnlockEvent() {
     onSuccess: (_, eventId) => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({ queryKey: ["events", eventId] });
+    },
+  });
+}
+
+export function useSendBlast() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      eventId,
+      type,
+    }: {
+      eventId: string;
+      type: (typeof blastTypeValues)[number];
+    }) => sendBlast(eventId, type),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["events", variables.eventId],
+      });
     },
   });
 }

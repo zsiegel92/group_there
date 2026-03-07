@@ -2,7 +2,11 @@
 
 const steps = ["Unscheduled", "Scheduled", "Confirmed"] as const;
 
-const stepColors = ["bg-red-500", "bg-yellow-500", "bg-green-500"] as const;
+const stepTextColors = [
+  "text-red-600",
+  "text-yellow-600",
+  "text-green-600",
+] as const;
 
 export function EventStatus({
   scheduled,
@@ -12,32 +16,28 @@ export function EventStatus({
   locked: boolean;
 }) {
   const currentStep = locked ? 2 : scheduled ? 1 : 0;
-  const activeColor = stepColors[currentStep]!;
 
   return (
-    <div className="inline-flex items-start">
+    <div className="inline-flex items-baseline gap-2">
       {steps.map((label, i) => {
-        const filled = i <= currentStep;
-        const lineFilled = i < currentStep;
+        const isCurrent = i === currentStep;
+        const isCompleted = i < currentStep;
 
         return (
-          <div key={label} className="flex items-center">
-            {/* Circle + label stacked */}
-            <div className="flex flex-col items-center">
-              <div
-                className={`w-3 h-3 rounded-full ${filled ? activeColor : "bg-gray-300"}`}
-              />
-              <span
-                className={`text-xs mt-1 whitespace-nowrap ${filled ? "text-gray-900" : "text-gray-400"}`}
-              >
-                {label}
-              </span>
-            </div>
-            {/* Connecting line */}
+          <div key={label} className="flex items-baseline gap-2">
+            <span
+              className={
+                isCurrent
+                  ? `text-lg font-semibold ${stepTextColors[currentStep]}`
+                  : isCompleted
+                    ? "text-xs text-gray-500"
+                    : "text-xs text-gray-300"
+              }
+            >
+              {label}
+            </span>
             {i < steps.length - 1 && (
-              <div
-                className={`w-16 h-0.5 mb-4 mx-1 ${lineFilled ? activeColor : "bg-gray-300"}`}
-              />
+              <span className="text-xs text-gray-300">&rarr;</span>
             )}
           </div>
         );

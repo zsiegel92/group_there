@@ -269,6 +269,27 @@ export const solutionParties = pgTable(
   (table) => [index("solutionParties_solutionId_idx").on(table.solutionId)]
 );
 
+export const blastTypeValues = ["event_scheduled", "event_confirmed"] as const;
+
+export type BlastType = (typeof blastTypeValues)[number];
+
+export const blasts = pgTable(
+  "blasts",
+  {
+    id: text("id").primaryKey(),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    type: text("type").notNull(), // 'event_scheduled' | 'event_confirmed'
+    sentByUserId: text("sent_by_user_id")
+      .notNull()
+      .references(() => users.id),
+    recipientCount: integer("recipient_count").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("blasts_eventId_idx").on(table.eventId)]
+);
+
 export const solutionPartyMembers = pgTable(
   "solution_party_members",
   {
@@ -344,6 +365,7 @@ export const eventRelations = relations(events, ({ one, many }) => ({
     fields: [events.id],
     references: [solutions.eventId],
   }),
+  blasts: many(blasts),
 }));
 
 export const eventsToUsersRelations = relations(eventsToUsers, ({ one }) => ({
@@ -397,3 +419,14 @@ export const solutionPartyMemberRelations = relations(
     }),
   })
 );
+
+export const blastRelations = relations(blasts, ({ one }) => ({
+  event: one(events, {
+    fields: [blasts.eventId],
+    references: [events.id],
+  }),
+  sentByUser: one(users, {
+    fields: [blasts.sentByUserId],
+    references: [users.id],
+  }),
+}));
