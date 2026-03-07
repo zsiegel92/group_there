@@ -29,6 +29,7 @@
     "generate-openapi-ts-from-openapi-json": "openapi-ts",
     "gen-client": "src/solver/.venv/bin/python src/solver/dump_openapi.py && openapi-ts",
     "dbshell": "dotenv -e .env -- sh -c 'psql \"$DATABASE_URL\"'",
+    "sqlc": "dotenv -e .env -- sh -c 'psql \"$DATABASE_URL\" -c \"$1\"' --",
     "migrations:push": "drizzle-kit push --config drizzle.config.ts",
     "script": "NODE_ENV=development tsx --env-file .env --conditions=react-server",
     "smoke-test-solver-service": "dotenv -e .env -- sh -c 'GROUPTHERE_SOLVER_API_URL=$PRODUCTION_GROUPTHERE_SOLVER_API_URL pnpm run script src/scripts/smoke-tests/test-solver-service.ts'"
