@@ -64,10 +64,10 @@ export async function createLocation(input: {
 
 export async function fetchOwnerLocations(
   ownerType: string,
-  ownerId: string,
+  ownerId: string
 ): Promise<Location[]> {
   const response = await fetch(
-    `/api/geo/locations?ownerType=${encodeURIComponent(ownerType)}&ownerId=${encodeURIComponent(ownerId)}`,
+    `/api/geo/locations?ownerType=${encodeURIComponent(ownerType)}&ownerId=${encodeURIComponent(ownerId)}`
   );
   if (!response.ok) {
     throw new Error("Failed to fetch locations");

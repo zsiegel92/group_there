@@ -1,4 +1,8 @@
-import type { AutocompletePrediction, PlaceDetails } from "./schema";
+import type {
+  AutocompletePrediction,
+  PlaceDetails,
+  RouteMatrixEntry,
+} from "./schema";
 
 function getApiKey() {
   const key = process.env.GOOGLE_ROUTES_API_KEY;
@@ -105,4 +109,96 @@ export async function googlePlaceDetails(
     latitude: data.location?.latitude ?? 0,
     longitude: data.location?.longitude ?? 0,
   };
+}
+
+/**
+ * Compute driving distances/durations between all origin-destination pairs
+ * using the Google Routes Matrix API.
+ *
+ * `locations` is a list of {id, latitude, longitude}. Returns the full
+ * pairwise matrix (every location to every other location).
+ */
+export async function googleRouteMatrix(
+  locations: { id: string; latitude: number; longitude: number }[]
+): Promise<RouteMatrixEntry[]> {
+  if (locations.length < 2) return [];
+
+  const origins = locations.map((loc) => ({
+    waypoint: {
+      location: {
+        latLng: { latitude: loc.latitude, longitude: loc.longitude },
+      },
+    },
+    routeModifiers: { avoidFerries: true },
+  }));
+
+  const destinations = locations.map((loc) => ({
+    waypoint: {
+      location: {
+        latLng: { latitude: loc.latitude, longitude: loc.longitude },
+      },
+    },
+  }));
+
+  const response = await fetch(
+    "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": getApiKey(),
+        "X-Goog-FieldMask":
+          "originIndex,destinationIndex,duration,distanceMeters,status,condition",
+      },
+      body: JSON.stringify({
+        origins,
+        destinations,
+        travelMode: "DRIVE",
+        routingPreference: "TRAFFIC_AWARE",
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(
+      `Google Route Matrix API error: ${response.status} ${text}`
+    );
+  }
+
+  const data: Array<{
+    originIndex: number;
+    destinationIndex: number;
+    duration?: string;
+    distanceMeters?: number;
+    status?: { code?: number };
+    condition?: string;
+  }> = await response.json();
+
+  const results: RouteMatrixEntry[] = [];
+  for (const entry of data) {
+    const origin = locations[entry.originIndex];
+    const destination = locations[entry.destinationIndex];
+    if (
+      entry.originIndex === entry.destinationIndex ||
+      !origin ||
+      !destination
+    ) {
+      continue;
+    }
+
+    // duration comes as "123s" string — parse to seconds
+    const durationSeconds = entry.duration
+      ? parseInt(entry.duration.replace("s", ""), 10)
+      : 0;
+
+    results.push({
+      originLocationId: origin.id,
+      destinationLocationId: destination.id,
+      durationSeconds,
+      distanceMeters: entry.distanceMeters ?? 0,
+    });
+  }
+
+  return results;
 }

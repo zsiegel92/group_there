@@ -43,3 +43,12 @@ export const PlaceDetailsSchema = z.object({
 });
 
 export type PlaceDetails = z.infer<typeof PlaceDetailsSchema>;
+
+export const RouteMatrixEntrySchema = z.object({
+  originLocationId: z.string(),
+  destinationLocationId: z.string(),
+  durationSeconds: z.number(),
+  distanceMeters: z.number(),
+});
+
+export type RouteMatrixEntry = z.infer<typeof RouteMatrixEntrySchema>;

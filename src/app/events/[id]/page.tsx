@@ -14,6 +14,7 @@ import { useSession } from "@/lib/auth-client";
 import { useEventDetails } from "../../api/events/client";
 import { AttendanceForm } from "./attendance-form";
 import { DeleteEventButton } from "./delete-event-button";
+import { DistanceStatus } from "./distance-status";
 import { EditEventButton } from "./edit-event-button";
 import { ScheduleEventButtons } from "./schedule-event-button";
 import { SolveProblem } from "./solve-problem";
@@ -242,6 +243,8 @@ export default function EventDetailPage(props: {
               </>
             );
           })()}
+
+        <DistanceStatus eventId={eventId} isAdmin={event.isAdmin} />
 
         {event.isAdmin && <SolveProblem eventId={eventId} />}
       </div>

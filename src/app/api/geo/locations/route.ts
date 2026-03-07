@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
   if (!ownerType || !ownerId) {
     return NextResponse.json(
       { error: "ownerType and ownerId are required" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     .select()
     .from(locations)
     .where(
-      and(eq(locations.ownerType, ownerType), eq(locations.ownerId, ownerId)),
+      and(eq(locations.ownerType, ownerType), eq(locations.ownerId, ownerId))
     )
     .orderBy(desc(locations.createdAt));
 

@@ -6,8 +6,8 @@ import { AddressSelectorAndCard } from "@/components/address-selector-and-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type DrivingStatus } from "@/db/schema";
-import type { Location } from "@/lib/geo/schema";
 import { useSession } from "@/lib/auth-client";
+import type { Location } from "@/lib/geo/schema";
 
 import {
   useAttendEvent,

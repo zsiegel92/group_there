@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db/db";
 import { events, eventsToUsers, groupsToUsers, locations } from "@/db/schema";
 import { getUser } from "@/lib/auth";
+import { ensureDistancesForEvent } from "@/lib/geo/distances";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -161,6 +162,10 @@ export async function POST(request: NextRequest, props: Params) {
     originLocationId,
   });
 
+  after(async () => {
+    await ensureDistancesForEvent(eventId);
+  });
+
   return NextResponse.json({
     success: true,
     attendance: {
@@ -262,6 +267,10 @@ export async function PATCH(request: NextRequest, props: Params) {
     .where(
       and(eq(eventsToUsers.eventId, eventId), eq(eventsToUsers.userId, user.id))
     );
+
+  after(async () => {
+    await ensureDistancesForEvent(eventId);
+  });
 
   return NextResponse.json({
     success: true,

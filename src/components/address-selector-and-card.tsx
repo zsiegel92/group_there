@@ -88,7 +88,7 @@ export function AddressSelectorAndCard({
         setIsLoading(false);
       }
     },
-    [onNewValidatedLocation, ownerType, ownerId],
+    [onNewValidatedLocation, ownerType, ownerId]
   );
 
   const handleSelectSuggested = useCallback(
@@ -96,7 +96,7 @@ export function AddressSelectorAndCard({
       onNewValidatedLocation(location);
       setIsChanging(false);
     },
-    [onNewValidatedLocation],
+    [onNewValidatedLocation]
   );
 
   const handleChange = useCallback(() => {
@@ -152,7 +152,7 @@ export function AddressSelectorAndCard({
                   "disabled:opacity-50 disabled:cursor-not-allowed",
                   isSelected
                     ? "border-blue-300 bg-blue-50 text-blue-700"
-                    : "bg-white hover:bg-gray-50",
+                    : "bg-white hover:bg-gray-50"
                 )}
               >
                 {loc.name}

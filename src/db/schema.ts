@@ -145,10 +145,7 @@ export const locations = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
-    index("locations_ownerType_ownerId_idx").on(
-      table.ownerType,
-      table.ownerId
-    ),
+    index("locations_ownerType_ownerId_idx").on(table.ownerType, table.ownerId),
     index("locations_googlePlaceId_idx").on(table.googlePlaceId),
   ]
 );
@@ -200,6 +197,26 @@ export const events = pgTable(
   (table) => [
     index("events_groupId_idx").on(table.groupId),
     index("events_time_idx").on(table.time),
+  ]
+);
+
+export const locationDistances = pgTable(
+  "location_distances",
+  {
+    originLocationId: text("origin_location_id")
+      .notNull()
+      .references(() => locations.id, { onDelete: "cascade" }),
+    destinationLocationId: text("destination_location_id")
+      .notNull()
+      .references(() => locations.id, { onDelete: "cascade" }),
+    durationSeconds: real("duration_seconds").notNull(),
+    distanceMeters: integer("distance_meters").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.originLocationId, table.destinationLocationId],
+    }),
   ]
 );
 

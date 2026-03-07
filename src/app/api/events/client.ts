@@ -56,6 +56,7 @@ const userAttendanceResponseSchema = z.object({
   joinedAt: z.string(),
 });
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const userAttendanceInputSchema = z.object({
   drivingStatus: z.enum(drivingStatusEnumValues),
   carFits: z.number().nullable(),
@@ -284,6 +285,31 @@ export async function unscheduleEvent(eventId: string) {
   return scheduleResponseSchema.parse(data);
 }
 
+// Distance status
+const distanceStatusSchema = z.object({
+  complete: z.boolean(),
+  have: z.number(),
+  need: z.number(),
+});
+
+export async function fetchDistanceStatus(eventId: string) {
+  const response = await fetch(`/api/events/${eventId}/distances`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch distance status");
+  }
+  const data = await response.json();
+  return distanceStatusSchema.parse(data);
+}
+
+export async function triggerDistanceCalculation(eventId: string) {
+  const response = await fetch(`/api/events/${eventId}/distances`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to trigger distance calculation");
+  }
+}
+
 // React Query hooks
 export function useEvents(groupId?: string) {
   return useQuery({
@@ -410,6 +436,30 @@ export function useUnscheduleEvent() {
     onSuccess: (_, eventId) => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({ queryKey: ["events", eventId] });
+    },
+  });
+}
+
+export function useDistanceStatus(eventId: string) {
+  return useQuery({
+    queryKey: ["events", eventId, "distances"],
+    queryFn: () => fetchDistanceStatus(eventId),
+    refetchInterval: (query) => {
+      // Poll every 3 seconds while incomplete, stop when complete
+      if (query.state.data?.complete) return false;
+      return 3000;
+    },
+  });
+}
+
+export function useTriggerDistanceCalculation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: triggerDistanceCalculation,
+    onSuccess: (_, eventId) => {
+      queryClient.invalidateQueries({
+        queryKey: ["events", eventId, "distances"],
+      });
     },
   });
 }
