@@ -1,5 +1,6 @@
 from groupthere_solver.solve import solve_problem
-from groupthere_solver.models import Problem, Solution, Tripper, Party, TripperDistance
+from groupthere_solver.models import Problem, Solution, Party
+from groupthere_solver.mock_problem import mock_problem, mock_problem_expected_solution
 
 
 def solutions_are_equivalent(sol1: Solution, sol2: Solution) -> bool:
@@ -53,62 +54,7 @@ def test_solve_simple_driver_and_rider():
 
     Expected solution: A picks up B (5 minutes total drive time)
     """
-    tripper_a = Tripper(
-        user_id="user-a",
-        origin_id="origin-a",
-        event_id="event-1",
-        car_fits=2,
-        must_drive=True,
-        seconds_before_event_start_can_leave=60,
-        distance_to_destination_seconds=5.0,
-    )
-
-    tripper_b = Tripper(
-        user_id="user-b",
-        origin_id="origin-b",
-        event_id="event-1",
-        car_fits=0,  # No car
-        must_drive=False,
-        seconds_before_event_start_can_leave=60,
-        distance_to_destination_seconds=5.0,
-    )
-
-    problem = Problem(
-        id="test-problem-1",
-        event_id="event-1",
-        trippers=[tripper_a, tripper_b],
-        tripper_distances=[
-            TripperDistance(
-                origin_user_id="user-a",
-                destination_user_id="user-b",
-                distance_seconds=5.0,
-            ),
-            TripperDistance(
-                origin_user_id="user-b",
-                destination_user_id="user-a",
-                distance_seconds=5.0,
-            ),
-        ],
-    )
-
-    solution = solve_problem(problem)
-
-    # Expected solution: one party with A driving and B as passenger
-    expected_solution = Solution(
-        id="expected",
-        successfully_completed=True,
-        feasible=True,
-        optimal=False,
-        parties=[
-            Party(
-                id="party-1",
-                driver_tripper_id="user-a",
-                passenger_tripper_ids=["user-b"],
-            )
-        ],
-        total_drive_seconds=5.0,
-    )
-
-    assert solutions_are_equivalent(solution, expected_solution), (
-        f"Expected solution with A driving B (5 min), but got: {solution}"
-    )
+    solution = solve_problem(mock_problem)
+    assert solutions_are_equivalent(
+        solution, mock_problem_expected_solution
+    ), f"Expected solution with A driving B (5 min), but got: {solution}"

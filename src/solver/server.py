@@ -37,9 +37,3 @@ async def solve_async(problem: Problem) -> ProblemReceivedResponse:
 @modal.asgi_app()
 def serve_webapp():
     return webapp
-
-
-@app.function()
-def test_remote():
-    print("Running on server!")
-    return "Returning from server!"
