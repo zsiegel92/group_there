@@ -2,6 +2,7 @@
 
 import { use } from "react";
 
+import { EventLocationsMap } from "@/components/map/event-locations-map";
 import {
   AdminBadge,
   ScheduledBadge,
@@ -112,6 +113,8 @@ export default function EventDetailPage(props: {
             )}
           </div>
         </div>
+
+        <EventLocationsMap event={event} />
 
         {!event.hasJoined && <AttendanceForm event={event} eventId={eventId} />}
 
