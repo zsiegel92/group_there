@@ -136,10 +136,7 @@ function EphemeralSolutionView({
       const userLocationMap = new Map<string, string>();
       for (const att of event.attendees) {
         if (att.userAttendance.originLocationId) {
-          userLocationMap.set(
-            att.userId,
-            att.userAttendance.originLocationId
-          );
+          userLocationMap.set(att.userId, att.userAttendance.originLocationId);
         }
       }
 
@@ -206,7 +203,9 @@ function EphemeralSolutionView({
         const seq = partySequences[pi];
         if (!seq) continue;
         const color =
-          ROUTE_COLORS[pi % ROUTE_COLORS.length] ?? ROUTE_COLORS[0] ?? "#16a34a";
+          ROUTE_COLORS[pi % ROUTE_COLORS.length] ??
+          ROUTE_COLORS[0] ??
+          "#16a34a";
         const coordinates: [number, number][] = [];
 
         for (let i = 0; i < seq.locationIds.length - 1; i++) {
@@ -416,8 +415,7 @@ function LockedSolutionView({
         </h2>
         <div className="space-y-3">
           {sol.parties.map((party, i) => {
-            const color =
-              ROUTE_COLORS[i % ROUTE_COLORS.length] ?? "#16a34a";
+            const color = ROUTE_COLORS[i % ROUTE_COLORS.length] ?? "#16a34a";
             const driver = party.members.find((m) => m.pickupOrder === 0);
             const passengers = party.members
               .filter((m) => m.pickupOrder > 0)
@@ -428,10 +426,7 @@ function LockedSolutionView({
                 key={party.id}
                 className="bg-white rounded-lg border overflow-hidden"
               >
-                <div
-                  className="h-1.5"
-                  style={{ backgroundColor: color }}
-                />
+                <div className="h-1.5" style={{ backgroundColor: color }} />
                 <div className="p-4 space-y-2">
                   {driver && (
                     <div className="flex items-center gap-2 flex-wrap">
@@ -518,8 +513,7 @@ function SolutionCards({
       {solution.feasible && (
         <div className="space-y-3">
           {solution.parties.map((party, i) => {
-            const color =
-              ROUTE_COLORS[i % ROUTE_COLORS.length] ?? "#16a34a";
+            const color = ROUTE_COLORS[i % ROUTE_COLORS.length] ?? "#16a34a";
             const driver = event.attendees.find(
               (a) => a.userId === party.driver_tripper_id
             );
@@ -532,10 +526,7 @@ function SolutionCards({
                 key={party.id}
                 className="bg-white rounded-lg border overflow-hidden"
               >
-                <div
-                  className="h-1.5"
-                  style={{ backgroundColor: color }}
-                />
+                <div className="h-1.5" style={{ backgroundColor: color }} />
                 <div className="p-4 space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-medium uppercase tracking-wide text-gray-400 w-14 shrink-0">

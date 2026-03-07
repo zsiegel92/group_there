@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/lib/auth-client";
-
 import type { Location } from "@/lib/geo/schema";
 
 import {
@@ -114,9 +113,7 @@ export default function EventDetailPage(props: {
           )}
         </div>
         <EventStatus scheduled={event.scheduled} locked={event.locked} />
-        {event.isAdmin && (
-          <BlastControls event={event} eventId={eventId} />
-        )}
+        {event.isAdmin && <BlastControls event={event} eventId={eventId} />}
       </div>
 
       <div className="space-y-6">
@@ -169,10 +166,7 @@ export default function EventDetailPage(props: {
 
         {/* Non-admin map: show only event destination + user's origin when NOT locked */}
         {!event.isAdmin && !event.locked && (
-          <NonAdminMap
-            event={event}
-            currentUserId={currentUserId}
-          />
+          <NonAdminMap event={event} currentUserId={currentUserId} />
         )}
 
         {/* Attendance form: hide when locked */}
@@ -234,8 +228,7 @@ export default function EventDetailPage(props: {
                           {currentUserAttendee.userAttendance.carFits - 1}
                         </div>
                       ) : null}
-                      {currentUserAttendee.userAttendance
-                        .earliestLeaveTime && (
+                      {currentUserAttendee.userAttendance.earliestLeaveTime && (
                         <div>
                           <span className="font-medium">Can leave at:</span>{" "}
                           {new Date(
@@ -303,7 +296,11 @@ function NonAdminMap({
       userAttendance: { originLocation: Location | null };
     }[] = [];
 
-    if (event.hasJoined && event.userAttendance?.originLocation && currentUserId) {
+    if (
+      event.hasJoined &&
+      event.userAttendance?.originLocation &&
+      currentUserId
+    ) {
       attendees.push({
         userId: currentUserId,
         userName: "You",
@@ -321,12 +318,7 @@ function NonAdminMap({
 
   if (!event.location) return null;
 
-  return (
-    <EventLocationsMap
-      event={miniEvent}
-      currentUserId={currentUserId}
-    />
-  );
+  return <EventLocationsMap event={miniEvent} currentUserId={currentUserId} />;
 }
 
 function AdminAttendeeList({

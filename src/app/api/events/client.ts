@@ -102,10 +102,16 @@ const solutionSchema = z.object({
   parties: z.array(solutionPartySchema),
 });
 
+const myPartyMemberSchema = solutionPartyMemberSchema.extend({
+  userEmail: z.string(),
+  estimatedPickup: z.string().nullable(),
+});
+
 const myPartySchema = z.object({
   role: z.enum(["driver", "passenger"]),
   partyIndex: z.number(),
-  members: z.array(solutionPartyMemberSchema),
+  estimatedEventArrival: z.string().nullable(),
+  members: z.array(myPartyMemberSchema),
 });
 
 const blastSchema = z.object({
@@ -139,6 +145,7 @@ const eventDetailSchema = z.object({
 
 export type EventDetail = z.infer<typeof eventDetailSchema>;
 export type SolutionPartyMember = z.infer<typeof solutionPartyMemberSchema>;
+export type MyPartyMember = z.infer<typeof myPartyMemberSchema>;
 export type MyParty = z.infer<typeof myPartySchema>;
 
 const eventDetailResponseSchema = z.object({

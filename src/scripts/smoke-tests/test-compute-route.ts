@@ -1,7 +1,7 @@
-export {};
-
 import { decodePolyline } from "@/lib/geo/polyline";
 import { googleComputeRoute } from "@/lib/geo/service";
+
+export {};
 
 async function main() {
   console.log("=== Compute Route API Smoke Test ===");

@@ -30,10 +30,7 @@ export async function POST(request: NextRequest, props: Params) {
   }
 
   if (!event.locked) {
-    return NextResponse.json(
-      { error: "Event is not locked" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Event is not locked" }, { status: 400 });
   }
 
   // Check admin
@@ -50,10 +47,7 @@ export async function POST(request: NextRequest, props: Params) {
 
   // Delete solution (cascade deletes parties + members), then unlock event
   await db.delete(solutions).where(eq(solutions.eventId, eventId));
-  await db
-    .update(events)
-    .set({ locked: false })
-    .where(eq(events.id, eventId));
+  await db.update(events).set({ locked: false }).where(eq(events.id, eventId));
 
   return NextResponse.json({ success: true });
 }

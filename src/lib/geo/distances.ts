@@ -174,7 +174,9 @@ export async function ensurePolylinesForPairs(
   if (pairs.length === 0) return {};
 
   const allLocationIds = [
-    ...new Set(pairs.flatMap((p) => [p.originLocationId, p.destinationLocationId])),
+    ...new Set(
+      pairs.flatMap((p) => [p.originLocationId, p.destinationLocationId])
+    ),
   ];
 
   // Fetch existing distance rows for these pairs
@@ -193,7 +195,10 @@ export async function ensurePolylinesForPairs(
     );
 
   const result: Record<string, string | null> = {};
-  const missingPairs: { originLocationId: string; destinationLocationId: string }[] = [];
+  const missingPairs: {
+    originLocationId: string;
+    destinationLocationId: string;
+  }[] = [];
 
   for (const pair of pairs) {
     const key = `${pair.originLocationId}:${pair.destinationLocationId}`;
@@ -211,7 +216,9 @@ export async function ensurePolylinesForPairs(
 
   // Look up lat/lng for locations that need polyline fetching
   const missingLocationIds = [
-    ...new Set(missingPairs.flatMap((p) => [p.originLocationId, p.destinationLocationId])),
+    ...new Set(
+      missingPairs.flatMap((p) => [p.originLocationId, p.destinationLocationId])
+    ),
   ];
   const locRows = await db
     .select({

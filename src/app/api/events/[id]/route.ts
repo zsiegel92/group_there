@@ -13,6 +13,7 @@ import {
 } from "@/db/schema";
 import { getUser } from "@/lib/auth";
 import { ensureDistancesForEvent } from "@/lib/geo/distances";
+import { computePartyEstimates } from "@/lib/itinerary";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -163,33 +164,52 @@ export async function GET(request: NextRequest, props: Params) {
         };
       }
 
-      // Everyone gets their party
+      // Everyone gets their party (with emails and estimated arrival times)
       for (const party of sol.parties) {
         const isMember = party.members.some((m) => m.userId === user.id);
         if (isMember) {
-          const currentMember = party.members.find(
-            (m) => m.userId === user.id
+          const currentMember = party.members.find((m) => m.userId === user.id);
+          const sortedMembers = party.members.sort(
+            (a, b) => a.pickupOrder - b.pickupOrder
           );
-          const att = attendeeLookup.get(user.id);
+
+          // Compute estimated times for this party
+          const attendeeForEstimates = sortedMembers.map((m) => {
+            const a = event.eventsToUsers.find((e) => e.userId === m.userId);
+            return {
+              userId: m.userId,
+              originLocationId: a?.originLocationId ?? null,
+              earliestLeaveTime: a?.earliestLeaveTime ?? null,
+              pickupOrder: m.pickupOrder,
+            };
+          });
+
+          const { estimatedPickups, estimatedEventArrival } =
+            await computePartyEstimates(attendeeForEstimates, event.locationId);
+
           myParty = {
             role:
               currentMember?.pickupOrder === 0
                 ? ("driver" as const)
                 : ("passenger" as const),
             partyIndex: party.partyIndex,
-            members: party.members
-              .sort((a, b) => a.pickupOrder - b.pickupOrder)
-              .map((m) => {
-                const memberAtt = attendeeLookup.get(m.userId);
-                return {
-                  userId: m.userId,
-                  userName: m.user.name,
-                  pickupOrder: m.pickupOrder,
-                  originLocation: memberAtt?.originLocation ?? null,
-                  originLocationId: memberAtt?.originLocationId ?? null,
-                  earliestLeaveTime: memberAtt?.earliestLeaveTime ?? null,
-                };
-              }),
+            estimatedEventArrival: estimatedEventArrival
+              ? estimatedEventArrival.toISOString()
+              : null,
+            members: sortedMembers.map((m) => {
+              const memberAtt = attendeeLookup.get(m.userId);
+              const pickup = estimatedPickups.get(m.userId);
+              return {
+                userId: m.userId,
+                userName: m.user.name,
+                userEmail: m.user.email,
+                pickupOrder: m.pickupOrder,
+                originLocation: memberAtt?.originLocation ?? null,
+                originLocationId: memberAtt?.originLocationId ?? null,
+                earliestLeaveTime: memberAtt?.earliestLeaveTime ?? null,
+                estimatedPickup: pickup ? pickup.toISOString() : null,
+              };
+            }),
           };
           break;
         }

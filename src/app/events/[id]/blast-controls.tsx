@@ -1,26 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { formatDistanceToNow } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 
-import {
-  useSendBlast,
-  type EventDetail,
-} from "../../api/events/client";
-
-function timeAgo(dateStr: string) {
-  const seconds = Math.floor(
-    (Date.now() - new Date(dateStr).getTime()) / 1000
-  );
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
+import { useSendBlast, type EventDetail } from "../../api/events/client";
 
 const blastTypeLabels = {
   event_scheduled: "Notified group to join",
@@ -62,8 +47,8 @@ export function BlastControls({
   if (!showScheduledButton && !showConfirmedButton) return null;
 
   return (
-    <div className="mt-3 space-y-3">
-      <div className="flex items-center gap-3">
+    <div className="mt-3 border rounded-lg p-4 space-y-3">
+      <div className="flex items-center gap-3 flex-wrap">
         {showScheduledButton && (
           <Button
             variant="secondary"
@@ -71,9 +56,7 @@ export function BlastControls({
             onClick={() => handleBlast("event_scheduled")}
             disabled={sendBlast.isPending}
           >
-            {sendBlast.isPending
-              ? "Sending..."
-              : "Notify Group to Join"}
+            {sendBlast.isPending ? "Sending..." : "Notify Group to Join"}
           </Button>
         )}
         {showConfirmedButton && (
@@ -99,28 +82,29 @@ export function BlastControls({
       </div>
 
       {/* Blast History */}
-      {event.blasts.length > 0 && (
-        <div className="max-h-32 overflow-y-auto">
+      <div className="max-h-32 overflow-y-auto">
+        {event.blasts.length > 0 ? (
           <div className="space-y-1">
             {event.blasts.map((blast) => (
-              <div
-                key={blast.id}
-                className="text-xs text-gray-500 flex gap-2"
-              >
+              <div key={blast.id} className="text-xs text-gray-500 flex gap-2">
                 <span>
-                  {blastTypeLabels[blast.type as keyof typeof blastTypeLabels] ??
-                    blast.type}
+                  {blast.type in blastTypeLabels
+                    ? blastTypeLabels[blast.type]
+                    : blast.type}
                 </span>
                 <span>({blast.recipientCount} recipients)</span>
-                <span>{timeAgo(blast.createdAt)}</span>
+                <span>
+                  {formatDistanceToNow(new Date(blast.createdAt), {
+                    addSuffix: true,
+                  })}
+                </span>
               </div>
             ))}
           </div>
-        </div>
-      )}
-      {event.blasts.length === 0 && (
-        <p className="text-xs text-gray-400">No notifications sent yet</p>
-      )}
+        ) : (
+          <p className="text-xs text-gray-400">No notifications sent yet</p>
+        )}
+      </div>
     </div>
   );
 }

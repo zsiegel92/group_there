@@ -3,7 +3,13 @@
 import "leaflet/dist/leaflet.css";
 
 import L from "leaflet";
-import { MapContainer, Marker, Polyline, Popup, TileLayer } from "react-leaflet";
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  Popup,
+  TileLayer,
+} from "react-leaflet";
 
 import {
   computeBounds,
@@ -70,7 +76,9 @@ export default function LeafletMapComponent({
       {routes.map((route, i) => (
         <Polyline
           key={`route-${i}`}
-          positions={route.coordinates.map(([lng, lat]) => [lat, lng] satisfies [number, number])}
+          positions={route.coordinates.map(
+            ([lng, lat]) => [lat, lng] satisfies [number, number]
+          )}
           pathOptions={{ color: route.color, weight: 4, opacity: 0.8 }}
         />
       ))}
@@ -81,7 +89,12 @@ export default function LeafletMapComponent({
             : point.variant === "you"
               ? YOU_COLOR
               : ORIGIN_COLOR;
-        const size = point.variant === "destination" ? 24 : point.variant === "you" ? 22 : 18;
+        const size =
+          point.variant === "destination"
+            ? 24
+            : point.variant === "you"
+              ? 22
+              : 18;
         return (
           <Marker
             key={`${point.latitude}-${point.longitude}-${i}`}
