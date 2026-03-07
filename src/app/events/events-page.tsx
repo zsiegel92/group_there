@@ -68,9 +68,7 @@ function EventCard({
           <div className="mt-2 text-gray-700">{event.message}</div>
         )}
       </div>
-      <div className="mt-3 text-blue-600 text-sm font-medium">
-        {linkText} →
-      </div>
+      <div className="mt-3 text-blue-600 text-sm font-medium">{linkText} →</div>
     </Link>
   );
 }
