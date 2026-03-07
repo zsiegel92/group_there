@@ -16,10 +16,10 @@ export const users = pgTable(
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     email: text("email").notNull().unique(),
-    emailVerified: boolean("emailVerified").default(false).notNull(),
+    emailVerified: boolean("email_verified").default(false).notNull(),
     image: text("image"),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt")
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
@@ -31,16 +31,16 @@ export const sessions = pgTable(
   "sessions",
   {
     id: text("id").primaryKey(),
-    expiresAt: timestamp("expiresAt").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
     token: text("token").notNull().unique(),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt")
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
-    ipAddress: text("ipAddress"),
-    userAgent: text("userAgent"),
-    userId: text("userId")
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
   },
@@ -54,20 +54,20 @@ export const accounts = pgTable(
   "accounts",
   {
     id: text("id").primaryKey(),
-    accountId: text("accountId").notNull(),
-    providerId: text("providerId").notNull(),
-    userId: text("userId")
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    accessToken: text("accessToken"),
-    refreshToken: text("refreshToken"),
-    idToken: text("idToken"),
-    accessTokenExpiresAt: timestamp("accessTokenExpiresAt"),
-    refreshTokenExpiresAt: timestamp("refreshTokenExpiresAt"),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at"),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
     scope: text("scope"),
     password: text("password"),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt")
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
@@ -81,9 +81,9 @@ export const verifications = pgTable(
     id: text("id").primaryKey(),
     identifier: text("identifier").notNull(),
     value: text("value").notNull(),
-    expiresAt: timestamp("expiresAt").notNull(),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt")
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
@@ -95,24 +95,24 @@ export const groups = pgTable("groups", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   secret: text("secret").notNull(), // hashed group secret for invite verification
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt")
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
 });
 
 export const groupsToUsers = pgTable(
-  "groupsToUsers",
+  "groups_to_users",
   {
-    groupId: text("groupId")
+    groupId: text("group_id")
       .notNull()
       .references(() => groups.id, { onDelete: "cascade" }),
-    userId: text("userId")
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    isAdmin: boolean("isAdmin").default(false).notNull(),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    isAdmin: boolean("is_admin").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.groupId, table.userId] }),
@@ -140,7 +140,7 @@ export const drivingStatusEnumValuesForPassengers: DrivingStatus[] = [
 ] as const;
 
 export const drivingStatusEnum = pgEnum(
-  "drivingStatus",
+  "driving_status",
   drivingStatusEnumValues
 );
 
@@ -148,7 +148,7 @@ export const events = pgTable(
   "events",
   {
     id: text("id").primaryKey(),
-    groupId: text("groupId")
+    groupId: text("group_id")
       .notNull()
       .references(() => groups.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
@@ -156,11 +156,11 @@ export const events = pgTable(
     time: timestamp("time").notNull(),
     message: text("message"),
     scheduled: boolean("scheduled").default(false).notNull(),
-    haveSentInvitationEmails: boolean("haveSentInvitationEmails")
+    haveSentInvitationEmails: boolean("have_sent_invitation_emails")
       .default(false)
       .notNull(),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt")
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
@@ -172,19 +172,19 @@ export const events = pgTable(
 );
 
 export const eventsToUsers = pgTable(
-  "eventsToUsers",
+  "events_to_users",
   {
-    eventId: text("eventId")
+    eventId: text("event_id")
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
-    userId: text("userId")
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    drivingStatus: drivingStatusEnum("drivingStatus").notNull(),
-    carFits: integer("carFits").notNull(), // includes driver!
-    earliestLeaveTime: timestamp("earliestLeaveTime"), // null if cannot drive
-    originLocation: text("originLocation").notNull(),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    drivingStatus: drivingStatusEnum("driving_status").notNull(),
+    carFits: integer("car_fits").notNull(), // includes driver!
+    earliestLeaveTime: timestamp("earliest_leave_time"), // null if cannot drive
+    originLocation: text("origin_location").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.eventId, table.userId] }),
