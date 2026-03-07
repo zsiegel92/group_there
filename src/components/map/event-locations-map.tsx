@@ -11,6 +11,7 @@ import MapboxMap from "./mapbox-map";
 type EventForMap = {
   location: Location | null;
   attendees: Array<{
+    userId: string;
     userName: string;
     userAttendance: {
       originLocation: Location | null;
@@ -21,9 +22,11 @@ type EventForMap = {
 export function EventLocationsMap({
   event,
   routes = [],
+  currentUserId,
 }: {
   event: EventForMap;
   routes?: Route[];
+  currentUserId?: string;
 }) {
   const points = useMemo(() => {
     const result: MapPoint[] = [];
@@ -44,17 +47,20 @@ export function EventLocationsMap({
     for (const attendee of event.attendees) {
       const origin = attendee.userAttendance.originLocation;
       if (origin && origin.latitude != null && origin.longitude != null) {
+        const isYou = attendee.userId === currentUserId;
         result.push({
           latitude: origin.latitude,
           longitude: origin.longitude,
-          label: `${attendee.userName} — ${origin.name}`,
-          variant: "origin",
+          label: isYou
+            ? `You — ${origin.name}`
+            : `${attendee.userName} — ${origin.name}`,
+          variant: isYou ? "you" : "origin",
         });
       }
     }
 
     return result;
-  }, [event]);
+  }, [event, currentUserId]);
 
   if (points.length === 0) return null;
 
@@ -68,6 +74,12 @@ export function EventLocationsMap({
           <span className="inline-block w-3 h-3 rounded-full bg-red-600" />{" "}
           Destination
         </span>
+        {points.some((p) => p.variant === "you") && (
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-3 h-3 rounded-full bg-teal-500" />{" "}
+            You
+          </span>
+        )}
         <span className="flex items-center gap-1">
           <span className="inline-block w-3 h-3 rounded-full bg-blue-600" />{" "}
           Attendee origins

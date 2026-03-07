@@ -246,7 +246,7 @@ export default function EventDetailPage(props: {
 
         <DistanceStatus eventId={eventId} isAdmin={event.isAdmin} />
 
-        <EventMapPanel event={event} eventId={eventId} />
+        <EventMapPanel event={event} eventId={eventId} currentUserId={session?.user?.id} />
       </div>
     </div>
   );

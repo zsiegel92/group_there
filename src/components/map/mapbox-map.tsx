@@ -33,7 +33,7 @@ function DestinationPin({ size }: { size: number }) {
   );
 }
 
-function PersonPin({ size }: { size: number }) {
+function PersonPin({ size, color }: { size: number; color: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -46,9 +46,9 @@ function PersonPin({ size }: { size: number }) {
       }}
     >
       {/* Rounded rectangle badge */}
-      <rect x="1" y="0" width="22" height="24" rx="6" fill="#2563eb" />
+      <rect x="1" y="0" width="22" height="24" rx="6" fill={color} />
       {/* Pointer triangle */}
-      <polygon points="8,23 16,23 12,32" fill="#2563eb" />
+      <polygon points="8,23 16,23 12,32" fill={color} />
       {/* Person head */}
       <circle cx="12" cy="8.5" r="3.5" fill="white" />
       {/* Person shoulders */}
@@ -62,10 +62,14 @@ function PersonPin({ size }: { size: number }) {
   );
 }
 
+const YOU_COLOR = "#0d9488"; // teal-600
+const ORIGIN_COLOR = "#2563eb"; // blue-600
+
 function MapboxMarker({ point }: { point: MapPoint }) {
   const [showPopup, setShowPopup] = useState(false);
   const isDestination = point.variant === "destination";
-  const size = isDestination ? 32 : 26;
+  const isYou = point.variant === "you";
+  const size = isDestination ? 32 : isYou ? 30 : 26;
   const popupOffset = isDestination ? size * 1.5 : size * (32 / 24);
 
   return (
@@ -82,7 +86,7 @@ function MapboxMarker({ point }: { point: MapPoint }) {
         {isDestination ? (
           <DestinationPin size={size} />
         ) : (
-          <PersonPin size={size} />
+          <PersonPin size={size} color={isYou ? YOU_COLOR : ORIGIN_COLOR} />
         )}
       </Marker>
       {showPopup && (
@@ -92,9 +96,18 @@ function MapboxMarker({ point }: { point: MapPoint }) {
           anchor="bottom"
           offset={popupOffset}
           onClose={() => setShowPopup(false)}
+          closeButton={false}
           closeOnClick={false}
         >
-          <div className="text-sm font-medium px-1">{point.label}</div>
+          <div className="flex items-center gap-2 pr-1">
+            <span className="text-sm font-medium">{point.label}</span>
+            <button
+              onClick={() => setShowPopup(false)}
+              className="text-gray-400 hover:text-gray-700 text-lg leading-none p-1 -mr-1 cursor-pointer"
+            >
+              &times;
+            </button>
+          </div>
         </Popup>
       )}
     </>

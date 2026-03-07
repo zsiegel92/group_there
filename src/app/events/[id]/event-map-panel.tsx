@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { EventLocationsMap } from "@/components/map/event-locations-map";
 import { ROUTE_COLORS, type Route } from "@/components/map/map-container";
+import { YouBadge } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { decodePolyline } from "@/lib/geo/polyline";
@@ -19,6 +20,7 @@ type EventForPanel = {
   attendees: Array<{
     userId: string;
     userName: string;
+    userEmail: string;
     userAttendance: {
       originLocationId: string | null;
       originLocation: Location | null;
@@ -30,9 +32,11 @@ type EventForPanel = {
 export function EventMapPanel({
   event,
   eventId,
+  currentUserId,
 }: {
   event: EventForPanel;
   eventId: string;
+  currentUserId: string | undefined;
 }) {
   const [solution, setSolution] = useState<Solution | null>(null);
   const [routes, setRoutes] = useState<Route[]>([]);
@@ -178,7 +182,7 @@ export function EventMapPanel({
 
   return (
     <div className="space-y-4">
-      <EventLocationsMap event={event} routes={routes} />
+      <EventLocationsMap event={event} routes={routes} currentUserId={currentUserId} />
 
       {event.isAdmin && (
         <div className="bg-gray-50 p-6 rounded-lg">
@@ -202,52 +206,92 @@ export function EventMapPanel({
               </div>
             )}
             {solution && (
-              <div className="bg-white p-4 rounded-lg border">
-                <h3 className="font-medium mb-2">
+              <div>
+                <h3 className="font-medium mb-3">
                   {solution.feasible
-                    ? `Solution found — ${solution.parties.length} carpool${solution.parties.length === 1 ? "" : "s"}`
+                    ? `Solution found — ${solution.parties.length} carpool${solution.parties.length === 1 ? "" : "s"}, ${Math.round(solution.total_drive_seconds / 60)} min total`
                     : "No feasible solution found"}
                 </h3>
                 {solution.feasible && (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {solution.parties.map((party, i) => {
-                      const driverName = event.attendees.find(
-                        (a) => a.userId === party.driver_tripper_id
-                      )?.userName;
-                      const passengerNames = party.passenger_tripper_ids.map(
-                        (pid) =>
-                          event.attendees.find((a) => a.userId === pid)
-                            ?.userName ?? pid
-                      );
                       const color =
-                        ROUTE_COLORS[i % ROUTE_COLORS.length]!;
+                        ROUTE_COLORS[i % ROUTE_COLORS.length] ?? "#16a34a";
+                      const driver = event.attendees.find(
+                        (a) => a.userId === party.driver_tripper_id
+                      );
+                      const passengers = party.passenger_tripper_ids.map(
+                        (pid) => event.attendees.find((a) => a.userId === pid)
+                      );
+
                       return (
                         <div
                           key={party.id}
-                          className="flex items-start gap-2 text-sm"
+                          className="bg-white rounded-lg border overflow-hidden"
                         >
-                          <span
-                            className="inline-block w-3 h-3 rounded-full mt-0.5 shrink-0"
+                          <div
+                            className="h-1.5"
                             style={{ backgroundColor: color }}
                           />
-                          <span>
-                            <span className="font-medium">
-                              {driverName ?? party.driver_tripper_id}
-                            </span>
-                            {passengerNames.length > 0 && (
-                              <span className="text-gray-600">
-                                {" picks up "}
-                                {passengerNames.join(", ")}
+                          <div className="p-4 space-y-2">
+                            {/* Driver */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-medium uppercase tracking-wide text-gray-400 w-14 shrink-0">
+                                Driver
                               </span>
+                              <span className="font-medium">
+                                {driver?.userName ?? "Unknown"}
+                              </span>
+                              {driver?.userId === currentUserId && <YouBadge />}
+                              {driver && (
+                                <span className="text-gray-400 text-sm">
+                                  {driver.userEmail}
+                                </span>
+                              )}
+                              {driver?.userAttendance.originLocation && (
+                                <span className="text-gray-500 text-sm">
+                                  from{" "}
+                                  {driver.userAttendance.originLocation.name}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Passengers */}
+                            {passengers.map((pass, j) => (
+                              <div
+                                key={pass?.userId ?? j}
+                                className="flex items-center gap-2 flex-wrap"
+                              >
+                                <span className="text-xs font-medium uppercase tracking-wide text-gray-400 w-14 shrink-0">
+                                  Rider
+                                </span>
+                                <span className="font-medium">
+                                  {pass?.userName ?? "Unknown"}
+                                </span>
+                                {pass?.userId === currentUserId && <YouBadge />}
+                                {pass && (
+                                  <span className="text-gray-400 text-sm">
+                                    {pass.userEmail}
+                                  </span>
+                                )}
+                                {pass?.userAttendance.originLocation && (
+                                  <span className="text-gray-500 text-sm">
+                                    from{" "}
+                                    {pass.userAttendance.originLocation.name}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+
+                            {passengers.length === 0 && (
+                              <div className="text-sm text-gray-400 italic ml-16">
+                                Solo driver
+                              </div>
                             )}
-                          </span>
+                          </div>
                         </div>
                       );
                     })}
-                    <div className="text-xs text-gray-500 mt-2">
-                      Total drive time:{" "}
-                      {Math.round(solution.total_drive_seconds / 60)} minutes
-                    </div>
                   </div>
                 )}
               </div>

@@ -14,6 +14,7 @@ import {
 
 const DESTINATION_COLOR = "#dc2626";
 const ORIGIN_COLOR = "#2563eb";
+const YOU_COLOR = "#0d9488";
 
 function makeIcon(color: string, size: number) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="${size}" height="${Math.round(size * 1.5)}">
@@ -75,15 +76,19 @@ export default function LeafletMapComponent({
       ))}
       {points.map((point, i) => {
         const color =
-          point.variant === "destination" ? DESTINATION_COLOR : ORIGIN_COLOR;
-        const size = point.variant === "destination" ? 24 : 18;
+          point.variant === "destination"
+            ? DESTINATION_COLOR
+            : point.variant === "you"
+              ? YOU_COLOR
+              : ORIGIN_COLOR;
+        const size = point.variant === "destination" ? 24 : point.variant === "you" ? 22 : 18;
         return (
           <Marker
             key={`${point.latitude}-${point.longitude}-${i}`}
             position={[point.latitude, point.longitude]}
             icon={makeIcon(color, size)}
           >
-            <Popup>
+            <Popup closeButton={false}>
               <div className="text-sm font-medium">
                 {point.variant === "destination" ? "Destination: " : ""}
                 {point.label}

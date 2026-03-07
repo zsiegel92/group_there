@@ -6,7 +6,7 @@ export type MapPoint = {
   latitude: number;
   longitude: number;
   label: string;
-  variant: "destination" | "origin";
+  variant: "destination" | "origin" | "you";
 };
 
 export type Route = {
