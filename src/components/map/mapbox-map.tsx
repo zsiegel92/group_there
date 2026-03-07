@@ -2,10 +2,10 @@
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
-import { useRef, useState } from "react";
-import { Map, Marker, Popup } from "react-map-gl/mapbox";
+import { useMemo, useRef, useState } from "react";
+import { Layer, Map, Marker, Popup, Source } from "react-map-gl/mapbox";
 
-import { computeInitialView, type MapPoint } from "./map-container";
+import { computeInitialView, type MapPoint, type Route } from "./map-container";
 
 function DestinationPin({ size }: { size: number }) {
   return (
@@ -101,9 +101,31 @@ function MapboxMarker({ point }: { point: MapPoint }) {
   );
 }
 
-export default function MapboxMap({ points }: { points: MapPoint[] }) {
+export default function MapboxMap({
+  points,
+  routes = [],
+}: {
+  points: MapPoint[];
+  routes?: Route[];
+}) {
   const [viewState, setViewState] = useState(computeInitialView(points));
   const mapRef = useRef<React.ComponentRef<typeof Map>>(null);
+
+  const routeData = useMemo(
+    () =>
+      routes.map((route) => {
+        const feature: GeoJSON.Feature<GeoJSON.LineString> = {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates: route.coordinates,
+          },
+        };
+        return { feature, color: route.color };
+      }),
+    [routes]
+  );
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
   if (!token) {
@@ -123,6 +145,28 @@ export default function MapboxMap({ points }: { points: MapPoint[] }) {
       mapStyle="mapbox://styles/mapbox/streets-v12"
       style={{ width: "100%", height: 400, borderRadius: 8 }}
     >
+      {routeData.map((rd, i) => (
+        <Source
+          key={`route-${i}`}
+          id={`route-${i}`}
+          type="geojson"
+          data={rd.feature}
+        >
+          <Layer
+            id={`route-line-${i}`}
+            type="line"
+            paint={{
+              "line-color": rd.color,
+              "line-width": 4,
+              "line-opacity": 0.8,
+            }}
+            layout={{
+              "line-cap": "round",
+              "line-join": "round",
+            }}
+          />
+        </Source>
+      ))}
       {points.map((point, i) => (
         <MapboxMarker
           key={`${point.latitude}-${point.longitude}-${i}`}

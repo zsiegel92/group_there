@@ -2,7 +2,6 @@
 
 import { use } from "react";
 
-import { EventLocationsMap } from "@/components/map/event-locations-map";
 import {
   AdminBadge,
   ScheduledBadge,
@@ -17,8 +16,8 @@ import { AttendanceForm } from "./attendance-form";
 import { DeleteEventButton } from "./delete-event-button";
 import { DistanceStatus } from "./distance-status";
 import { EditEventButton } from "./edit-event-button";
+import { EventMapPanel } from "./event-map-panel";
 import { ScheduleEventButtons } from "./schedule-event-button";
-import { SolveProblem } from "./solve-problem";
 
 export default function EventDetailPage(props: {
   params: Promise<{ id: string }>;
@@ -113,8 +112,6 @@ export default function EventDetailPage(props: {
             )}
           </div>
         </div>
-
-        <EventLocationsMap event={event} />
 
         {!event.hasJoined && <AttendanceForm event={event} eventId={eventId} />}
 
@@ -249,7 +246,7 @@ export default function EventDetailPage(props: {
 
         <DistanceStatus eventId={eventId} isAdmin={event.isAdmin} />
 
-        {event.isAdmin && <SolveProblem eventId={eventId} />}
+        <EventMapPanel event={event} eventId={eventId} />
       </div>
     </div>
   );

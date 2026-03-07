@@ -3,12 +3,13 @@
 import "leaflet/dist/leaflet.css";
 
 import L from "leaflet";
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { MapContainer, Marker, Polyline, Popup, TileLayer } from "react-leaflet";
 
 import {
   computeBounds,
   computeInitialView,
   type MapPoint,
+  type Route,
 } from "./map-container";
 
 const DESTINATION_COLOR = "#dc2626";
@@ -30,8 +31,10 @@ function makeIcon(color: string, size: number) {
 
 export default function LeafletMapComponent({
   points,
+  routes = [],
 }: {
   points: MapPoint[];
+  routes?: Route[];
 }) {
   const initial = computeInitialView(points);
   const bounds = computeBounds(points);
@@ -63,6 +66,13 @@ export default function LeafletMapComponent({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      {routes.map((route, i) => (
+        <Polyline
+          key={`route-${i}`}
+          positions={route.coordinates.map(([lng, lat]) => [lat, lng] satisfies [number, number])}
+          pathOptions={{ color: route.color, weight: 4, opacity: 0.8 }}
+        />
+      ))}
       {points.map((point, i) => {
         const color =
           point.variant === "destination" ? DESTINATION_COLOR : ORIGIN_COLOR;

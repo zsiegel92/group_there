@@ -1,9 +1,15 @@
 import { and, eq, inArray, or } from "drizzle-orm";
+import PQueue from "p-queue";
+import pRetry from "p-retry";
 
 import { db } from "@/db/db";
-import { events, locationDistances } from "@/db/schema";
+import { events, locationDistances, locations } from "@/db/schema";
 
-import { googleRouteMatrix } from "./service";
+import { googleComputeRoute, googleRouteMatrix } from "./service";
+
+const POLYLINE_CONCURRENCY = 3;
+const POLYLINE_INTERVAL_MS = 200;
+const POLYLINE_RETRY_COUNT = 2;
 
 /**
  * Gather all location IDs relevant to an event's distance matrix:
@@ -156,4 +162,127 @@ export async function invalidateDistancesForLocation(locationId: string) {
         eq(locationDistances.destinationLocationId, locationId)
       )
     );
+}
+
+/**
+ * Ensure encoded polylines exist for a set of location pairs.
+ * Returns all polylines keyed by `${originId}:${destId}`.
+ */
+export async function ensurePolylinesForPairs(
+  pairs: { originLocationId: string; destinationLocationId: string }[]
+) {
+  if (pairs.length === 0) return {};
+
+  const allLocationIds = [
+    ...new Set(pairs.flatMap((p) => [p.originLocationId, p.destinationLocationId])),
+  ];
+
+  // Fetch existing distance rows for these pairs
+  const existing = await db
+    .select({
+      originLocationId: locationDistances.originLocationId,
+      destinationLocationId: locationDistances.destinationLocationId,
+      encodedPolyline: locationDistances.encodedPolyline,
+    })
+    .from(locationDistances)
+    .where(
+      and(
+        inArray(locationDistances.originLocationId, allLocationIds),
+        inArray(locationDistances.destinationLocationId, allLocationIds)
+      )
+    );
+
+  const result: Record<string, string | null> = {};
+  const missingPairs: { originLocationId: string; destinationLocationId: string }[] = [];
+
+  for (const pair of pairs) {
+    const key = `${pair.originLocationId}:${pair.destinationLocationId}`;
+    const row = existing.find(
+      (e) => `${e.originLocationId}:${e.destinationLocationId}` === key
+    );
+    if (row?.encodedPolyline) {
+      result[key] = row.encodedPolyline;
+    } else {
+      missingPairs.push(pair);
+    }
+  }
+
+  if (missingPairs.length === 0) return result;
+
+  // Look up lat/lng for locations that need polyline fetching
+  const missingLocationIds = [
+    ...new Set(missingPairs.flatMap((p) => [p.originLocationId, p.destinationLocationId])),
+  ];
+  const locRows = await db
+    .select({
+      id: locations.id,
+      latitude: locations.latitude,
+      longitude: locations.longitude,
+    })
+    .from(locations)
+    .where(inArray(locations.id, missingLocationIds));
+
+  const locMap = new Map(locRows.map((l) => [l.id, l]));
+
+  const queue = new PQueue({
+    concurrency: POLYLINE_CONCURRENCY,
+    interval: POLYLINE_INTERVAL_MS,
+    intervalCap: POLYLINE_CONCURRENCY,
+  });
+
+  const tasks = missingPairs.map((pair) =>
+    queue.add(async () => {
+      const origin = locMap.get(pair.originLocationId);
+      const dest = locMap.get(pair.destinationLocationId);
+      if (!origin || !dest) return;
+
+      const originLat = origin.latitude;
+      const originLng = origin.longitude;
+      const destLat = dest.latitude;
+      const destLng = dest.longitude;
+      if (
+        originLat == null ||
+        originLng == null ||
+        destLat == null ||
+        destLng == null
+      ) {
+        return;
+      }
+
+      const key = `${pair.originLocationId}:${pair.destinationLocationId}`;
+      try {
+        const { encodedPolyline } = await pRetry(
+          () =>
+            googleComputeRoute(
+              { latitude: originLat, longitude: originLng },
+              { latitude: destLat, longitude: destLng }
+            ),
+          { retries: POLYLINE_RETRY_COUNT }
+        );
+
+        // Update the existing distance row with the polyline
+        await db
+          .update(locationDistances)
+          .set({ encodedPolyline })
+          .where(
+            and(
+              eq(locationDistances.originLocationId, pair.originLocationId),
+              eq(
+                locationDistances.destinationLocationId,
+                pair.destinationLocationId
+              )
+            )
+          );
+
+        result[key] = encodedPolyline;
+      } catch (err) {
+        console.error(`Failed to fetch polyline for ${key}:`, err);
+        result[key] = null;
+      }
+    })
+  );
+
+  await Promise.all(tasks);
+
+  return result;
 }

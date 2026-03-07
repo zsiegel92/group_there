@@ -310,6 +310,27 @@ export async function triggerDistanceCalculation(eventId: string) {
   }
 }
 
+// Route polylines
+const routePolylinesResponseSchema = z.object({
+  polylines: z.record(z.string(), z.string().nullable()),
+});
+
+export async function fetchRoutePolylines(
+  eventId: string,
+  pairs: { originLocationId: string; destinationLocationId: string }[]
+) {
+  const response = await fetch(`/api/events/${eventId}/routes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pairs }),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch route polylines");
+  }
+  const data = await response.json();
+  return routePolylinesResponseSchema.parse(data);
+}
+
 // React Query hooks
 export function useEvents(groupId?: string) {
   return useQuery({

@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import type { Location } from "@/lib/geo/schema";
 
 import LeafletMap from "./leaflet-map";
-import { USE_PAID_MAPBOX, type MapPoint } from "./map-container";
+import { USE_PAID_MAPBOX, type MapPoint, type Route } from "./map-container";
 import MapboxMap from "./mapbox-map";
 
 type EventForMap = {
@@ -18,7 +18,13 @@ type EventForMap = {
   }>;
 };
 
-export function EventLocationsMap({ event }: { event: EventForMap }) {
+export function EventLocationsMap({
+  event,
+  routes = [],
+}: {
+  event: EventForMap;
+  routes?: Route[];
+}) {
   const points = useMemo(() => {
     const result: MapPoint[] = [];
 
@@ -67,7 +73,7 @@ export function EventLocationsMap({ event }: { event: EventForMap }) {
           Attendee origins
         </span>
       </div>
-      <MapComponent points={points} />
+      <MapComponent points={points} routes={routes} />
     </div>
   );
 }

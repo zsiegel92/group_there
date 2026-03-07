@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   AutocompletePredictionSchema,
+  ComputeRouteResponseSchema,
   PlaceDetailsSchema,
   RouteMatrixEntrySchema,
 } from "./schema";
@@ -234,4 +235,56 @@ export async function googleRouteMatrix(
   }
 
   return results;
+}
+
+/**
+ * Compute a driving route between two points and return the encoded polyline.
+ */
+export async function googleComputeRoute(
+  origin: { latitude: number; longitude: number },
+  destination: { latitude: number; longitude: number }
+) {
+  const response = await fetch(
+    "https://routes.googleapis.com/directions/v2:computeRoutes",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": getApiKey(),
+        "X-Goog-FieldMask": "routes.polyline.encodedPolyline",
+      },
+      body: JSON.stringify({
+        origin: {
+          location: {
+            latLng: { latitude: origin.latitude, longitude: origin.longitude },
+          },
+        },
+        destination: {
+          location: {
+            latLng: {
+              latitude: destination.latitude,
+              longitude: destination.longitude,
+            },
+          },
+        },
+        travelMode: "DRIVE",
+        routingPreference: "TRAFFIC_AWARE",
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(
+      `Google Compute Route API error: ${response.status} ${text}`
+    );
+  }
+
+  const data = ComputeRouteResponseSchema.parse(await response.json());
+  const route = data.routes[0];
+  if (!route) {
+    throw new Error("No route returned from Google Compute Route API");
+  }
+
+  return { encodedPolyline: route.polyline.encodedPolyline };
 }

@@ -9,6 +9,23 @@ export type MapPoint = {
   variant: "destination" | "origin";
 };
 
+export type Route = {
+  coordinates: [number, number][]; // [lng, lat][] for GeoJSON
+  color: string;
+  label: string;
+};
+
+export const ROUTE_COLORS = [
+  "#16a34a",
+  "#ea580c",
+  "#9333ea",
+  "#0d9488",
+  "#dc2626",
+  "#2563eb",
+  "#ca8a04",
+  "#be185d",
+];
+
 export function computeBounds(points: MapPoint[]) {
   if (points.length === 0) return null;
 

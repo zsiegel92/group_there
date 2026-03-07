@@ -52,3 +52,15 @@ export const RouteMatrixEntrySchema = z.object({
 });
 
 export type RouteMatrixEntry = z.infer<typeof RouteMatrixEntrySchema>;
+
+export const ComputeRouteResponseSchema = z.object({
+  routes: z.array(
+    z.object({
+      polyline: z.object({
+        encodedPolyline: z.string(),
+      }),
+    })
+  ),
+});
+
+export type ComputeRouteResponse = z.infer<typeof ComputeRouteResponseSchema>;

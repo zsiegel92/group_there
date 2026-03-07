@@ -211,6 +211,7 @@ export const locationDistances = pgTable(
       .references(() => locations.id, { onDelete: "cascade" }),
     durationSeconds: real("duration_seconds").notNull(),
     distanceMeters: integer("distance_meters").notNull(),
+    encodedPolyline: text("encoded_polyline"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [

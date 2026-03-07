@@ -33,7 +33,7 @@
     "db:migrate": "drizzle-kit push --config drizzle.config.ts",
     "script": "NODE_ENV=development tsx --env-file .env --conditions=react-server",
     "smoke-test-solver-service": "dotenv -e .env -- sh -c 'GROUPTHERE_SOLVER_API_URL=$PRODUCTION_GROUPTHERE_SOLVER_API_URL pnpm run script src/scripts/smoke-tests/test-solver-service.ts'",
-    "smoke-test:google": "pnpm run script src/scripts/smoke-tests/test-google.ts"
+    "smoke-test:google": "pnpm run script src/scripts/smoke-tests/test-google.ts && pnpm run script src/scripts/smoke-tests/test-route-matrix.ts && pnpm run script src/scripts/smoke-tests/test-compute-route.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
@@ -49,6 +49,8 @@
     "lucide-react": "^0.562.0",
     "mapbox-gl": "^3.19.1",
     "next": "16.1.1",
+    "p-queue": "^9.1.0",
+    "p-retry": "^7.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-leaflet": "^5.0.0",
@@ -62,6 +64,7 @@
     "@hey-api/openapi-ts": "0.89.2",
     "@ianvs/prettier-plugin-sort-imports": "^4.7.0",
     "@tailwindcss/postcss": "^4",
+    "@types/geojson": "^7946.0.16",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^20",
     "@types/react": "^19",
