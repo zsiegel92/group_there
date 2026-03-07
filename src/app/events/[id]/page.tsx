@@ -1,23 +1,34 @@
 "use client";
 
-import { use } from "react";
+import { use, useMemo } from "react";
 
+import { EventLocationsMap } from "@/components/map/event-locations-map";
 import {
   AdminBadge,
+  LockedBadge,
   ScheduledBadge,
   UnscheduledBadge,
   YouBadge,
 } from "@/components/ui/badges";
+import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/lib/auth-client";
 
-import { useEventDetails } from "../../api/events/client";
+import type { Location } from "@/lib/geo/schema";
+
+import {
+  useEventDetails,
+  useUnlockEvent,
+  type EventDetail,
+} from "../../api/events/client";
 import { AttendanceForm } from "./attendance-form";
 import { DeleteEventButton } from "./delete-event-button";
 import { DistanceStatus } from "./distance-status";
 import { EditEventButton } from "./edit-event-button";
 import { EventMapPanel } from "./event-map-panel";
+import { EventStatus } from "./event-status";
 import { ScheduleEventButtons } from "./schedule-event-button";
+import { YourTrip } from "./your-trip";
 
 export default function EventDetailPage(props: {
   params: Promise<{ id: string }>;
@@ -27,6 +38,7 @@ export default function EventDetailPage(props: {
   const { data: session } = useSession();
 
   const { data, isLoading, error } = useEventDetails(eventId);
+  const unlockEvent = useUnlockEvent();
 
   const event = data?.event;
 
@@ -49,9 +61,11 @@ export default function EventDetailPage(props: {
   if (!event) return null;
 
   const eventDate = new Date(event.time);
+  const currentUserId = session?.user?.id;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
+      {/* Header */}
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-2">
           <div>
@@ -60,7 +74,7 @@ export default function EventDetailPage(props: {
             </h1>
             <p className="text-gray-600">Group: {event.groupName}</p>
           </div>
-          {event.isAdmin && (
+          {event.isAdmin && !event.locked && (
             <div className="flex flex-wrap gap-2">
               <EditEventButton event={event} eventId={eventId} />
               <ScheduleEventButtons
@@ -70,14 +84,39 @@ export default function EventDetailPage(props: {
               {!event.scheduled && <DeleteEventButton eventId={eventId} />}
             </div>
           )}
+          {event.isAdmin && event.locked && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (
+                  confirm(
+                    "Unlocking will delete the confirmed itinerary. Are you sure?"
+                  )
+                ) {
+                  unlockEvent.mutate(eventId);
+                }
+              }}
+              disabled={unlockEvent.isPending}
+            >
+              {unlockEvent.isPending ? "Unlocking..." : "Unlock Event"}
+            </Button>
+          )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 mb-4">
           {event.isAdmin && <AdminBadge />}
-          {event.scheduled ? <ScheduledBadge /> : <UnscheduledBadge />}
+          {event.locked ? (
+            <LockedBadge />
+          ) : event.scheduled ? (
+            <ScheduledBadge />
+          ) : (
+            <UnscheduledBadge />
+          )}
         </div>
+        <EventStatus scheduled={event.scheduled} locked={event.locked} />
       </div>
 
       <div className="space-y-6">
+        {/* Event Details */}
         <div className="bg-gray-50 p-6 rounded-lg">
           <h2 className="text-xl font-semibold mb-4">Event Details</h2>
           <div className="space-y-2 text-gray-700">
@@ -113,140 +152,248 @@ export default function EventDetailPage(props: {
           </div>
         </div>
 
-        {!event.hasJoined && <AttendanceForm event={event} eventId={eventId} />}
+        {/* Your Trip card (locked + has party assignment) */}
+        {event.locked && event.myParty && currentUserId && (
+          <YourTrip
+            myParty={event.myParty}
+            eventId={eventId}
+            eventLocation={event.location}
+            eventLocationId={event.locationId}
+            currentUserId={currentUserId}
+          />
+        )}
 
-        {event.attendees.length > 0 &&
+        {/* Non-admin map: show only event destination + user's origin when NOT locked */}
+        {!event.isAdmin && !event.locked && (
+          <NonAdminMap
+            event={event}
+            currentUserId={currentUserId}
+          />
+        )}
+
+        {/* Attendance form: hide when locked */}
+        {!event.locked && !event.hasJoined && (
+          <AttendanceForm event={event} eventId={eventId} />
+        )}
+
+        {/* Your Attendance card */}
+        {event.hasJoined &&
           (() => {
-            const currentUserId = session?.user?.id;
-            const currentUserAttendee = event.attendees.find(
-              (a) => a.userId === currentUserId
-            );
-            const otherAttendees = event.attendees.filter(
-              (a) => a.userId !== currentUserId
-            );
+            // For admins, find from attendees array. For non-admins, construct from userAttendance
+            const currentUserAttendee = event.isAdmin
+              ? event.attendees?.find((a) => a.userId === currentUserId)
+              : event.userAttendance
+                ? {
+                    userName: session?.user?.name ?? "You",
+                    userId: currentUserId ?? "",
+                    userAttendance: event.userAttendance,
+                  }
+                : null;
+
+            if (!currentUserAttendee) return null;
 
             return (
-              <>
-                {currentUserAttendee && (
-                  <div>
-                    <h2 className="text-xl font-semibold mb-4">
-                      Your Attendance
-                    </h2>
-                    <div className="space-y-3">
-                      <div className="p-4 border rounded-lg bg-blue-50 border-blue-300 relative">
-                        <div className="flex justify-between items-start gap-2">
-                          <div className="font-medium">
-                            {currentUserAttendee.userName}
-                            <span className="ml-2">
-                              <YouBadge />
-                            </span>
-                          </div>
-                          <AttendanceForm
-                            event={event}
-                            eventId={eventId}
-                            renderAsButton={true}
-                          />
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Your Attendance</h2>
+                <div className="space-y-3">
+                  <div className="p-4 border rounded-lg bg-blue-50 border-blue-300 relative">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="font-medium">
+                        {currentUserAttendee.userName}
+                        <span className="ml-2">
+                          <YouBadge />
+                        </span>
+                      </div>
+                      {!event.locked && (
+                        <AttendanceForm
+                          event={event}
+                          eventId={eventId}
+                          renderAsButton={true}
+                        />
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-600 space-y-1 mt-2">
+                      <div>
+                        <span className="font-medium">Status:</span>{" "}
+                        {currentUserAttendee.userAttendance.drivingStatus ===
+                        "cannot_drive"
+                          ? "Cannot Drive"
+                          : currentUserAttendee.userAttendance.drivingStatus ===
+                              "must_drive"
+                            ? "Must Drive"
+                            : "Can Drive or Not Drive"}
+                      </div>
+                      {currentUserAttendee.userAttendance.carFits &&
+                      currentUserAttendee.userAttendance.carFits > 0 ? (
+                        <div>
+                          <span className="font-medium">Passengers:</span>{" "}
+                          {currentUserAttendee.userAttendance.carFits - 1}
                         </div>
-                        <div className="text-sm text-gray-600 space-y-1 mt-2">
-                          <div>
-                            <span className="font-medium">Status:</span>{" "}
-                            {currentUserAttendee.userAttendance
-                              .drivingStatus === "cannot_drive"
-                              ? "Cannot Drive"
-                              : currentUserAttendee.userAttendance
-                                    .drivingStatus === "must_drive"
-                                ? "Must Drive"
-                                : "Can Drive or Not Drive"}
-                          </div>
-                          {currentUserAttendee.userAttendance.carFits &&
-                          currentUserAttendee.userAttendance.carFits > 0 ? (
-                            <div>
-                              <span className="font-medium">Passengers:</span>{" "}
-                              {currentUserAttendee.userAttendance.carFits - 1}
-                            </div>
-                          ) : null}
-                          {currentUserAttendee.userAttendance
-                            .earliestLeaveTime && (
-                            <div>
-                              <span className="font-medium">Can leave at:</span>{" "}
-                              {new Date(
-                                currentUserAttendee.userAttendance
-                                  .earliestLeaveTime
-                              ).toLocaleString()}
-                            </div>
-                          )}
-                          <div>
-                            <span className="font-medium">Coming from:</span>{" "}
-                            {currentUserAttendee.userAttendance.originLocation
-                              ? currentUserAttendee.userAttendance
-                                  .originLocation.name
-                              : "Unknown"}
-                          </div>
+                      ) : null}
+                      {currentUserAttendee.userAttendance
+                        .earliestLeaveTime && (
+                        <div>
+                          <span className="font-medium">Can leave at:</span>{" "}
+                          {new Date(
+                            currentUserAttendee.userAttendance.earliestLeaveTime
+                          ).toLocaleString()}
                         </div>
+                      )}
+                      <div>
+                        <span className="font-medium">Coming from:</span>{" "}
+                        {currentUserAttendee.userAttendance.originLocation
+                          ? currentUserAttendee.userAttendance.originLocation
+                              .name
+                          : "Unknown"}
                       </div>
                     </div>
                   </div>
-                )}
-
-                {otherAttendees.length > 0 && (
-                  <div>
-                    <h2 className="text-xl font-semibold mb-4">
-                      Other Attendees ({otherAttendees.length})
-                    </h2>
-                    <div className="space-y-3">
-                      {otherAttendees.map((attendee) => (
-                        <div
-                          key={attendee.userId}
-                          className="p-4 border rounded-lg bg-gray-50"
-                        >
-                          <div className="font-medium">{attendee.userName}</div>
-                          <div className="text-sm text-gray-600 space-y-1 mt-2">
-                            <div>
-                              <span className="font-medium">Status:</span>{" "}
-                              {attendee.userAttendance.drivingStatus ===
-                              "cannot_drive"
-                                ? "Cannot Drive"
-                                : attendee.userAttendance.drivingStatus ===
-                                    "must_drive"
-                                  ? "Must Drive"
-                                  : "Can Drive or Not Drive"}
-                            </div>
-                            {attendee.userAttendance.carFits &&
-                            attendee.userAttendance.carFits > 0 ? (
-                              <div>
-                                <span className="font-medium">Passengers:</span>{" "}
-                                {attendee.userAttendance.carFits - 1}
-                              </div>
-                            ) : null}
-                            {attendee.userAttendance.earliestLeaveTime && (
-                              <div>
-                                <span className="font-medium">
-                                  Can leave at:
-                                </span>{" "}
-                                {new Date(
-                                  attendee.userAttendance.earliestLeaveTime
-                                ).toLocaleString()}
-                              </div>
-                            )}
-                            <div>
-                              <span className="font-medium">Coming from:</span>{" "}
-                              {attendee.userAttendance.originLocation
-                                ? attendee.userAttendance.originLocation.name
-                                : "Unknown"}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
+                </div>
+              </div>
             );
           })()}
 
-        <DistanceStatus eventId={eventId} isAdmin={event.isAdmin} />
+        {/* Non-admins: attendee count */}
+        {!event.isAdmin && (
+          <div className="text-gray-600">
+            {event.attendeeCount} attendee{event.attendeeCount !== 1 ? "s" : ""}
+          </div>
+        )}
 
-        <EventMapPanel event={event} eventId={eventId} currentUserId={session?.user?.id} />
+        {/* Admins: full attendee list */}
+        {event.isAdmin && event.attendees && event.attendees.length > 0 && (
+          <AdminAttendeeList
+            attendees={event.attendees}
+            currentUserId={currentUserId}
+          />
+        )}
+
+        {/* Admins only: DistanceStatus + EventMapPanel */}
+        {event.isAdmin && (
+          <>
+            <DistanceStatus eventId={eventId} isAdmin={event.isAdmin} />
+            <EventMapPanel
+              event={event}
+              eventId={eventId}
+              currentUserId={currentUserId}
+            />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NonAdminMap({
+  event,
+  currentUserId,
+}: {
+  event: EventDetail;
+  currentUserId: string | undefined;
+}) {
+  // Build a mini event for the map with only destination + user's origin
+  const miniEvent = useMemo(() => {
+    const attendees: {
+      userId: string;
+      userName: string;
+      userAttendance: { originLocation: Location | null };
+    }[] = [];
+
+    if (event.hasJoined && event.userAttendance?.originLocation && currentUserId) {
+      attendees.push({
+        userId: currentUserId,
+        userName: "You",
+        userAttendance: {
+          originLocation: event.userAttendance.originLocation,
+        },
+      });
+    }
+
+    return {
+      location: event.location,
+      attendees,
+    };
+  }, [event, currentUserId]);
+
+  if (!event.location) return null;
+
+  return (
+    <EventLocationsMap
+      event={miniEvent}
+      currentUserId={currentUserId}
+    />
+  );
+}
+
+function AdminAttendeeList({
+  attendees,
+  currentUserId,
+}: {
+  attendees: Array<{
+    userId: string;
+    userName: string;
+    userEmail: string;
+    userImage: string | null;
+    userAttendance: {
+      drivingStatus: string;
+      carFits: number | null;
+      earliestLeaveTime: string | null;
+      originLocationId: string | null;
+      originLocation: { name: string } | null;
+      joinedAt: string;
+    };
+  }>;
+  currentUserId: string | undefined;
+}) {
+  const otherAttendees = attendees.filter((a) => a.userId !== currentUserId);
+
+  if (otherAttendees.length === 0) return null;
+
+  return (
+    <div>
+      <h2 className="text-xl font-semibold mb-4">
+        Other Attendees ({otherAttendees.length})
+      </h2>
+      <div className="space-y-3">
+        {otherAttendees.map((attendee) => (
+          <div
+            key={attendee.userId}
+            className="p-4 border rounded-lg bg-gray-50"
+          >
+            <div className="font-medium">{attendee.userName}</div>
+            <div className="text-sm text-gray-600 space-y-1 mt-2">
+              <div>
+                <span className="font-medium">Status:</span>{" "}
+                {attendee.userAttendance.drivingStatus === "cannot_drive"
+                  ? "Cannot Drive"
+                  : attendee.userAttendance.drivingStatus === "must_drive"
+                    ? "Must Drive"
+                    : "Can Drive or Not Drive"}
+              </div>
+              {attendee.userAttendance.carFits &&
+              attendee.userAttendance.carFits > 0 ? (
+                <div>
+                  <span className="font-medium">Passengers:</span>{" "}
+                  {attendee.userAttendance.carFits - 1}
+                </div>
+              ) : null}
+              {attendee.userAttendance.earliestLeaveTime && (
+                <div>
+                  <span className="font-medium">Can leave at:</span>{" "}
+                  {new Date(
+                    attendee.userAttendance.earliestLeaveTime
+                  ).toLocaleString()}
+                </div>
+              )}
+              <div>
+                <span className="font-medium">Coming from:</span>{" "}
+                {attendee.userAttendance.originLocation
+                  ? attendee.userAttendance.originLocation.name
+                  : "Unknown"}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

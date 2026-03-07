@@ -3,7 +3,13 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db/db";
-import { events, groupsToUsers, locations } from "@/db/schema";
+import {
+  events,
+  eventsToUsers,
+  groupsToUsers,
+  locations,
+  solutions,
+} from "@/db/schema";
 import { getUser } from "@/lib/auth";
 import { ensureDistancesForEvent } from "@/lib/geo/distances";
 
@@ -89,6 +95,127 @@ export async function GET(request: NextRequest, props: Params) {
         }
       : null;
 
+  // Load solution if event is locked
+  let solutionData = null;
+  let myParty = null;
+
+  if (event.locked) {
+    const sol = await db.query.solutions.findFirst({
+      where: eq(solutions.eventId, eventId),
+      with: {
+        parties: {
+          with: {
+            driver: true,
+            members: {
+              with: {
+                user: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (sol) {
+      // Build attendee lookup for origin locations and leave times
+      const attendeeLookup = new Map(
+        event.eventsToUsers.map((att) => [
+          att.userId,
+          {
+            originLocation: formatLocationObj(att.originLocation),
+            originLocationId: att.originLocationId,
+            earliestLeaveTime: att.earliestLeaveTime
+              ? att.earliestLeaveTime.toISOString()
+              : null,
+          },
+        ])
+      );
+
+      // Admin gets full solution
+      if (membership.isAdmin) {
+        solutionData = {
+          id: sol.id,
+          feasible: sol.feasible,
+          optimal: sol.optimal,
+          totalDriveSeconds: sol.totalDriveSeconds,
+          parties: sol.parties
+            .sort((a, b) => a.partyIndex - b.partyIndex)
+            .map((party) => ({
+              id: party.id,
+              partyIndex: party.partyIndex,
+              driverUserId: party.driverUserId,
+              driverName: party.driver?.name ?? null,
+              members: party.members
+                .sort((a, b) => a.pickupOrder - b.pickupOrder)
+                .map((m) => {
+                  const att = attendeeLookup.get(m.userId);
+                  return {
+                    userId: m.userId,
+                    userName: m.user.name,
+                    pickupOrder: m.pickupOrder,
+                    originLocation: att?.originLocation ?? null,
+                    originLocationId: att?.originLocationId ?? null,
+                    earliestLeaveTime: att?.earliestLeaveTime ?? null,
+                  };
+                }),
+            })),
+        };
+      }
+
+      // Everyone gets their party
+      for (const party of sol.parties) {
+        const isMember = party.members.some((m) => m.userId === user.id);
+        if (isMember) {
+          const currentMember = party.members.find(
+            (m) => m.userId === user.id
+          );
+          const att = attendeeLookup.get(user.id);
+          myParty = {
+            role:
+              currentMember?.pickupOrder === 0
+                ? ("driver" as const)
+                : ("passenger" as const),
+            partyIndex: party.partyIndex,
+            members: party.members
+              .sort((a, b) => a.pickupOrder - b.pickupOrder)
+              .map((m) => {
+                const memberAtt = attendeeLookup.get(m.userId);
+                return {
+                  userId: m.userId,
+                  userName: m.user.name,
+                  pickupOrder: m.pickupOrder,
+                  originLocation: memberAtt?.originLocation ?? null,
+                  originLocationId: memberAtt?.originLocationId ?? null,
+                  earliestLeaveTime: memberAtt?.earliestLeaveTime ?? null,
+                };
+              }),
+          };
+          break;
+        }
+      }
+    }
+  }
+
+  // Build attendees: admins get full list, non-admins get empty
+  const attendees = membership.isAdmin
+    ? event.eventsToUsers.map((att) => ({
+        userId: att.user.id,
+        userName: att.user.name,
+        userEmail: att.user.email,
+        userImage: att.user.image,
+        userAttendance: {
+          drivingStatus: att.drivingStatus,
+          carFits: att.carFits,
+          earliestLeaveTime: att.earliestLeaveTime
+            ? att.earliestLeaveTime.toISOString()
+            : null,
+          originLocationId: att.originLocationId,
+          originLocation: formatLocationObj(att.originLocation),
+          joinedAt: att.createdAt.toISOString(),
+        },
+      }))
+    : [];
+
   return NextResponse.json({
     event: {
       id: event.id,
@@ -100,6 +227,7 @@ export async function GET(request: NextRequest, props: Params) {
       time: event.time.toISOString(),
       message: event.message,
       scheduled: event.scheduled,
+      locked: event.locked,
       createdAt: event.createdAt.toISOString(),
       isAdmin: membership.isAdmin,
       hasJoined: !!userAttendance,
@@ -115,22 +243,10 @@ export async function GET(request: NextRequest, props: Params) {
             joinedAt: userAttendance.createdAt.toISOString(),
           }
         : null,
-      attendees: event.eventsToUsers.map((att) => ({
-        userId: att.user.id,
-        userName: att.user.name,
-        userEmail: att.user.email,
-        userImage: att.user.image,
-        userAttendance: {
-          drivingStatus: att.drivingStatus,
-          carFits: att.carFits,
-          earliestLeaveTime: att.earliestLeaveTime
-            ? att.earliestLeaveTime.toISOString()
-            : null,
-          originLocationId: att.originLocationId,
-          originLocation: formatLocationObj(att.originLocation),
-          joinedAt: att.createdAt.toISOString(),
-        },
-      })),
+      attendees,
+      attendeeCount: event.eventsToUsers.length,
+      solution: solutionData,
+      myParty,
     },
   });
 }
@@ -175,6 +291,13 @@ export async function PATCH(request: NextRequest, props: Params) {
 
   if (!membership || !membership.isAdmin) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+  }
+
+  if (event.locked) {
+    return NextResponse.json(
+      { error: "Cannot edit a locked event. Unlock it first." },
+      { status: 400 }
+    );
   }
 
   // If updating locationId, verify the location exists

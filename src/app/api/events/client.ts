@@ -33,6 +33,7 @@ const eventDetailsSchema = z.object({
   time: z.string(),
   message: z.string().nullable(),
   scheduled: z.boolean(),
+  locked: z.boolean(),
   createdAt: z.string(),
 });
 
@@ -75,6 +76,37 @@ const attendeeSchema = z.object({
   userAttendance: userAttendanceResponseSchema,
 });
 
+const solutionPartyMemberSchema = z.object({
+  userId: z.string(),
+  userName: z.string(),
+  pickupOrder: z.number(),
+  originLocation: LocationSchema.nullable(),
+  originLocationId: z.string().nullable(),
+  earliestLeaveTime: z.string().nullable(),
+});
+
+const solutionPartySchema = z.object({
+  id: z.string(),
+  partyIndex: z.number(),
+  driverUserId: z.string().nullable(),
+  driverName: z.string().nullable(),
+  members: z.array(solutionPartyMemberSchema),
+});
+
+const solutionSchema = z.object({
+  id: z.string(),
+  feasible: z.boolean(),
+  optimal: z.boolean(),
+  totalDriveSeconds: z.number(),
+  parties: z.array(solutionPartySchema),
+});
+
+const myPartySchema = z.object({
+  role: z.enum(["driver", "passenger"]),
+  partyIndex: z.number(),
+  members: z.array(solutionPartyMemberSchema),
+});
+
 const eventDetailSchema = z.object({
   id: z.string(),
   groupId: z.string(),
@@ -85,12 +117,20 @@ const eventDetailSchema = z.object({
   time: z.string(),
   message: z.string().nullable(),
   scheduled: z.boolean(),
+  locked: z.boolean(),
   createdAt: z.string(),
   isAdmin: z.boolean(),
   hasJoined: z.boolean(),
   userAttendance: userAttendanceResponseSchema.nullable(),
-  attendees: z.array(attendeeSchema),
+  attendees: z.array(attendeeSchema).optional().default([]),
+  attendeeCount: z.number(),
+  solution: solutionSchema.nullable().optional(),
+  myParty: myPartySchema.nullable().optional(),
 });
+
+export type EventDetail = z.infer<typeof eventDetailSchema>;
+export type SolutionPartyMember = z.infer<typeof solutionPartyMemberSchema>;
+export type MyParty = z.infer<typeof myPartySchema>;
 
 const eventDetailResponseSchema = z.object({
   event: eventDetailSchema,
@@ -285,6 +325,42 @@ export async function unscheduleEvent(eventId: string) {
   return scheduleResponseSchema.parse(data);
 }
 
+// Confirm itinerary (lock event with solution)
+export async function confirmItinerary(
+  eventId: string,
+  input: {
+    parties: { driverUserId: string; passengerUserIds: string[] }[];
+    totalDriveSeconds: number;
+    feasible: boolean;
+    optimal: boolean;
+  }
+) {
+  const response = await fetch(`/api/events/${eventId}/confirm-itinerary`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to confirm itinerary");
+  }
+  const data = await response.json();
+  return successResponseSchema.parse(data);
+}
+
+// Unlock event (delete solution)
+export async function unlockEvent(eventId: string) {
+  const response = await fetch(`/api/events/${eventId}/unlock`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to unlock event");
+  }
+  const data = await response.json();
+  return successResponseSchema.parse(data);
+}
+
 // Distance status
 const distanceStatusSchema = z.object({
   complete: z.boolean(),
@@ -454,6 +530,41 @@ export function useUnscheduleEvent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: unscheduleEvent,
+    onSuccess: (_, eventId) => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: ["events", eventId] });
+    },
+  });
+}
+
+export function useConfirmItinerary() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      eventId,
+      input,
+    }: {
+      eventId: string;
+      input: {
+        parties: { driverUserId: string; passengerUserIds: string[] }[];
+        totalDriveSeconds: number;
+        feasible: boolean;
+        optimal: boolean;
+      };
+    }) => confirmItinerary(eventId, input),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({
+        queryKey: ["events", variables.eventId],
+      });
+    },
+  });
+}
+
+export function useUnlockEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: unlockEvent,
     onSuccess: (_, eventId) => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({ queryKey: ["events", eventId] });

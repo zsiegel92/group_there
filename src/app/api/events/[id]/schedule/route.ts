@@ -41,6 +41,13 @@ export async function POST(request: NextRequest, props: Params) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
+  if (event.locked) {
+    return NextResponse.json(
+      { error: "Cannot schedule a locked event. Unlock it first." },
+      { status: 400 }
+    );
+  }
+
   // Check if already scheduled
   if (event.scheduled) {
     return NextResponse.json(

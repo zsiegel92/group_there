@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   AdminBadge,
   JoinedBadge,
+  LockedBadge,
   NotJoinedBadge,
 } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ type GroupedEvents = {
     time: string;
     message: string | null;
     scheduled: boolean;
+    locked: boolean;
     createdAt: string;
     hasJoined: boolean;
     isGroupAdmin: boolean;
@@ -57,6 +59,7 @@ function EventCard({
         <h3 className="text-lg font-medium">{event.name}</h3>
         <div className="flex gap-2">
           {event.isGroupAdmin && <AdminBadge />}
+          {event.locked && <LockedBadge />}
           {event.hasJoined ? <JoinedBadge /> : <NotJoinedBadge />}
         </div>
       </div>
@@ -107,6 +110,7 @@ export function EventsPage({ groupId }: { groupId?: string }) {
             time: event.eventDetails.time,
             message: event.eventDetails.message,
             scheduled: event.eventDetails.scheduled,
+            locked: event.eventDetails.locked,
             createdAt: event.eventDetails.createdAt,
             hasJoined: event.hasJoined,
             isGroupAdmin: event.isGroupAdmin,

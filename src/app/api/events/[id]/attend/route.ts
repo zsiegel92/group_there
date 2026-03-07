@@ -91,6 +91,13 @@ export async function POST(request: NextRequest, props: Params) {
     );
   }
 
+  if (event.locked) {
+    return NextResponse.json(
+      { error: "Cannot modify attendance for a locked event" },
+      { status: 400 }
+    );
+  }
+
   // Check if user is a member of the event's group
   const membership = await db.query.groupsToUsers.findFirst({
     where: and(
@@ -209,6 +216,13 @@ export async function PATCH(request: NextRequest, props: Params) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
+  if (event.locked) {
+    return NextResponse.json(
+      { error: "Cannot modify attendance for a locked event" },
+      { status: 400 }
+    );
+  }
+
   // Check if user already joined
   const existingAttendance = await db.query.eventsToUsers.findFirst({
     where: and(
@@ -295,6 +309,18 @@ export async function DELETE(request: NextRequest, props: Params) {
   }
 
   const eventId = params.id;
+
+  // Check if event is locked
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+  });
+
+  if (event?.locked) {
+    return NextResponse.json(
+      { error: "Cannot modify attendance for a locked event" },
+      { status: 400 }
+    );
+  }
 
   // Check if user is attending
   const existingAttendance = await db.query.eventsToUsers.findFirst({

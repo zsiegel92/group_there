@@ -19,6 +19,7 @@ type Event = {
   time: string;
   hasJoined: boolean;
   scheduled: boolean;
+  locked: boolean;
   userAttendance: {
     drivingStatus: DrivingStatus;
     carFits: number | null;
@@ -307,7 +308,7 @@ export function AttendanceForm({
 
   // If renderAsButton is true, we're rendering in the attendance card header
   if (renderAsButton) {
-    if (!event.hasJoined || !event.scheduled) return null;
+    if (!event.hasJoined || !event.scheduled || event.locked) return null;
 
     if (!isEditingAttendance) {
       return (
@@ -329,7 +330,7 @@ export function AttendanceForm({
   }
 
   // Regular mode: for joining event initially
-  if (!event.hasJoined && event.scheduled) {
+  if (!event.hasJoined && event.scheduled && !event.locked) {
     return (
       <div className="bg-white p-6 rounded-lg border">
         <h2 className="text-xl font-semibold mb-4">Join Event</h2>

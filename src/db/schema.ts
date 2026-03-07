@@ -185,6 +185,7 @@ export const events = pgTable(
     time: timestamp("time").notNull(),
     message: text("message"),
     scheduled: boolean("scheduled").default(false).notNull(),
+    locked: boolean("locked").default(false).notNull(),
     haveSentInvitationEmails: boolean("have_sent_invitation_emails")
       .default(false)
       .notNull(),
@@ -243,6 +244,48 @@ export const eventsToUsers = pgTable(
   ]
 );
 
+export const solutions = pgTable("solutions", {
+  id: text("id").primaryKey(),
+  eventId: text("event_id")
+    .notNull()
+    .unique()
+    .references(() => events.id, { onDelete: "cascade" }),
+  feasible: boolean("feasible").notNull(),
+  optimal: boolean("optimal").notNull(),
+  totalDriveSeconds: real("total_drive_seconds").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const solutionParties = pgTable(
+  "solution_parties",
+  {
+    id: text("id").primaryKey(),
+    solutionId: text("solution_id")
+      .notNull()
+      .references(() => solutions.id, { onDelete: "cascade" }),
+    driverUserId: text("driver_user_id").references(() => users.id),
+    partyIndex: integer("party_index").notNull(),
+  },
+  (table) => [index("solutionParties_solutionId_idx").on(table.solutionId)]
+);
+
+export const solutionPartyMembers = pgTable(
+  "solution_party_members",
+  {
+    partyId: text("party_id")
+      .notNull()
+      .references(() => solutionParties.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    pickupOrder: integer("pickup_order").notNull(), // 0=driver, 1+=passengers in order
+  },
+  (table) => [
+    primaryKey({ columns: [table.partyId, table.userId] }),
+    index("solutionPartyMembers_userId_idx").on(table.userId),
+  ]
+);
+
 export const userRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   accounts: many(accounts),
@@ -297,6 +340,10 @@ export const eventRelations = relations(events, ({ one, many }) => ({
     references: [locations.id],
   }),
   eventsToUsers: many(eventsToUsers),
+  solution: one(solutions, {
+    fields: [events.id],
+    references: [solutions.eventId],
+  }),
 }));
 
 export const eventsToUsersRelations = relations(eventsToUsers, ({ one }) => ({
@@ -313,3 +360,40 @@ export const eventsToUsersRelations = relations(eventsToUsers, ({ one }) => ({
     references: [locations.id],
   }),
 }));
+
+export const solutionRelations = relations(solutions, ({ one, many }) => ({
+  event: one(events, {
+    fields: [solutions.eventId],
+    references: [events.id],
+  }),
+  parties: many(solutionParties),
+}));
+
+export const solutionPartyRelations = relations(
+  solutionParties,
+  ({ one, many }) => ({
+    solution: one(solutions, {
+      fields: [solutionParties.solutionId],
+      references: [solutions.id],
+    }),
+    driver: one(users, {
+      fields: [solutionParties.driverUserId],
+      references: [users.id],
+    }),
+    members: many(solutionPartyMembers),
+  })
+);
+
+export const solutionPartyMemberRelations = relations(
+  solutionPartyMembers,
+  ({ one }) => ({
+    party: one(solutionParties, {
+      fields: [solutionPartyMembers.partyId],
+      references: [solutionParties.id],
+    }),
+    user: one(users, {
+      fields: [solutionPartyMembers.userId],
+      references: [users.id],
+    }),
+  })
+);

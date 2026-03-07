@@ -47,6 +47,10 @@ export function UnscheduledBadge() {
   return <Badge color="yellow">Unscheduled (Not visible to members)</Badge>;
 }
 
+export function LockedBadge() {
+  return <Badge color="blue">Itinerary Confirmed</Badge>;
+}
+
 export function YouBadge() {
   return (
     <Badge color="teal" size="small">

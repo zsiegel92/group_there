@@ -76,6 +76,7 @@ export async function GET(request: NextRequest) {
           time: event.time.toISOString(),
           message: event.message,
           scheduled: event.scheduled,
+          locked: event.locked,
           createdAt: event.createdAt.toISOString(),
         },
         hasJoined: event.eventsToUsers.length > 0,

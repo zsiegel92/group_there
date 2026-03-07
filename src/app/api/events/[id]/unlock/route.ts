@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db/db";
-import { events, groupsToUsers } from "@/db/schema";
+import { events, groupsToUsers, solutions } from "@/db/schema";
 import { getUser } from "@/lib/auth";
 
 type Params = {
   params: Promise<{ id: string }>;
 };
 
-// POST /api/events/[id]/unschedule - Unschedule event (admin only)
+// POST /api/events/[id]/unlock - Unlock event and delete persisted solution
 export async function POST(request: NextRequest, props: Params) {
   const params = await props.params;
   const user = await getUser(request);
@@ -29,7 +29,14 @@ export async function POST(request: NextRequest, props: Params) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  // Check if user is an admin of the event's group
+  if (!event.locked) {
+    return NextResponse.json(
+      { error: "Event is not locked" },
+      { status: 400 }
+    );
+  }
+
+  // Check admin
   const membership = await db.query.groupsToUsers.findFirst({
     where: and(
       eq(groupsToUsers.groupId, event.groupId),
@@ -41,37 +48,12 @@ export async function POST(request: NextRequest, props: Params) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
-  if (event.locked) {
-    return NextResponse.json(
-      { error: "Cannot unschedule a locked event. Unlock it first." },
-      { status: 400 }
-    );
-  }
-
-  // Check if already unscheduled
-  if (!event.scheduled) {
-    return NextResponse.json(
-      { error: "Event is already unscheduled" },
-      { status: 400 }
-    );
-  }
-
-  // Unschedule the event
-  // Note: haveSentInvitationEmails remains true so emails aren't sent again if rescheduled
-  const [updatedEvent] = await db
+  // Delete solution (cascade deletes parties + members), then unlock event
+  await db.delete(solutions).where(eq(solutions.eventId, eventId));
+  await db
     .update(events)
-    .set({
-      scheduled: false,
-    })
-    .where(eq(events.id, eventId))
-    .returning();
+    .set({ locked: false })
+    .where(eq(events.id, eventId));
 
-  return NextResponse.json({
-    success: true,
-    event: {
-      id: updatedEvent.id,
-      scheduled: updatedEvent.scheduled,
-      haveSentInvitationEmails: updatedEvent.haveSentInvitationEmails,
-    },
-  });
+  return NextResponse.json({ success: true });
 }
