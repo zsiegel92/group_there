@@ -220,35 +220,32 @@ export function AttendanceForm({
                 max={event.time.slice(0, 16)}
                 required
               />
-              <div className="flex gap-2 mt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setEarliestLeaveTime(
-                      formatDatetimeLocal(
-                        new Date(new Date(event.time).getTime() - 15 * 60_000)
-                      )
-                    );
-                  }}
-                >
-                  15 min before
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setEarliestLeaveTime(
-                      formatDatetimeLocal(
-                        new Date(new Date(event.time).getTime() - 30 * 60_000)
-                      )
-                    );
-                  }}
-                >
-                  30 min before
-                </Button>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {[15, 30, 45, 60, 75, 90, 120].map((minutes) => (
+                  <Button
+                    key={minutes}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEarliestLeaveTime(
+                        formatDatetimeLocal(
+                          new Date(
+                            new Date(event.time).getTime() - minutes * 60_000
+                          )
+                        )
+                      );
+                    }}
+                  >
+                    {minutes < 60
+                      ? `${minutes} min before`
+                      : minutes === 60
+                        ? "1 hr before"
+                        : minutes % 60 === 0
+                          ? `${minutes / 60} hr before`
+                          : `${Math.floor(minutes / 60)} hr ${minutes % 60} min before`}
+                  </Button>
+                ))}
               </div>
               {earliestLeaveTime && (
                 <p className="text-sm text-gray-600 mt-1">{getTimeBefore()}</p>
