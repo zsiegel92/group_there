@@ -38,4 +38,6 @@ We should of course see the `eventsToUsers` locations on the map even before we 
 
 Basically, we should be able to automatically generate and modify a scenario easily, generate solutions, see the solution in UI, see it on the map, and see metrics about the advantage yielded by that solution.
 
+Also - when users are created, we generate their testing group. But we're essentially putting the database in a wrong state. If a user does not have a testing group yet, the `/groups` page should have a "Create testing group" button, next to their existing groups, kind of on a card at the end (not next to the "Create group" button but as like a "there would be a group here but there's not - click here to make one" UI element).
+
 Go!
