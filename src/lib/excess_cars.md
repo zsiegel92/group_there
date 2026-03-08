@@ -1,4 +1,4 @@
-Okay another challenge. Next to "Generate solutions", there should be a button for "allow rideshare service".
+Okay another challenge. Next to "Generate solutions", there should be a button for "allow rideshare service". Well maybe it shouldn't just apply to the solution generation but to the event overall - an option for admins to configure for a given event.
 
 If selected, the python solver service should have a parameter that allows each non-driver participantss to have a variable (or multiple variables?) that indicate they can drive but with a penalty that will ensure it's only used if there is no feasible solution otherwise.
 
