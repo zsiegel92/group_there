@@ -353,9 +353,13 @@ function LockedSolutionView({
       ).values(),
     ];
 
-    setIsFetchingRoutes(true);
-    fetchRoutePolylines(eventId, uniquePairs)
-      .then(({ polylines }) => {
+    let cancelled = false;
+    void (async () => {
+      setIsFetchingRoutes(true);
+      try {
+        const { polylines } = await fetchRoutePolylines(eventId, uniquePairs);
+        if (cancelled) return;
+
         const builtRoutes: Route[] = [];
 
         for (let pi = 0; pi < partySequences.length; pi++) {
@@ -386,13 +390,16 @@ function LockedSolutionView({
         }
 
         setRoutes(builtRoutes);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch route polylines:", err);
-      })
-      .finally(() => {
-        setIsFetchingRoutes(false);
-      });
+      } catch (err) {
+        if (!cancelled) console.error("Failed to fetch route polylines:", err);
+      } finally {
+        if (!cancelled) setIsFetchingRoutes(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [sol, event.locationId, eventId]);
 
   if (!sol) return null;
@@ -523,9 +530,7 @@ function SolutionCards({
         <div className="space-y-3">
           {solution.parties.map((party, i) => {
             const color = ROUTE_COLORS[i % ROUTE_COLORS.length] ?? "#16a34a";
-            const estimate = partyEstimates.find(
-              (e) => e.partyId === party.id
-            );
+            const estimate = partyEstimates.find((e) => e.partyId === party.id);
             const driver = event.attendees.find(
               (a) => a.userId === party.driver_tripper_id
             );
@@ -631,9 +636,7 @@ function ItineraryRow({
           <span className="font-medium">{name}</span>
           {isYou && <YouBadge />}
         </div>
-        {detail && (
-          <div className="text-sm text-gray-500 mt-0.5">{detail}</div>
-        )}
+        {detail && <div className="text-sm text-gray-500 mt-0.5">{detail}</div>}
         {email && (
           <div className="text-sm text-gray-500 mt-0.5">
             <a

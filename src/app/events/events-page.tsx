@@ -81,7 +81,11 @@ function EventCard({
       </div>
       <div className="mt-3 flex items-baseline justify-between">
         <span className="text-blue-600 text-sm font-medium">{linkText} →</span>
-        <EventStatus scheduled={event.scheduled} locked={event.locked} compact />
+        <EventStatus
+          scheduled={event.scheduled}
+          locked={event.locked}
+          compact
+        />
       </div>
     </Link>
   );

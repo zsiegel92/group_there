@@ -3,6 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 
+import type { LocationOwnerType } from "@/db/schema";
+
 import {
   AutocompletePredictionSchema,
   LocationSchema,
@@ -47,7 +49,7 @@ export async function createLocation(input: {
   zip: string | null;
   latitude: number | null;
   longitude: number | null;
-  ownerType: "user" | "event";
+  ownerType: LocationOwnerType;
   ownerId: string;
 }): Promise<Location> {
   const response = await fetch("/api/geo/locations", {
@@ -63,7 +65,7 @@ export async function createLocation(input: {
 }
 
 export async function fetchOwnerLocations(
-  ownerType: string,
+  ownerType: LocationOwnerType,
   ownerId: string
 ): Promise<Location[]> {
   const response = await fetch(
@@ -76,7 +78,10 @@ export async function fetchOwnerLocations(
   return z.array(LocationSchema).parse(data.locations);
 }
 
-export function useOwnerLocations(ownerType: string, ownerId: string) {
+export function useOwnerLocations(
+  ownerType: LocationOwnerType,
+  ownerId: string
+) {
   return useQuery({
     queryKey: ["locations", ownerType, ownerId],
     queryFn: () => fetchOwnerLocations(ownerType, ownerId),

@@ -3,7 +3,13 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db/db";
-import { events, eventsToUsers, groupsToUsers, locations } from "@/db/schema";
+import {
+  events,
+  eventsToUsers,
+  groupsToUsers,
+  locations,
+  type LocationOwnerType,
+} from "@/db/schema";
 import { getUser } from "@/lib/auth";
 import { ensureDistancesForEvent } from "@/lib/geo/distances";
 
@@ -131,9 +137,13 @@ export async function POST(request: NextRequest, props: Params) {
   const { drivingStatus, carFits, earliestLeaveTime, originLocationId } =
     result.data;
 
-  // Verify the location exists
+  // Verify the location exists and is a user location
+  const expectedOwnerType: LocationOwnerType = "user";
   const location = await db.query.locations.findFirst({
-    where: eq(locations.id, originLocationId),
+    where: and(
+      eq(locations.id, originLocationId),
+      eq(locations.ownerType, expectedOwnerType)
+    ),
   });
 
   if (!location) {
@@ -241,9 +251,13 @@ export async function PATCH(request: NextRequest, props: Params) {
   const { drivingStatus, carFits, earliestLeaveTime, originLocationId } =
     result.data;
 
-  // Verify the location exists
+  // Verify the location exists and is a user location
+  const expectedOwnerType: LocationOwnerType = "user";
   const location = await db.query.locations.findFirst({
-    where: eq(locations.id, originLocationId),
+    where: and(
+      eq(locations.id, originLocationId),
+      eq(locations.ownerType, expectedOwnerType)
+    ),
   });
 
   if (!location) {

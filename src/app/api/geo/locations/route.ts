@@ -3,7 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db/db";
-import { locations } from "@/db/schema";
+import { locationOwnerTypeValues, locations } from "@/db/schema";
 import { getUser } from "@/lib/auth";
 
 const createLocationSchema = z.object({
@@ -17,7 +17,7 @@ const createLocationSchema = z.object({
   zip: z.string().nullable(),
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
-  ownerType: z.enum(["user", "event"]),
+  ownerType: z.enum(locationOwnerTypeValues),
   ownerId: z.string().min(1),
 });
 
@@ -27,15 +27,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const ownerType = request.nextUrl.searchParams.get("ownerType");
+  const ownerTypeParam = request.nextUrl.searchParams.get("ownerType");
   const ownerId = request.nextUrl.searchParams.get("ownerId");
 
-  if (!ownerType || !ownerId) {
+  if (!ownerTypeParam || !ownerId) {
     return NextResponse.json(
       { error: "ownerType and ownerId are required" },
       { status: 400 }
     );
   }
+
+  const ownerTypeParsed = z
+    .enum(locationOwnerTypeValues)
+    .safeParse(ownerTypeParam);
+  if (!ownerTypeParsed.success) {
+    return NextResponse.json({ error: "Invalid ownerType" }, { status: 400 });
+  }
+
+  const ownerType = ownerTypeParsed.data;
 
   const results = await db
     .select()

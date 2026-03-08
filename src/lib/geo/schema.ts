@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { locationOwnerTypeValues } from "@/db/schema";
+
 export const LocationSchema = z.object({
   id: z.string(),
   googlePlaceId: z.string().nullable(),
@@ -12,7 +14,7 @@ export const LocationSchema = z.object({
   zip: z.string().nullable(),
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
-  ownerType: z.enum(["user", "event"]),
+  ownerType: z.enum(locationOwnerTypeValues),
   ownerId: z.string(),
 });
 

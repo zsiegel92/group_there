@@ -50,9 +50,7 @@ export async function solveProblem(eventId: string) {
       }[] = [];
 
       if (party.driver_tripper_id) {
-        const att = attendees.find(
-          (a) => a.userId === party.driver_tripper_id
-        );
+        const att = attendees.find((a) => a.userId === party.driver_tripper_id);
         members.push({
           userId: party.driver_tripper_id,
           originLocationId: att?.originLocationId ?? null,
@@ -78,8 +76,7 @@ export async function solveProblem(eventId: string) {
         partyId: party.id,
         stops: members.map((m) => ({
           userId: m.userId,
-          estimatedTime:
-            estimatedPickups.get(m.userId)?.toISOString() ?? null,
+          estimatedTime: estimatedPickups.get(m.userId)?.toISOString() ?? null,
         })),
         estimatedEventArrival: estimatedEventArrival?.toISOString() ?? null,
       } satisfies PartyEstimate;

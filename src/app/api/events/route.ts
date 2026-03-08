@@ -3,7 +3,13 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db/db";
-import { events, eventsToUsers, groupsToUsers, locations } from "@/db/schema";
+import {
+  events,
+  eventsToUsers,
+  groupsToUsers,
+  locations,
+  type LocationOwnerType,
+} from "@/db/schema";
 import { getUser } from "@/lib/auth";
 
 const createEventSchema = z.object({
@@ -120,9 +126,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
-  // Verify the location exists
+  // Verify the location exists and is an event location
+  const expectedOwnerType: LocationOwnerType = "event";
   const location = await db.query.locations.findFirst({
-    where: eq(locations.id, locationId),
+    where: and(
+      eq(locations.id, locationId),
+      eq(locations.ownerType, expectedOwnerType)
+    ),
   });
 
   if (!location) {

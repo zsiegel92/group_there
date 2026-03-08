@@ -6,11 +6,11 @@ import { db } from "@/db/db";
 import {
   blasts,
   events,
-  eventsToUsers,
   groupsToUsers,
   locationDistances,
   locations,
   solutions,
+  type LocationOwnerType,
 } from "@/db/schema";
 import { getUser } from "@/lib/auth";
 import { ensureDistancesForEvent } from "@/lib/geo/distances";
@@ -165,9 +165,7 @@ export async function GET(request: NextRequest, props: Params) {
               (a, b) => a.pickupOrder - b.pickupOrder
             );
             const membersForEstimate = sortedMembers.map((m) => {
-              const a = event.eventsToUsers.find(
-                (e) => e.userId === m.userId
-              );
+              const a = event.eventsToUsers.find((e) => e.userId === m.userId);
               return {
                 userId: m.userId,
                 originLocationId: a?.originLocationId ?? null,
@@ -240,7 +238,11 @@ export async function GET(request: NextRequest, props: Params) {
           });
 
           const { estimatedPickups, estimatedEventArrival } =
-            await computePartyEstimates(attendeeForEstimates, event.locationId, event.time);
+            await computePartyEstimates(
+              attendeeForEstimates,
+              event.locationId,
+              event.time
+            );
 
           myParty = {
             role:
@@ -394,10 +396,14 @@ export async function PATCH(request: NextRequest, props: Params) {
     );
   }
 
-  // If updating locationId, verify the location exists
+  // If updating locationId, verify the location exists and is an event location
   if (result.data.locationId !== undefined) {
+    const expectedOwnerType: LocationOwnerType = "event";
     const location = await db.query.locations.findFirst({
-      where: eq(locations.id, result.data.locationId),
+      where: and(
+        eq(locations.id, result.data.locationId),
+        eq(locations.ownerType, expectedOwnerType)
+      ),
     });
     if (!location) {
       return NextResponse.json(

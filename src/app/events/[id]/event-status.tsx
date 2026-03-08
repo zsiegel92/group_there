@@ -32,7 +32,10 @@ export function EventStatus({
           : `text-lg font-semibold ${stepTextColors[currentStep]}`;
 
         return (
-          <div key={label} className={`flex items-baseline ${compact ? "gap-1" : "gap-2"}`}>
+          <div
+            key={label}
+            className={`flex items-baseline ${compact ? "gap-1" : "gap-2"}`}
+          >
             <span
               className={
                 isCurrent
@@ -45,7 +48,11 @@ export function EventStatus({
               {label}
             </span>
             {i < steps.length - 1 && (
-              <span className={`${compact ? "text-[10px]" : "text-xs"} text-gray-300`}>&rarr;</span>
+              <span
+                className={`${compact ? "text-[10px]" : "text-xs"} text-gray-300`}
+              >
+                &rarr;
+              </span>
             )}
           </div>
         );

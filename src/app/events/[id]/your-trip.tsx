@@ -66,9 +66,13 @@ export function YourTrip({
 
     if (pairs.length === 0) return;
 
-    setIsFetchingRoutes(true);
-    fetchRoutePolylines(eventId, pairs)
-      .then(({ polylines }) => {
+    let cancelled = false;
+    void (async () => {
+      setIsFetchingRoutes(true);
+      try {
+        const { polylines } = await fetchRoutePolylines(eventId, pairs);
+        if (cancelled) return;
+
         const coordinates: [number, number][] = [];
         for (let i = 0; i < pairs.length; i++) {
           const pair = pairs[i]!;
@@ -91,13 +95,17 @@ export function YourTrip({
             "#16a34a";
           setRoutes([{ coordinates, color, label: "Your trip" }]);
         }
-      })
-      .catch((err) => {
-        console.error("Failed to fetch route polylines for your trip:", err);
-      })
-      .finally(() => {
-        setIsFetchingRoutes(false);
-      });
+      } catch (err) {
+        if (!cancelled)
+          console.error("Failed to fetch route polylines for your trip:", err);
+      } finally {
+        if (!cancelled) setIsFetchingRoutes(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [eventId, eventLocationId, myParty]);
 
   const driver = myParty.members.find((m) => m.pickupOrder === 0);

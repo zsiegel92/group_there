@@ -126,6 +126,11 @@ export const locationOwnerTypeValues = ["user", "event"] as const;
 
 export type LocationOwnerType = (typeof locationOwnerTypeValues)[number];
 
+const locationOwnerTypeEnum = pgEnum(
+  "location_owner_type",
+  locationOwnerTypeValues
+);
+
 export const locations = pgTable(
   "locations",
   {
@@ -140,7 +145,7 @@ export const locations = pgTable(
     zip: text("zip"),
     latitude: real("latitude"),
     longitude: real("longitude"),
-    ownerType: text("owner_type").notNull(), // 'user' | 'event'
+    ownerType: locationOwnerTypeEnum("owner_type").notNull(),
     ownerId: text("owner_id").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },

@@ -8,7 +8,6 @@ import {
   blasts,
   blastTypeValues,
   events,
-  eventsToUsers,
   groupsToUsers,
   solutions,
 } from "@/db/schema";
@@ -230,7 +229,7 @@ export async function POST(request: NextRequest, props: Params) {
     };
     const emails: RecipientEmail[] = [];
 
-    for (const { party, sortedMembers, estimates } of partyEstimates) {
+    for (const { party: _party, sortedMembers, estimates } of partyEstimates) {
       for (const member of sortedMembers) {
         const att = attendeeLookup.get(member.userId);
         if (!att) continue;

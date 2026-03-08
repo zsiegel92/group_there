@@ -4,10 +4,7 @@ import { use, useMemo } from "react";
 import Link from "next/link";
 
 import { EventLocationsMap } from "@/components/map/event-locations-map";
-import {
-  AdminBadge,
-  YouBadge,
-} from "@/components/ui/badges";
+import { AdminBadge, YouBadge } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/lib/auth-client";
@@ -261,9 +258,9 @@ export default function EventDetailPage(props: {
                           </div>
                           {att.drivingStatus === "can_drive_or_not" && (
                             <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">
-                              It will not be possible for anyone else to pick you
-                              up — you must either drive yourself or change your
-                              departure time availability.
+                              It will not be possible for anyone else to pick
+                              you up — you must either drive yourself or change
+                              your departure time availability.
                             </div>
                           )}
                         </div>

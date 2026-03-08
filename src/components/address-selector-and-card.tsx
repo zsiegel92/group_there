@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { Input } from "@/components/ui/input";
+import type { LocationOwnerType } from "@/db/schema";
 import {
   createLocation,
   getPlaceDetails,
@@ -15,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 type AddressSelectorAndCardProps = {
   onNewValidatedLocation: (location: Location | null) => void;
-  ownerType: "user" | "event";
+  ownerType: LocationOwnerType;
   ownerId: string;
   selectedLocation?: Location | null;
   disabled?: boolean;
