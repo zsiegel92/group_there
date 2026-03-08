@@ -25,3 +25,12 @@ Generating these will have a few steps:
 - use reverse-geocoding (but not geocoding since we already have the lat/lon) to generation Location values to insert. We will first need new functionality in `src/lib/geo/service.ts` and new smoke-tests added to `smoke-test:google`. If there is no such google API or you need additional scopes on our google api creds, lmk and we'll work it out.
 - add them to the event with their locations
 - Each user should have a minimal UI to quickly edit their attendance form excluding origin location - whether they can/have to drive, number seats, earliest they can leave (can simplify to ONLY selecting from the available chips - 15, 30, 45, 1hr, 1hr15, 1h430, 2hr)
+- should be really easy to modify them all, ideally with keyboard (without setting up explicit keyboard handlers - just like tab and spacebar and maybe sometimes arrows should do it - just make it normal)
+- It should render on the map as before. I'd prefer to extend our existing map UI stuff than totally rewriting it for this, or at least a good mix of re-using bits and pieces (maybe adding exports, moving some things to their own files, etc.)
+
+
+- these testing events are alwaqys "Scheduled" or "Confirmed" (not unscheduled)
+- there are no blast utils of course (no emails to these fake users)
+- ideally we reuse as much of the "Generate solution" UI and API routes etc but don't make things too complicated.
+
+There should be additional UI on the page that shows metrics, like "total drive time if everyone drives themselves" (to compare to the optimal found solution). Put this in its own module and set it up in such a way that if we wanted to add that part to the regular `src/app/events/[id]/social-event-details-page.tsx` page we can.

@@ -1,4 +1,7 @@
+// import { notFound } from 'next/navigation'
 import { SocialEventDetailPage } from "@/app/events/[id]/social-event-details-page";
+
+// import { TestingEventDetailPage } from "@/app/events/[id]/testing-event-details-page";
 
 export default async function EventDetailPage({
   params,
@@ -10,4 +13,6 @@ export default async function EventDetailPage({
   // await delay(5000);
   // TODO: test whether id is for the user's testing group. If it's not the user's testing group, or it's a group the user isn't a member of, or an unscheduled group for which the user isn't an admin, or an event that just doesn't exist, do notFound
   return <SocialEventDetailPage eventId={id} />;
+  // return <TestingEventDetailPage eventId={id} />;
+  // notFound();
 }
