@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
+import { differenceInSeconds, format } from "date-fns";
 
 import { EventLocationsMap } from "@/components/map/event-locations-map";
 import { AdminBadge, YouBadge } from "@/components/ui/badges";
@@ -108,11 +109,7 @@ export function SocialEventDetailPage({ eventId }: { eventId: string }) {
           <div className="space-y-2 text-gray-700">
             <div>
               <span className="font-medium">When:</span>{" "}
-              {eventDate.toLocaleDateString()} at{" "}
-              {eventDate.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              {format(eventDate, "MM/dd/yyyy")} at {format(eventDate, "h:mm a")}
             </div>
             <div>
               <span className="font-medium">Where:</span>{" "}
@@ -216,9 +213,13 @@ export function SocialEventDetailPage({ eventId }: { eventId: string }) {
                       {currentUserAttendee.userAttendance.earliestLeaveTime && (
                         <div>
                           <span className="font-medium">Can leave at:</span>{" "}
-                          {new Date(
-                            currentUserAttendee.userAttendance.earliestLeaveTime
-                          ).toLocaleString()}
+                          {format(
+                            new Date(
+                              currentUserAttendee.userAttendance
+                                .earliestLeaveTime
+                            ),
+                            "MM/dd/yyyy h:mm a"
+                          )}
                         </div>
                       )}
                       <div>
@@ -236,10 +237,10 @@ export function SocialEventDetailPage({ eventId }: { eventId: string }) {
                         att.directTravelSeconds == null
                       )
                         return null;
-                      const availableSeconds =
-                        (new Date(event.time).getTime() -
-                          new Date(att.earliestLeaveTime).getTime()) /
-                        1000;
+                      const availableSeconds = differenceInSeconds(
+                        new Date(event.time),
+                        new Date(att.earliestLeaveTime)
+                      );
                       if (att.directTravelSeconds <= availableSeconds)
                         return null;
                       return (
@@ -390,9 +391,10 @@ function AdminAttendeeList({
               {attendee.userAttendance.earliestLeaveTime && (
                 <div>
                   <span className="font-medium">Can leave at:</span>{" "}
-                  {new Date(
-                    attendee.userAttendance.earliestLeaveTime
-                  ).toLocaleString()}
+                  {format(
+                    new Date(attendee.userAttendance.earliestLeaveTime),
+                    "MM/dd/yyyy h:mm a"
+                  )}
                 </div>
               )}
               <div>

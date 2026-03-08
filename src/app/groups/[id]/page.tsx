@@ -4,6 +4,7 @@ import { use, useCallback, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 
 import { AdminBadge, YouBadge } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
@@ -238,7 +239,7 @@ export default function GroupDetailPage(props: {
                       {membershipInfo.user.email}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Joined {membershipInfo.joinedAt.toLocaleDateString()}
+                      Joined {format(membershipInfo.joinedAt, "MM/dd/yyyy")}
                     </div>
                   </div>
                 </div>

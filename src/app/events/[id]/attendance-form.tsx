@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { differenceInMinutes, format, subMinutes } from "date-fns";
 
 import { AddressSelectorAndCard } from "@/components/address-selector-and-card";
 import { Button } from "@/components/ui/button";
@@ -30,12 +31,7 @@ type Event = {
 };
 
 function formatDatetimeLocal(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  return format(date, "yyyy-MM-dd'T'HH:mm");
 }
 
 type AttendanceFormProps = {
@@ -144,13 +140,9 @@ export function AttendanceForm({
     const carFits = event.userAttendance.carFits;
     setPassengersCount(carFits != null && carFits > 0 ? carFits - 1 : 1);
     if (event.userAttendance.earliestLeaveTime) {
-      const leaveDate = new Date(event.userAttendance.earliestLeaveTime);
-      const year = leaveDate.getFullYear();
-      const month = String(leaveDate.getMonth() + 1).padStart(2, "0");
-      const day = String(leaveDate.getDate()).padStart(2, "0");
-      const hours = String(leaveDate.getHours()).padStart(2, "0");
-      const minutes = String(leaveDate.getMinutes()).padStart(2, "0");
-      setEarliestLeaveTime(`${year}-${month}-${day}T${hours}:${minutes}`);
+      setEarliestLeaveTime(
+        formatDatetimeLocal(new Date(event.userAttendance.earliestLeaveTime))
+      );
     }
     setSelectedLocation(event.userAttendance.originLocation);
     setIsEditingAttendance(true);
@@ -159,11 +151,11 @@ export function AttendanceForm({
   // Calculate time difference for display
   const getTimeBefore = useCallback(() => {
     if (!earliestLeaveTime) return "";
-    const eventDate = new Date(event.time);
-    const leaveDate = new Date(earliestLeaveTime);
-    const diffMs = eventDate.getTime() - leaveDate.getTime();
-    const diffMinutes = Math.floor(diffMs / 60000);
-    return `${diffMinutes} minutes before the event`;
+    const diff = differenceInMinutes(
+      new Date(event.time),
+      new Date(earliestLeaveTime)
+    );
+    return `${diff} minutes before the event`;
   }, [earliestLeaveTime, event.time]);
 
   const canDrive = drivingStatus !== "cannot_drive";
@@ -230,9 +222,7 @@ export function AttendanceForm({
                     onClick={() => {
                       setEarliestLeaveTime(
                         formatDatetimeLocal(
-                          new Date(
-                            new Date(event.time).getTime() - minutes * 60_000
-                          )
+                          subMinutes(new Date(event.time), minutes)
                         )
                       );
                     }}

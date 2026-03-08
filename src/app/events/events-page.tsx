@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
+import { format } from "date-fns";
 
 import {
   AdminBadge,
@@ -65,11 +66,7 @@ function EventCard({
       <div className="text-sm text-gray-600 space-y-1">
         <div>
           <span className="font-medium">When:</span>{" "}
-          {eventDate.toLocaleDateString()}{" "}
-          {eventDate.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+          {format(eventDate, "MM/dd/yyyy h:mm a")}
         </div>
         <div>
           <span className="font-medium">Where:</span>{" "}

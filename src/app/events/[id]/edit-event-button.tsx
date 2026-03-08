@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { format } from "date-fns";
 
 import { AddressSelectorAndCard } from "@/components/address-selector-and-card";
 import { Button } from "@/components/ui/button";
@@ -35,13 +36,7 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
     setEditName(event.name);
     setEditLocation(event.location);
     // Convert ISO string to datetime-local format
-    const timeDate = new Date(event.time);
-    const year = timeDate.getFullYear();
-    const month = String(timeDate.getMonth() + 1).padStart(2, "0");
-    const day = String(timeDate.getDate()).padStart(2, "0");
-    const hours = String(timeDate.getHours()).padStart(2, "0");
-    const minutes = String(timeDate.getMinutes()).padStart(2, "0");
-    setEditTime(`${year}-${month}-${day}T${hours}:${minutes}`);
+    setEditTime(format(new Date(event.time), "yyyy-MM-dd'T'HH:mm"));
     setEditMessage(event.message || "");
     setShowEditForm(true);
   }, [event]);

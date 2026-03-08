@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { format } from "date-fns";
 
 import { AdminBadge } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
@@ -63,7 +64,8 @@ export default function GroupsPage() {
               <div className="flex gap-2 text-sm text-gray-600">
                 {groupMembership.isAdmin && <AdminBadge />}
                 <span className="text-gray-500">
-                  Created {groupMembership.group.createdAt.toLocaleDateString()}
+                  Created{" "}
+                  {format(groupMembership.group.createdAt, "MM/dd/yyyy")}
                 </span>
               </div>
             </Link>

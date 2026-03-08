@@ -28,9 +28,14 @@ Generating these will have a few steps:
 - should be really easy to modify them all, ideally with keyboard (without setting up explicit keyboard handlers - just like tab and spacebar and maybe sometimes arrows should do it - just make it normal)
 - It should render on the map as before. I'd prefer to extend our existing map UI stuff than totally rewriting it for this, or at least a good mix of re-using bits and pieces (maybe adding exports, moving some things to their own files, etc.)
 
-
 - these testing events are alwaqys "Scheduled" or "Confirmed" (not unscheduled)
 - there are no blast utils of course (no emails to these fake users)
 - ideally we reuse as much of the "Generate solution" UI and API routes etc but don't make things too complicated.
 
 There should be additional UI on the page that shows metrics, like "total drive time if everyone drives themselves" (to compare to the optimal found solution). Put this in its own module and set it up in such a way that if we wanted to add that part to the regular `src/app/events/[id]/social-event-details-page.tsx` page we can.
+
+We should of course see the `eventsToUsers` locations on the map even before we generate a solution. Once we generate a solution, just like on the existing /events/[id] page, we should see the routes etc.
+
+Basically, we should be able to automatically generate and modify a scenario easily, generate solutions, see the solution in UI, see it on the map, and see metrics about the advantage yielded by that solution.
+
+Go!
