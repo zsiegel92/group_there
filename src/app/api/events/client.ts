@@ -81,10 +81,12 @@ const attendeeSchema = z.object({
 const solutionPartyMemberSchema = z.object({
   userId: z.string(),
   userName: z.string(),
+  userEmail: z.string().optional(),
   pickupOrder: z.number(),
   originLocation: LocationSchema.nullable(),
   originLocationId: z.string().nullable(),
   earliestLeaveTime: z.string().nullable(),
+  estimatedPickup: z.string().nullable().optional(),
 });
 
 const solutionPartySchema = z.object({
@@ -92,6 +94,7 @@ const solutionPartySchema = z.object({
   partyIndex: z.number(),
   driverUserId: z.string().nullable(),
   driverName: z.string().nullable(),
+  estimatedEventArrival: z.string().nullable().optional(),
   members: z.array(solutionPartyMemberSchema),
 });
 

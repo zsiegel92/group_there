@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
 
 import { EventLocationsMap } from "@/components/map/event-locations-map";
 import { ROUTE_COLORS, type Route } from "@/components/map/map-container";
@@ -17,7 +18,7 @@ import {
   useUnlockEvent,
   type EventDetail,
 } from "../../api/events/client";
-import { solveProblem } from "./solve-action";
+import { solveProblem, type PartyEstimate } from "./solve-action";
 
 type EventForPanel = {
   location: Location | null;
@@ -74,6 +75,7 @@ function EphemeralSolutionView({
   currentUserId: string | undefined;
 }) {
   const [solution, setSolution] = useState<Solution | null>(null);
+  const [partyEstimates, setPartyEstimates] = useState<PartyEstimate[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [isSolving, setIsSolving] = useState(false);
   const [isFetchingRoutes, setIsFetchingRoutes] = useState(false);
@@ -82,13 +84,15 @@ function EphemeralSolutionView({
   const handleSolveProblem = async () => {
     setIsSolving(true);
     setSolution(null);
+    setPartyEstimates([]);
     setRoutes([]);
     try {
       const result = await solveProblem(eventId);
-      setSolution(result);
+      setSolution(result.solution);
+      setPartyEstimates(result.partyEstimates);
 
-      if (result.feasible && result.parties.length > 0) {
-        await fetchAndBuildRoutes(result);
+      if (result.solution.feasible && result.solution.parties.length > 0) {
+        await fetchAndBuildRoutes(result.solution);
       }
     } catch (error) {
       console.error("Failed to solve problem:", error);
@@ -278,6 +282,7 @@ function EphemeralSolutionView({
           {solution && (
             <SolutionCards
               solution={solution}
+              partyEstimates={partyEstimates}
               event={event}
               currentUserId={currentUserId}
             />
@@ -427,44 +432,46 @@ function LockedSolutionView({
                 className="bg-white rounded-lg border overflow-hidden"
               >
                 <div className="h-1.5" style={{ backgroundColor: color }} />
-                <div className="p-4 space-y-2">
+                <div className="p-4 space-y-0">
                   {driver && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-medium uppercase tracking-wide text-gray-400 w-14 shrink-0">
-                        Driver
-                      </span>
-                      <span className="font-medium">{driver.userName}</span>
-                      {driver.userId === currentUserId && <YouBadge />}
-                      {driver.originLocation && (
-                        <span className="text-gray-500 text-sm">
-                          from {driver.originLocation.name}
-                        </span>
-                      )}
-                    </div>
+                    <ItineraryRow
+                      time={driver.estimatedPickup ?? null}
+                      label="Depart"
+                      name={driver.userName}
+                      detail={driver.originLocation?.name ?? undefined}
+                      email={driver.userEmail}
+                      isYou={driver.userId === currentUserId}
+                      isLast={false}
+                    />
                   )}
 
                   {passengers.map((pass) => (
-                    <div
+                    <ItineraryRow
                       key={pass.userId}
-                      className="flex items-center gap-2 flex-wrap"
-                    >
-                      <span className="text-xs font-medium uppercase tracking-wide text-gray-400 w-14 shrink-0">
-                        Rider
-                      </span>
-                      <span className="font-medium">{pass.userName}</span>
-                      {pass.userId === currentUserId && <YouBadge />}
-                      {pass.originLocation && (
-                        <span className="text-gray-500 text-sm">
-                          from {pass.originLocation.name}
-                        </span>
-                      )}
-                    </div>
+                      time={pass.estimatedPickup ?? null}
+                      label="Pick up"
+                      name={pass.userName}
+                      detail={pass.originLocation?.name ?? undefined}
+                      email={pass.userEmail}
+                      isYou={pass.userId === currentUserId}
+                      isLast={false}
+                    />
                   ))}
 
                   {passengers.length === 0 && (
-                    <div className="text-sm text-gray-400 italic ml-16">
+                    <div className="text-sm text-gray-400 italic pl-20 py-1">
                       Solo driver
                     </div>
+                  )}
+
+                  {event.location && (
+                    <ItineraryRow
+                      time={party.estimatedEventArrival ?? null}
+                      label="Arrive"
+                      name={event.location.name}
+                      isYou={false}
+                      isLast={true}
+                    />
                   )}
                 </div>
               </div>
@@ -496,10 +503,12 @@ function LockedSolutionView({
 
 function SolutionCards({
   solution,
+  partyEstimates,
   event,
   currentUserId,
 }: {
   solution: Solution;
+  partyEstimates: PartyEstimate[];
   event: EventForPanel;
   currentUserId: string | undefined;
 }) {
@@ -514,6 +523,9 @@ function SolutionCards({
         <div className="space-y-3">
           {solution.parties.map((party, i) => {
             const color = ROUTE_COLORS[i % ROUTE_COLORS.length] ?? "#16a34a";
+            const estimate = partyEstimates.find(
+              (e) => e.partyId === party.id
+            );
             const driver = event.attendees.find(
               (a) => a.userId === party.driver_tripper_id
             );
@@ -521,69 +533,118 @@ function SolutionCards({
               event.attendees.find((a) => a.userId === pid)
             );
 
+            const getStopTime = (userId: string) =>
+              estimate?.stops.find((s) => s.userId === userId)?.estimatedTime ??
+              null;
+
             return (
               <div
                 key={party.id}
                 className="bg-white rounded-lg border overflow-hidden"
               >
                 <div className="h-1.5" style={{ backgroundColor: color }} />
-                <div className="p-4 space-y-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-medium uppercase tracking-wide text-gray-400 w-14 shrink-0">
-                      Driver
-                    </span>
-                    <span className="font-medium">
-                      {driver?.userName ?? "Unknown"}
-                    </span>
-                    {driver?.userId === currentUserId && <YouBadge />}
-                    {driver && (
-                      <span className="text-gray-400 text-sm">
-                        {driver.userEmail}
-                      </span>
-                    )}
-                    {driver?.userAttendance.originLocation && (
-                      <span className="text-gray-500 text-sm">
-                        from {driver.userAttendance.originLocation.name}
-                      </span>
-                    )}
-                  </div>
+                <div className="p-4 space-y-0">
+                  {/* Driver stop */}
+                  <ItineraryRow
+                    time={driver ? getStopTime(driver.userId) : null}
+                    label="Depart"
+                    name={driver?.userName ?? "Unknown"}
+                    detail={
+                      driver?.userAttendance.originLocation?.name ?? undefined
+                    }
+                    email={driver?.userEmail}
+                    isYou={driver?.userId === currentUserId}
+                    isLast={false}
+                  />
 
+                  {/* Passenger stops */}
                   {passengers.map((pass, j) => (
-                    <div
+                    <ItineraryRow
                       key={pass?.userId ?? j}
-                      className="flex items-center gap-2 flex-wrap"
-                    >
-                      <span className="text-xs font-medium uppercase tracking-wide text-gray-400 w-14 shrink-0">
-                        Rider
-                      </span>
-                      <span className="font-medium">
-                        {pass?.userName ?? "Unknown"}
-                      </span>
-                      {pass?.userId === currentUserId && <YouBadge />}
-                      {pass && (
-                        <span className="text-gray-400 text-sm">
-                          {pass.userEmail}
-                        </span>
-                      )}
-                      {pass?.userAttendance.originLocation && (
-                        <span className="text-gray-500 text-sm">
-                          from {pass.userAttendance.originLocation.name}
-                        </span>
-                      )}
-                    </div>
+                      time={pass ? getStopTime(pass.userId) : null}
+                      label="Pick up"
+                      name={pass?.userName ?? "Unknown"}
+                      detail={
+                        pass?.userAttendance.originLocation?.name ?? undefined
+                      }
+                      email={pass?.userEmail}
+                      isYou={pass?.userId === currentUserId}
+                      isLast={false}
+                    />
                   ))}
 
                   {passengers.length === 0 && (
-                    <div className="text-sm text-gray-400 italic ml-16">
+                    <div className="text-sm text-gray-400 italic pl-20 py-1">
                       Solo driver
                     </div>
                   )}
+
+                  {/* Arrival */}
+                  <ItineraryRow
+                    time={estimate?.estimatedEventArrival ?? null}
+                    label="Arrive"
+                    name={event.location?.name ?? "Event"}
+                    isYou={false}
+                    isLast={true}
+                  />
                 </div>
               </div>
             );
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function ItineraryRow({
+  time,
+  label,
+  name,
+  detail,
+  email,
+  isYou,
+  isLast,
+}: {
+  time: string | null;
+  label: string;
+  name: string;
+  detail?: string;
+  email?: string | null;
+  isYou: boolean;
+  isLast: boolean;
+}) {
+  return (
+    <div className="flex gap-3">
+      <div className="w-16 shrink-0 text-right text-sm text-gray-500 pt-0.5">
+        {time ? `~${format(new Date(time), "h:mm a")}` : ""}
+      </div>
+      <div className="flex flex-col items-center">
+        <div className="w-2.5 h-2.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+        {!isLast && <div className="w-0.5 bg-blue-200 flex-1 min-h-4" />}
+      </div>
+      <div className="pb-3 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-medium uppercase tracking-wide text-gray-400">
+            {label}
+          </span>
+          <span className="font-medium">{name}</span>
+          {isYou && <YouBadge />}
+        </div>
+        {detail && (
+          <div className="text-sm text-gray-500 mt-0.5">{detail}</div>
+        )}
+        {email && (
+          <div className="text-sm text-gray-500 mt-0.5">
+            <a
+              href={`mailto:${email}`}
+              className="text-blue-600 hover:underline"
+            >
+              {email}
+            </a>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

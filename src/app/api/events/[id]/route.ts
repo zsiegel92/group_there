@@ -152,34 +152,70 @@ export async function GET(request: NextRequest, props: Params) {
         ])
       );
 
-      // Admin gets full solution
+      // Admin gets full solution with itinerary estimates
       if (membership.isAdmin) {
+        const sortedParties = sol.parties.sort(
+          (a, b) => a.partyIndex - b.partyIndex
+        );
+
+        // Compute itinerary estimates for all parties
+        const partyEstimatesResults = await Promise.all(
+          sortedParties.map(async (party) => {
+            const sortedMembers = party.members.sort(
+              (a, b) => a.pickupOrder - b.pickupOrder
+            );
+            const membersForEstimate = sortedMembers.map((m) => {
+              const a = event.eventsToUsers.find(
+                (e) => e.userId === m.userId
+              );
+              return {
+                userId: m.userId,
+                originLocationId: a?.originLocationId ?? null,
+                earliestLeaveTime: a?.earliestLeaveTime ?? null,
+                pickupOrder: m.pickupOrder,
+              };
+            });
+            return computePartyEstimates(
+              membersForEstimate,
+              event.locationId,
+              event.time
+            );
+          })
+        );
+
         solutionData = {
           id: sol.id,
           feasible: sol.feasible,
           optimal: sol.optimal,
           totalDriveSeconds: sol.totalDriveSeconds,
-          parties: sol.parties
-            .sort((a, b) => a.partyIndex - b.partyIndex)
-            .map((party) => ({
+          parties: sortedParties.map((party, pi) => {
+            const estimates = partyEstimatesResults[pi];
+            return {
               id: party.id,
               partyIndex: party.partyIndex,
               driverUserId: party.driverUserId,
               driverName: party.driver?.name ?? null,
+              estimatedEventArrival: estimates?.estimatedEventArrival
+                ? estimates.estimatedEventArrival.toISOString()
+                : null,
               members: party.members
                 .sort((a, b) => a.pickupOrder - b.pickupOrder)
                 .map((m) => {
                   const att = attendeeLookup.get(m.userId);
+                  const pickup = estimates?.estimatedPickups.get(m.userId);
                   return {
                     userId: m.userId,
                     userName: m.user.name,
+                    userEmail: m.user.email,
                     pickupOrder: m.pickupOrder,
                     originLocation: att?.originLocation ?? null,
                     originLocationId: att?.originLocationId ?? null,
                     earliestLeaveTime: att?.earliestLeaveTime ?? null,
+                    estimatedPickup: pickup ? pickup.toISOString() : null,
                   };
                 }),
-            })),
+            };
+          }),
         };
       }
 

@@ -19,7 +19,7 @@ export function SolveProblem({ eventId }: SolveProblemProps) {
     setSolution(null);
     try {
       const result = await solveProblem(eventId);
-      setSolution(result);
+      setSolution(result.solution);
     } catch (error) {
       console.error("Failed to solve problem:", error);
       alert(
