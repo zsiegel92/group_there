@@ -29,6 +29,15 @@ type Event = {
   } | null;
 };
 
+function formatDatetimeLocal(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 type AttendanceFormProps = {
   event: Event;
   eventId: string;
@@ -211,6 +220,36 @@ export function AttendanceForm({
                 max={event.time.slice(0, 16)}
                 required
               />
+              <div className="flex gap-2 mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEarliestLeaveTime(
+                      formatDatetimeLocal(
+                        new Date(new Date(event.time).getTime() - 15 * 60_000)
+                      )
+                    );
+                  }}
+                >
+                  15 min before
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEarliestLeaveTime(
+                      formatDatetimeLocal(
+                        new Date(new Date(event.time).getTime() - 30 * 60_000)
+                      )
+                    );
+                  }}
+                >
+                  30 min before
+                </Button>
+              </div>
               {earliestLeaveTime && (
                 <p className="text-sm text-gray-600 mt-1">{getTimeBefore()}</p>
               )}

@@ -8,6 +8,7 @@ import {
   events,
   eventsToUsers,
   groupsToUsers,
+  locationDistances,
   locations,
   solutions,
 } from "@/db/schema";
@@ -77,6 +78,24 @@ export async function GET(request: NextRequest, props: Params) {
   const userAttendance = event.eventsToUsers.find(
     (att) => att.userId === user.id
   );
+
+  // Query direct travel time from user's origin to event location
+  let directTravelSeconds: number | null = null;
+  if (
+    userAttendance?.originLocationId &&
+    event.locationId &&
+    userAttendance.originLocationId !== event.locationId
+  ) {
+    const dist = await db.query.locationDistances.findFirst({
+      where: and(
+        eq(locationDistances.originLocationId, userAttendance.originLocationId),
+        eq(locationDistances.destinationLocationId, event.locationId)
+      ),
+    });
+    if (dist) {
+      directTravelSeconds = dist.durationSeconds;
+    }
+  }
 
   const formatLocationObj = (loc: typeof event.location) =>
     loc
@@ -185,7 +204,7 @@ export async function GET(request: NextRequest, props: Params) {
           });
 
           const { estimatedPickups, estimatedEventArrival } =
-            await computePartyEstimates(attendeeForEstimates, event.locationId);
+            await computePartyEstimates(attendeeForEstimates, event.locationId, event.time);
 
           myParty = {
             role:
@@ -233,6 +252,7 @@ export async function GET(request: NextRequest, props: Params) {
           originLocationId: att.originLocationId,
           originLocation: formatLocationObj(att.originLocation),
           joinedAt: att.createdAt.toISOString(),
+          directTravelSeconds: null,
         },
       }))
     : [];
@@ -270,6 +290,7 @@ export async function GET(request: NextRequest, props: Params) {
             originLocationId: userAttendance.originLocationId,
             originLocation: formatLocationObj(userAttendance.originLocation),
             joinedAt: userAttendance.createdAt.toISOString(),
+            directTravelSeconds,
           }
         : null,
       attendees,

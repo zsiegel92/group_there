@@ -213,7 +213,8 @@ export async function POST(request: NextRequest, props: Params) {
 
         const estimates = await computePartyEstimates(
           membersForEstimate,
-          event.locationId
+          event.locationId,
+          event.time
         );
 
         return { party, sortedMembers, estimates };

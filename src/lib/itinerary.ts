@@ -17,7 +17,8 @@ export async function computePartyEstimates(
     earliestLeaveTime: Date | null;
     pickupOrder: number;
   }[],
-  eventLocationId: string | null
+  eventLocationId: string | null,
+  eventTime: Date
 ) {
   const sorted = [...members].sort((a, b) => a.pickupOrder - b.pickupOrder);
 
@@ -66,20 +67,29 @@ export async function computePartyEstimates(
     ])
   );
 
-  // Find driver's departure time
-  const driver = sorted[0];
-  if (!driver?.earliestLeaveTime) {
-    return {
-      estimatedPickups: new Map<string, Date>(),
-      estimatedEventArrival: null,
-    };
+  // Sum all leg durations to get total route duration
+  let totalRouteDuration = 0;
+  for (const [origin, dest] of pairs) {
+    const duration = distanceMap.get(`${origin}:${dest}`);
+    if (duration != null) {
+      totalRouteDuration += duration;
+    }
   }
 
-  let currentTime = driver.earliestLeaveTime;
+  // Backward-compute: depart so that the group arrives at event time
+  const idealDeparture = addSeconds(eventTime, -totalRouteDuration);
+
+  const driver = sorted[0];
+  // Use the later of idealDeparture and driver's earliest leave time
+  const actualDeparture =
+    driver?.earliestLeaveTime && driver.earliestLeaveTime > idealDeparture
+      ? driver.earliestLeaveTime
+      : idealDeparture;
+
+  // Forward-compute pickup times from actualDeparture
+  let currentTime = actualDeparture;
   const estimatedPickups = new Map<string, Date>();
 
-  // Driver departs at their earliestLeaveTime — no pickup needed
-  // Process each consecutive leg
   let routeIdx = 0;
   for (const m of sorted) {
     if (m.pickupOrder === 0) {
@@ -89,7 +99,6 @@ export async function computePartyEstimates(
       continue;
     }
 
-    // Look up duration from previous stop to this stop
     const pair = pairs[routeIdx - 1];
     if (pair) {
       const duration = distanceMap.get(`${pair[0]}:${pair[1]}`);

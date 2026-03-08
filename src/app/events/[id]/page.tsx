@@ -244,6 +244,35 @@ export default function EventDetailPage(props: {
                           : "Unknown"}
                       </div>
                     </div>
+                    {(() => {
+                      const att = currentUserAttendee.userAttendance;
+                      if (
+                        !att.earliestLeaveTime ||
+                        att.directTravelSeconds == null
+                      )
+                        return null;
+                      const availableSeconds =
+                        (new Date(event.time).getTime() -
+                          new Date(att.earliestLeaveTime).getTime()) /
+                        1000;
+                      if (att.directTravelSeconds <= availableSeconds)
+                        return null;
+                      return (
+                        <div className="mt-3 space-y-2">
+                          <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                            Your departure time doesn&apos;t allow enough travel
+                            time to reach the event on time.
+                          </div>
+                          {att.drivingStatus === "can_drive_or_not" && (
+                            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">
+                              It will not be possible for anyone else to pick you
+                              up — you must either drive yourself or change your
+                              departure time availability.
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

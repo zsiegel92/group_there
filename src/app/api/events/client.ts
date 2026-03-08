@@ -56,6 +56,7 @@ const userAttendanceResponseSchema = z.object({
   originLocationId: z.string().nullable(),
   originLocation: LocationSchema.nullable(),
   joinedAt: z.string(),
+  directTravelSeconds: z.number().nullable(),
 });
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
