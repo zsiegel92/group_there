@@ -11,33 +11,41 @@ const stepTextColors = [
 export function EventStatus({
   scheduled,
   locked,
+  compact = false,
 }: {
   scheduled: boolean;
   locked: boolean;
+  compact?: boolean;
 }) {
   const currentStep = locked ? 2 : scheduled ? 1 : 0;
 
   return (
-    <div className="inline-flex items-baseline gap-2">
+    <div
+      className={`inline-flex items-baseline ${compact ? "gap-1" : "gap-2"}`}
+    >
       {steps.map((label, i) => {
         const isCurrent = i === currentStep;
         const isCompleted = i < currentStep;
 
+        const currentClass = compact
+          ? `text-xs font-semibold ${stepTextColors[currentStep]}`
+          : `text-lg font-semibold ${stepTextColors[currentStep]}`;
+
         return (
-          <div key={label} className="flex items-baseline gap-2">
+          <div key={label} className={`flex items-baseline ${compact ? "gap-1" : "gap-2"}`}>
             <span
               className={
                 isCurrent
-                  ? `text-lg font-semibold ${stepTextColors[currentStep]}`
+                  ? currentClass
                   : isCompleted
-                    ? "text-xs text-gray-500"
-                    : "text-xs text-gray-300"
+                    ? `${compact ? "text-[10px]" : "text-xs"} text-gray-500`
+                    : `${compact ? "text-[10px]" : "text-xs"} text-gray-300`
               }
             >
               {label}
             </span>
             {i < steps.length - 1 && (
-              <span className="text-xs text-gray-300">&rarr;</span>
+              <span className={`${compact ? "text-[10px]" : "text-xs"} text-gray-300`}>&rarr;</span>
             )}
           </div>
         );

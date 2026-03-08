@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   AdminBadge,
   JoinedBadge,
-  LockedBadge,
   NotJoinedBadge,
 } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 import { useEvents } from "../api/events/client";
 import { useGroups } from "../api/groups/client";
+import { EventStatus } from "./[id]/event-status";
 
 type LocationSummary = {
   id: string;
@@ -59,7 +59,6 @@ function EventCard({
         <h3 className="text-lg font-medium">{event.name}</h3>
         <div className="flex gap-2">
           {event.isGroupAdmin && <AdminBadge />}
-          {event.locked && <LockedBadge />}
           {event.hasJoined ? <JoinedBadge /> : <NotJoinedBadge />}
         </div>
       </div>
@@ -80,7 +79,10 @@ function EventCard({
           <div className="mt-2 text-gray-700">{event.message}</div>
         )}
       </div>
-      <div className="mt-3 text-blue-600 text-sm font-medium">{linkText} →</div>
+      <div className="mt-3 flex items-baseline justify-between">
+        <span className="text-blue-600 text-sm font-medium">{linkText} →</span>
+        <EventStatus scheduled={event.scheduled} locked={event.locked} compact />
+      </div>
     </Link>
   );
 }

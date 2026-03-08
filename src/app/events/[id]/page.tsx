@@ -1,13 +1,11 @@
 "use client";
 
 import { use, useMemo } from "react";
+import Link from "next/link";
 
 import { EventLocationsMap } from "@/components/map/event-locations-map";
 import {
   AdminBadge,
-  LockedBadge,
-  ScheduledBadge,
-  UnscheduledBadge,
   YouBadge,
 } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
@@ -72,7 +70,13 @@ export default function EventDetailPage(props: {
             <h1 className="text-2xl sm:text-3xl font-bold mb-2">
               {event.name}
             </h1>
-            <p className="text-gray-600">Group: {event.groupName}</p>
+            <Link
+              href={`/groups/${event.groupId}`}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors w-fit"
+            >
+              <span>Group: {event.groupName}</span>
+              {event.isAdmin && <AdminBadge />}
+            </Link>
           </div>
           {event.isAdmin && !event.locked && (
             <div className="flex flex-wrap gap-2">
@@ -102,17 +106,9 @@ export default function EventDetailPage(props: {
             </Button>
           )}
         </div>
-        <div className="flex gap-2 mb-4">
-          {event.isAdmin && <AdminBadge />}
-          {event.locked ? (
-            <LockedBadge />
-          ) : event.scheduled ? (
-            <ScheduledBadge />
-          ) : (
-            <UnscheduledBadge />
-          )}
+        <div className="mb-4">
+          <EventStatus scheduled={event.scheduled} locked={event.locked} />
         </div>
-        <EventStatus scheduled={event.scheduled} locked={event.locked} />
         {event.isAdmin && <BlastControls event={event} eventId={eventId} />}
       </div>
 
