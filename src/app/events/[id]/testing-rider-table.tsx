@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { drivingStatusEnumValues, type DrivingStatus } from "@/db/schema";
 
 import {
   useDeleteRider,
   useUpdateRiders,
+  type RiderFieldUpdate,
   type TestRider,
 } from "../../api/testing-events/client";
 
@@ -27,32 +29,66 @@ export function TestingRiderTable({
   eventId: string;
   eventTime: string;
 }) {
+  const queryClient = useQueryClient();
   const updateRiders = useUpdateRiders();
   const deleteRider = useDeleteRider();
-  const pendingUpdates = useRef(new Map<string, Record<string, unknown>>());
+  const pendingUpdates = useRef(new Map<string, RiderFieldUpdate>());
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [dirtyUserIds, setDirtyUserIds] = useState<Set<string>>(new Set());
 
   const flushUpdates = useCallback(() => {
-    const updates = Array.from(pendingUpdates.current.entries()).map(
-      ([userId, fields]) => ({
-        userId,
-        ...fields,
-      })
-    );
+    const entries = Array.from(pendingUpdates.current.entries());
+    const updates = entries.map(([userId, fields]) => ({
+      userId,
+      ...fields,
+    }));
+    const flushedIds = entries.map(([userId]) => userId);
+    pendingUpdates.current.clear();
+
     if (updates.length > 0) {
-      updateRiders.mutate({ eventId, updates });
-      pendingUpdates.current.clear();
+      updateRiders.mutate(
+        { eventId, updates },
+        {
+          onSettled: () => {
+            setDirtyUserIds((prev) => {
+              const next = new Set(prev);
+              for (const id of flushedIds) {
+                if (!pendingUpdates.current.has(id)) {
+                  next.delete(id);
+                }
+              }
+              return next;
+            });
+          },
+        }
+      );
     }
   }, [eventId, updateRiders]);
 
   const scheduleUpdate = useCallback(
-    (userId: string, fields: Record<string, unknown>) => {
+    (userId: string, fields: RiderFieldUpdate) => {
+      // Mark as dirty immediately
+      setDirtyUserIds((prev) => new Set(prev).add(userId));
+
+      // Optimistically update the cache so the UI reflects the change instantly
+      const qk = ["testing-events", eventId, "riders"];
+      void queryClient.cancelQueries({ queryKey: qk });
+      queryClient.setQueryData<{ riders: TestRider[] }>(qk, (old) => {
+        if (!old) return old;
+        return {
+          riders: old.riders.map((r) =>
+            r.userId === userId ? { ...r, ...fields } : r
+          ),
+        };
+      });
+
+      // Queue for batched network request (debounced)
       const existing = pendingUpdates.current.get(userId) ?? {};
       pendingUpdates.current.set(userId, { ...existing, ...fields });
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(flushUpdates, 500);
     },
-    [flushUpdates]
+    [eventId, flushUpdates, queryClient]
   );
 
   if (riders.length === 0) {
@@ -73,6 +109,7 @@ export function TestingRiderTable({
           eventTime={eventTime}
           onUpdate={scheduleUpdate}
           onDelete={() => deleteRider.mutate({ eventId, userId: rider.userId })}
+          isPending={dirtyUserIds.has(rider.userId)}
         />
       ))}
     </div>
@@ -85,12 +122,14 @@ function RiderRow({
   eventTime,
   onUpdate,
   onDelete,
+  isPending,
 }: {
   rider: TestRider;
   eventId: string;
   eventTime: string;
-  onUpdate: (userId: string, fields: Record<string, unknown>) => void;
+  onUpdate: (userId: string, fields: RiderFieldUpdate) => void;
   onDelete: () => void;
+  isPending: boolean;
 }) {
   const eventDate = new Date(eventTime);
 
@@ -102,9 +141,18 @@ function RiderRow({
     : null;
 
   return (
-    <div className="p-3 border rounded-lg bg-white text-sm space-y-2">
+    <div
+      className={`p-3 border rounded-lg text-sm space-y-2 transition-colors ${
+        isPending ? "border-blue-300 bg-blue-50/50" : "border-gray-200 bg-white"
+      }`}
+    >
       <div className="flex items-center justify-between gap-2">
-        <div className="font-medium truncate">{rider.userName}</div>
+        <div className="font-medium truncate flex items-center gap-1.5">
+          {rider.userName}
+          {isPending && (
+            <span className="inline-block size-1.5 rounded-full bg-blue-400 animate-pulse" />
+          )}
+        </div>
         <button
           onClick={onDelete}
           className="text-red-500 hover:text-red-700 text-xs shrink-0 cursor-pointer"

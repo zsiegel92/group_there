@@ -86,24 +86,6 @@ export function TestingEventDetailPage({ eventId }: { eventId: string }) {
 
   if (!event) return null;
 
-  // Build event shape for EventMapPanel
-  const eventForPanel = {
-    location: event.location,
-    locationId: event.locationId,
-    locked: event.locked,
-    attendees: riders.map((r) => ({
-      userId: r.userId,
-      userName: r.userName,
-      userEmail: r.userEmail,
-      userAttendance: {
-        originLocationId: r.originLocationId,
-        originLocation: buildLocation(r),
-      },
-    })),
-    isAdmin: true,
-    solution: event.solution,
-  };
-
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Header */}
@@ -148,7 +130,22 @@ export function TestingEventDetailPage({ eventId }: { eventId: string }) {
         <DistanceStatus eventId={eventId} isAdmin={true} />
 
         <EventMapPanel
-          event={eventForPanel}
+          event={{
+            location: event.location,
+            locationId: event.locationId,
+            locked: event.locked,
+            attendees: riders.map((r) => ({
+              userId: r.userId,
+              userName: r.userName,
+              userEmail: r.userEmail,
+              userAttendance: {
+                originLocationId: r.originLocationId,
+                originLocation: buildLocation(r),
+              },
+            })),
+            isAdmin: true,
+            solution: event.solution,
+          }}
           eventId={eventId}
           currentUserId={undefined}
           onSolutionGenerated={handleSolutionGenerated}

@@ -33,7 +33,8 @@
     "db:migrate": "drizzle-kit push --config drizzle.config.ts",
     "script": "NODE_ENV=development tsx --env-file .env --conditions=react-server",
     "smoke-test-solver-service": "dotenv -e .env -- sh -c 'GROUPTHERE_SOLVER_API_URL=$PRODUCTION_GROUPTHERE_SOLVER_API_URL pnpm run script src/scripts/smoke-tests/test-solver-service.ts'",
-    "smoke-test:google": "pnpm run script src/scripts/smoke-tests/test-google.ts && pnpm run script src/scripts/smoke-tests/test-route-matrix.ts && pnpm run script src/scripts/smoke-tests/test-compute-route.ts && pnpm run script src/scripts/smoke-tests/test-reverse-geocode.ts"
+    "smoke-test:google": "pnpm run script src/scripts/smoke-tests/test-google.ts && pnpm run script src/scripts/smoke-tests/test-route-matrix.ts && pnpm run script src/scripts/smoke-tests/test-compute-route.ts && pnpm run script src/scripts/smoke-tests/test-reverse-geocode.ts",
+    "smoke-test:google-large-distmat": "pnpm run script src/scripts/smoke-tests/test-route-matrix-large.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

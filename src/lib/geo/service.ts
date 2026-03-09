@@ -5,6 +5,7 @@ import {
   ComputeRouteResponseSchema,
   PlaceDetailsSchema,
   RouteMatrixEntrySchema,
+  type RouteMatrixEntry,
 } from "./schema";
 
 function getApiKey() {
@@ -174,19 +175,18 @@ export async function googlePlaceDetails(placeId: string) {
   });
 }
 
-/**
- * Compute driving distances/durations between all origin-destination pairs
- * using the Google Routes Matrix API.
- *
- * `locations` is a list of {id, latitude, longitude}. Returns the full
- * pairwise matrix (every location to every other location).
- */
-export async function googleRouteMatrix(
-  locations: { id: string; latitude: number; longitude: number }[]
-) {
-  if (locations.length < 2) return [];
+const MATRIX_BLOCK_SIZE = 25;
 
-  const origins = locations.map((loc) => ({
+/**
+ * Fetch a single block of the route matrix for the given origin/destination
+ * slices. Indices in the response are relative to the slices, so callers
+ * must pass the corresponding location sub-arrays to map back to IDs.
+ */
+async function fetchRouteMatrixBlock(
+  originLocations: { id: string; latitude: number; longitude: number }[],
+  destinationLocations: { id: string; latitude: number; longitude: number }[]
+) {
+  const origins = originLocations.map((loc) => ({
     waypoint: {
       location: {
         latLng: { latitude: loc.latitude, longitude: loc.longitude },
@@ -195,7 +195,7 @@ export async function googleRouteMatrix(
     routeModifiers: { avoidFerries: true },
   }));
 
-  const destinations = locations.map((loc) => ({
+  const destinations = destinationLocations.map((loc) => ({
     waypoint: {
       location: {
         latLng: { latitude: loc.latitude, longitude: loc.longitude },
@@ -231,19 +231,14 @@ export async function googleRouteMatrix(
   const rawResponse = await response.json();
   const data = googleRouteMatrixResponseSchema.parse(rawResponse);
 
-  const results = [];
+  const results: RouteMatrixEntry[] = [];
   for (const entry of data) {
-    const origin = locations[entry.originIndex];
-    const destination = locations[entry.destinationIndex];
-    if (
-      entry.originIndex === entry.destinationIndex ||
-      !origin ||
-      !destination
-    ) {
+    const origin = originLocations[entry.originIndex];
+    const destination = destinationLocations[entry.destinationIndex];
+    if (!origin || !destination || origin.id === destination.id) {
       continue;
     }
 
-    // duration comes as "123s" string — parse to seconds
     const durationSeconds = entry.duration
       ? parseInt(entry.duration.replace("s", ""), 10)
       : 0;
@@ -256,6 +251,46 @@ export async function googleRouteMatrix(
         distanceMeters: entry.distanceMeters ?? 0,
       })
     );
+  }
+
+  return results;
+}
+
+/**
+ * Compute driving distances/durations between all origin-destination pairs
+ * using the Google Routes Matrix API.
+ *
+ * `locations` is a list of {id, latitude, longitude}. Returns the full
+ * pairwise matrix (every location to every other location).
+ *
+ * The API limits requests to 625 elements (25x25). For larger matrices we
+ * slide a 25x25 block across the full matrix, collecting results from each
+ * chunk sequentially.
+ */
+export async function googleRouteMatrix(
+  locations: { id: string; latitude: number; longitude: number }[]
+) {
+  if (locations.length < 2) return [];
+
+  const n = locations.length;
+  if (n <= MATRIX_BLOCK_SIZE) {
+    return fetchRouteMatrixBlock(locations, locations);
+  }
+
+  const results: RouteMatrixEntry[] = [];
+  for (let oStart = 0; oStart < n; oStart += MATRIX_BLOCK_SIZE) {
+    const originSlice = locations.slice(
+      oStart,
+      Math.min(oStart + MATRIX_BLOCK_SIZE, n)
+    );
+    for (let dStart = 0; dStart < n; dStart += MATRIX_BLOCK_SIZE) {
+      const destSlice = locations.slice(
+        dStart,
+        Math.min(dStart + MATRIX_BLOCK_SIZE, n)
+      );
+      const blockResults = await fetchRouteMatrixBlock(originSlice, destSlice);
+      results.push(...blockResults);
+    }
   }
 
   return results;

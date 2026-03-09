@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
-import { drivingStatusEnumValues } from "@/db/schema";
+import { drivingStatusEnumValues, type DrivingStatus } from "@/db/schema";
 
 // Rider schemas
 const riderLocationSchema = z
@@ -29,6 +29,12 @@ const riderSchema = z.object({
 });
 
 export type TestRider = z.infer<typeof riderSchema>;
+
+export type RiderFieldUpdate = {
+  drivingStatus?: DrivingStatus;
+  carFits?: number;
+  earliestLeaveTime?: string | null;
+};
 
 const ridersResponseSchema = z.object({
   riders: z.array(riderSchema),
@@ -78,7 +84,7 @@ async function updateRiders(
   eventId: string,
   updates: {
     userId: string;
-    drivingStatus?: (typeof drivingStatusEnumValues)[number];
+    drivingStatus?: DrivingStatus;
     carFits?: number;
     earliestLeaveTime?: string | null;
   }[]
@@ -152,7 +158,7 @@ export function useUpdateRiders() {
       eventId: string;
       updates: {
         userId: string;
-        drivingStatus?: (typeof drivingStatusEnumValues)[number];
+        drivingStatus?: DrivingStatus;
         carFits?: number;
         earliestLeaveTime?: string | null;
       }[];
