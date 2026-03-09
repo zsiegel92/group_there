@@ -51,7 +51,16 @@ export default function CreateEventPage() {
         dialog.alert("Failed to create event. Please try again.");
       }
     },
-    [groupId, name, selectedLocation, time, message, createEvent, router, dialog]
+    [
+      groupId,
+      name,
+      selectedLocation,
+      time,
+      message,
+      createEvent,
+      router,
+      dialog,
+    ]
   );
 
   if (groupsLoading) {

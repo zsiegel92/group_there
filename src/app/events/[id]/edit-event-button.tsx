@@ -69,7 +69,16 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
         dialog.alert("Failed to update event. Please try again.");
       }
     },
-    [event, eventId, editName, editLocation, editTime, editMessage, updateEvent, dialog]
+    [
+      event,
+      eventId,
+      editName,
+      editLocation,
+      editTime,
+      editMessage,
+      updateEvent,
+      dialog,
+    ]
   );
 
   return (
@@ -96,9 +105,7 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">
-              Location
-            </label>
+            <label className="block text-sm font-medium mb-2">Location</label>
             <AddressSelectorAndCard
               onNewValidatedLocation={setEditLocation}
               ownerType="event"

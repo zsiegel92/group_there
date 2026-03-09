@@ -313,8 +313,8 @@ export function AttendanceForm({
       >
         <h2 className="text-xl font-bold mb-4">Leave Event</h2>
         <p className="mb-6">
-          Are you sure you want to leave this event? Your attendance
-          information will be removed.
+          Are you sure you want to leave this event? Your attendance information
+          will be removed.
         </p>
         <div className="flex gap-2 justify-end">
           <Button

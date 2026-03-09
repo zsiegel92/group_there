@@ -265,7 +265,8 @@ export async function updateEvent(
     body: JSON.stringify(input),
   });
   if (!response.ok) {
-    throw new Error("Failed to update event");
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.error ?? "Failed to update event");
   }
   const data = await response.json();
   return updateEventResponseSchema.parse(data);

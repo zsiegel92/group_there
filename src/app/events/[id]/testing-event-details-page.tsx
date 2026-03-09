@@ -20,6 +20,7 @@ import { DistanceStatus } from "./distance-status";
 import { EditEventButton } from "./edit-event-button";
 import { EventDetailsCard } from "./event-details-card";
 import { EventMapPanel } from "./event-map-panel";
+import { EventStatus } from "./event-status";
 import { MetricsPanel } from "./metrics-panel";
 import { TestingRiderTable } from "./testing-rider-table";
 
@@ -103,13 +104,22 @@ export function TestingEventDetailPage({ eventId }: { eventId: string }) {
               Group: {event.groupName}
             </Link>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <EditEventButton event={event} eventId={eventId} />
-            <DeleteEventButton eventId={eventId} />
-          </div>
+          {!event.locked && (
+            <div className="flex flex-wrap gap-2">
+              <EditEventButton event={event} eventId={eventId} />
+              <DeleteEventButton eventId={eventId} />
+            </div>
+          )}
         </div>
-        <div className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700 border border-dashed border-gray-300 mb-4">
-          Testing Playground
+        <div className="flex items-center gap-3 mb-4">
+          <div className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700 border border-dashed border-gray-300">
+            Testing Playground
+          </div>
+          <EventStatus
+            scheduled={event.scheduled}
+            locked={event.locked}
+            hideUnscheduled
+          />
         </div>
       </div>
 

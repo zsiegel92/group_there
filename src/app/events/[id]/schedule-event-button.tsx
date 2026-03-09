@@ -100,8 +100,8 @@ export function ScheduleEventButtons({
       >
         <h2 className="text-xl font-bold mb-4">Unschedule Event</h2>
         <p className="mb-6">
-          This will hide the event from group members. They will not be able
-          to join until you schedule it again.
+          This will hide the event from group members. They will not be able to
+          join until you schedule it again.
         </p>
         <div className="flex gap-2 justify-end">
           <Button
@@ -117,9 +117,7 @@ export function ScheduleEventButtons({
             disabled={unscheduleEvent.isPending}
             data-autofocus
           >
-            {unscheduleEvent.isPending
-              ? "Unscheduling..."
-              : "Unschedule Event"}
+            {unscheduleEvent.isPending ? "Unscheduling..." : "Unschedule Event"}
           </Button>
         </div>
       </Dialog>

@@ -1,8 +1,8 @@
 "use client";
 
-const steps = ["Unscheduled", "Scheduled", "Confirmed"] as const;
+const allSteps = ["Unscheduled", "Scheduled", "Confirmed"] as const;
 
-const stepTextColors = [
+const allStepTextColors = [
   "text-red-600",
   "text-yellow-600",
   "text-green-600",
@@ -12,12 +12,20 @@ export function EventStatus({
   scheduled,
   locked,
   compact = false,
+  hideUnscheduled = false,
 }: {
   scheduled: boolean;
   locked: boolean;
   compact?: boolean;
+  hideUnscheduled?: boolean;
 }) {
-  const currentStep = locked ? 2 : scheduled ? 1 : 0;
+  const fullIndex = locked ? 2 : scheduled ? 1 : 0;
+
+  const steps = hideUnscheduled ? allSteps.slice(1) : allSteps;
+  const stepTextColors = hideUnscheduled
+    ? allStepTextColors.slice(1)
+    : allStepTextColors;
+  const currentStep = hideUnscheduled ? fullIndex - 1 : fullIndex;
 
   return (
     <div
