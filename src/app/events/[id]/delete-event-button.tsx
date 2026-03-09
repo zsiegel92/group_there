@@ -3,7 +3,9 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { useDialog } from "@/components/dialog-provider";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 
 import { useDeleteEvent } from "../../api/events/client";
 
@@ -14,6 +16,7 @@ type DeleteEventButtonProps = {
 export function DeleteEventButton({ eventId }: DeleteEventButtonProps) {
   const router = useRouter();
   const deleteEvent = useDeleteEvent();
+  const dialog = useDialog();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -24,10 +27,10 @@ export function DeleteEventButton({ eventId }: DeleteEventButtonProps) {
     } catch (error) {
       console.error("Failed to delete event:", error);
       if (error instanceof Error) {
-        alert(error.message);
+        dialog.alert(error.message);
       }
     }
-  }, [eventId, deleteEvent, router]);
+  }, [eventId, deleteEvent, router, dialog]);
 
   return (
     <>
@@ -39,34 +42,36 @@ export function DeleteEventButton({ eventId }: DeleteEventButtonProps) {
         Delete
       </Button>
 
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold mb-4">Delete Event</h2>
-            <p className="mb-6">
-              Are you sure you want to delete this event? This action cannot be
-              undone.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setShowDeleteConfirm(false)}
-                disabled={deleteEvent.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={deleteEvent.isPending}
-              >
-                {deleteEvent.isPending ? "Deleting..." : "Delete Event"}
-              </Button>
-            </div>
-          </div>
+      <Dialog
+        open={showDeleteConfirm}
+        onClose={() => {
+          if (!deleteEvent.isPending) setShowDeleteConfirm(false);
+        }}
+      >
+        <h2 className="text-xl font-bold mb-4">Delete Event</h2>
+        <p className="mb-6">
+          Are you sure you want to delete this event? This action cannot be
+          undone.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setShowDeleteConfirm(false)}
+            disabled={deleteEvent.isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={deleteEvent.isPending}
+            data-autofocus
+          >
+            {deleteEvent.isPending ? "Deleting..." : "Delete Event"}
+          </Button>
         </div>
-      )}
+      </Dialog>
     </>
   );
 }

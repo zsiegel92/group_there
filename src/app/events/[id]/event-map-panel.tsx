@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 
+import { useDialog } from "@/components/dialog-provider";
 import { EventLocationsMap } from "@/components/map/event-locations-map";
 import { ROUTE_COLORS, type Route } from "@/components/map/map-container";
 import { YouBadge } from "@/components/ui/badges";
@@ -91,6 +92,7 @@ function EphemeralSolutionView({
   const [isSolving, setIsSolving] = useState(false);
   const [isFetchingRoutes, setIsFetchingRoutes] = useState(false);
   const confirmItinerary = useConfirmItinerary();
+  const dialog = useDialog();
 
   const handleSolveProblem = async () => {
     setIsSolving(true);
@@ -113,7 +115,7 @@ function EphemeralSolutionView({
       }
     } catch (error) {
       console.error("Failed to solve problem:", error);
-      alert(
+      dialog.alert(
         error instanceof Error
           ? error.message
           : "Failed to generate solution. Please try again."
@@ -123,15 +125,13 @@ function EphemeralSolutionView({
     }
   };
 
-  const handleConfirmItinerary = () => {
+  const handleConfirmItinerary = async () => {
     if (!solution || !solution.feasible) return;
 
-    if (
-      !confirm(
-        "Confirm itineraries? This will lock the event and notify participants."
-      )
-    )
-      return;
+    const confirmed = await dialog.confirm(
+      "Confirm itineraries? This will lock the event and notify participants."
+    );
+    if (!confirmed) return;
 
     const parties = solution.parties.map((party) => ({
       driverUserId: party.driver_tripper_id ?? "",
@@ -322,6 +322,7 @@ function LockedSolutionView({
   const unlockEvent = useUnlockEvent();
   const [routes, setRoutes] = useState<Route[]>([]);
   const [isFetchingRoutes, setIsFetchingRoutes] = useState(false);
+  const dialog = useDialog();
 
   const sol = event.solution;
 
@@ -506,12 +507,11 @@ function LockedSolutionView({
         <div className="mt-4">
           <Button
             variant="secondary"
-            onClick={() => {
-              if (
-                confirm(
-                  "Unlocking will delete the confirmed itinerary. Are you sure?"
-                )
-              ) {
+            onClick={async () => {
+              const confirmed = await dialog.confirm(
+                "Unlocking will delete the confirmed itinerary. Are you sure?"
+              );
+              if (confirmed) {
                 unlockEvent.mutate(eventId);
               }
             }}

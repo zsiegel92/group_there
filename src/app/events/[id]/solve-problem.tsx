@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { useDialog } from "@/components/dialog-provider";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import type { Solution } from "@/python-client";
@@ -13,6 +14,7 @@ interface SolveProblemProps {
 export function SolveProblem({ eventId }: SolveProblemProps) {
   const [solution, setSolution] = useState<Solution | null>(null);
   const [isSolving, setIsSolving] = useState(false);
+  const dialog = useDialog();
 
   const handleSolveProblem = async () => {
     setIsSolving(true);
@@ -22,7 +24,7 @@ export function SolveProblem({ eventId }: SolveProblemProps) {
       setSolution(result.solution);
     } catch (error) {
       console.error("Failed to solve problem:", error);
-      alert(
+      dialog.alert(
         error instanceof Error
           ? error.message
           : "Failed to generate solution. Please try again."

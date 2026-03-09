@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { useGroups } from "@/app/api/groups/client";
 import { AddressSelectorAndCard } from "@/components/address-selector-and-card";
+import { useDialog } from "@/components/dialog-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -17,6 +18,7 @@ export default function CreateEventPage() {
   const searchParams = useSearchParams();
   const { data: groupsData, isLoading: groupsLoading } = useGroups();
   const createEvent = useCreateEvent();
+  const dialog = useDialog();
 
   const groupIdParam = searchParams.get("groupId");
   const [groupId, setGroupId] = useState(groupIdParam || "");
@@ -46,10 +48,10 @@ export default function CreateEventPage() {
         router.push(`/events/${result.event.id}`);
       } catch (error) {
         console.error("Failed to create event:", error);
-        alert("Failed to create event. Please try again.");
+        dialog.alert("Failed to create event. Please try again.");
       }
     },
-    [groupId, name, selectedLocation, time, message, createEvent, router]
+    [groupId, name, selectedLocation, time, message, createEvent, router, dialog]
   );
 
   if (groupsLoading) {

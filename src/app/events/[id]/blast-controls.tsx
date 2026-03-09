@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 
+import { useDialog } from "@/components/dialog-provider";
 import { Button } from "@/components/ui/button";
 
 import { useSendBlast, type EventDetail } from "../../api/events/client";
@@ -21,14 +22,16 @@ export function BlastControls({
 }) {
   const sendBlast = useSendBlast();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const dialog = useDialog();
 
-  const handleBlast = (type: "event_scheduled" | "event_confirmed") => {
+  const handleBlast = async (type: "event_scheduled" | "event_confirmed") => {
     const message =
       type === "event_scheduled"
         ? "Send email to all group members who haven't joined yet?"
         : "Send confirmation email to all attendees?";
 
-    if (!confirm(message)) return;
+    const confirmed = await dialog.confirm(message);
+    if (!confirmed) return;
 
     sendBlast.mutate(
       { eventId, type },

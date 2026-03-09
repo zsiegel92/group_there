@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 
+import { useDialog } from "@/components/dialog-provider";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import type { Location } from "@/lib/geo/schema";
@@ -168,6 +169,7 @@ function GenerateRidersPanel({
   const [radiusMiles, setRadiusMiles] = useState(15);
   const generateRiders = useGenerateRiders();
   const deleteAllRiders = useDeleteAllRiders();
+  const dialog = useDialog();
 
   return (
     <div className="bg-gray-50 p-6 rounded-lg border border-dashed border-gray-300">
@@ -216,8 +218,9 @@ function GenerateRidersPanel({
         {riderCount > 0 && (
           <Button
             variant="secondary"
-            onClick={() => {
-              if (confirm("Delete all test riders?")) {
+            onClick={async () => {
+              const confirmed = await dialog.confirm("Delete all test riders?");
+              if (confirmed) {
                 deleteAllRiders.mutate(eventId);
               }
             }}

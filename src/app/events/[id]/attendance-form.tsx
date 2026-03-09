@@ -4,7 +4,9 @@ import { useCallback, useState } from "react";
 import { differenceInMinutes, format, subMinutes } from "date-fns";
 
 import { AddressSelectorAndCard } from "@/components/address-selector-and-card";
+import { useDialog } from "@/components/dialog-provider";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { type DrivingStatus } from "@/db/schema";
 import { useSession } from "@/lib/auth-client";
@@ -49,6 +51,7 @@ export function AttendanceForm({
   const attendEvent = useAttendEvent();
   const updateAttendance = useUpdateAttendance();
   const leaveEvent = useLeaveEvent();
+  const dialog = useDialog();
 
   const [isEditingAttendance, setIsEditingAttendance] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -67,7 +70,7 @@ export function AttendanceForm({
       e.preventDefault();
 
       if (!selectedLocation) {
-        alert("Please select an origin location.");
+        dialog.alert("Please select an origin location.");
         return;
       }
 
@@ -90,19 +93,19 @@ export function AttendanceForm({
             input: attendanceData,
           });
           setIsEditingAttendance(false);
-          alert("Attendance updated successfully!");
+          dialog.alert("Attendance updated successfully!");
         } else {
           await attendEvent.mutateAsync({
             eventId,
             input: attendanceData,
           });
           setIsEditingAttendance(false);
-          alert("Joined event successfully!");
+          dialog.alert("Joined event successfully!");
         }
       } catch (error) {
         console.error("Failed to submit attendance:", error);
         if (error instanceof Error) {
-          alert(error.message);
+          dialog.alert(error.message);
         }
       }
     },
@@ -116,6 +119,7 @@ export function AttendanceForm({
       attendEvent,
       event.hasJoined,
       setIsEditingAttendance,
+      dialog,
     ]
   );
 
@@ -124,14 +128,14 @@ export function AttendanceForm({
       await leaveEvent.mutateAsync(eventId);
       setShowLeaveConfirm(false);
       setIsEditingAttendance(false);
-      alert("You have left the event.");
+      dialog.alert("You have left the event.");
     } catch (error) {
       console.error("Failed to leave event:", error);
       if (error instanceof Error) {
-        alert(error.message);
+        dialog.alert(error.message);
       }
     }
-  }, [eventId, leaveEvent, setIsEditingAttendance]);
+  }, [eventId, leaveEvent, setIsEditingAttendance, dialog]);
 
   const openAttendanceForm = useCallback(() => {
     if (!event.userAttendance) return;
@@ -301,34 +305,36 @@ export function AttendanceForm({
         </div>
       </form>
 
-      {showLeaveConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold mb-4">Leave Event</h2>
-            <p className="mb-6">
-              Are you sure you want to leave this event? Your attendance
-              information will be removed.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setShowLeaveConfirm(false)}
-                disabled={leaveEvent.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleLeave}
-                disabled={leaveEvent.isPending}
-              >
-                {leaveEvent.isPending ? "Leaving..." : "Leave Event"}
-              </Button>
-            </div>
-          </div>
+      <Dialog
+        open={showLeaveConfirm}
+        onClose={() => {
+          if (!leaveEvent.isPending) setShowLeaveConfirm(false);
+        }}
+      >
+        <h2 className="text-xl font-bold mb-4">Leave Event</h2>
+        <p className="mb-6">
+          Are you sure you want to leave this event? Your attendance
+          information will be removed.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setShowLeaveConfirm(false)}
+            disabled={leaveEvent.isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleLeave}
+            disabled={leaveEvent.isPending}
+            data-autofocus
+          >
+            {leaveEvent.isPending ? "Leaving..." : "Leave Event"}
+          </Button>
         </div>
-      )}
+      </Dialog>
     </>
   );
 

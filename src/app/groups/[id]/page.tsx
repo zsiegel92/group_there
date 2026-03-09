@@ -6,8 +6,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 
+import { useDialog } from "@/components/dialog-provider";
 import { AdminBadge, YouBadge } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/lib/auth-client";
@@ -28,6 +30,7 @@ export default function GroupDetailPage(props: {
   const router = useRouter();
   const groupId = params.id;
   const { data: session } = useSession();
+  const dialog = useDialog();
 
   const { data, isLoading, error, refetch } = useGroupDetails(groupId);
   const deleteGroup = useDeleteGroup();
@@ -74,17 +77,17 @@ export default function GroupDetailPage(props: {
         );
         setInviteEmails([""]);
         setShowInviteDialog(false);
-        alert(
+        dialog.alert(
           `Invite${validEmails.length > 1 ? "s" : ""} sent successfully to ${validEmails.length} email${validEmails.length > 1 ? "s" : ""}!`
         );
       } catch (error) {
         console.error("Failed to send invites:", error);
-        alert("Failed to send some invites. Please try again.");
+        dialog.alert("Failed to send some invites. Please try again.");
       } finally {
         setSendingInvites(false);
       }
     },
-    [inviteEmails, inviteToGroup, groupId]
+    [inviteEmails, inviteToGroup, groupId, dialog]
   );
 
   const handleDelete = useCallback(async () => {
@@ -93,9 +96,9 @@ export default function GroupDetailPage(props: {
       router.push("/groups");
     } catch (error) {
       console.error("Failed to delete group:", error);
-      alert("Failed to delete group. Please try again.");
+      dialog.alert("Failed to delete group. Please try again.");
     }
-  }, [groupId, deleteGroup, router]);
+  }, [groupId, deleteGroup, router, dialog]);
 
   const handleLeave = useCallback(async () => {
     try {
@@ -103,9 +106,9 @@ export default function GroupDetailPage(props: {
       router.push("/groups");
     } catch (error) {
       console.error("Failed to leave group:", error);
-      alert("Failed to leave group. Please try again.");
+      dialog.alert("Failed to leave group. Please try again.");
     }
-  }, [groupId, leaveGroup, router]);
+  }, [groupId, leaveGroup, router, dialog]);
 
   const handlePromote = useCallback(
     async (userId: string) => {
@@ -114,10 +117,10 @@ export default function GroupDetailPage(props: {
         refetch();
       } catch (error) {
         console.error("Failed to promote user:", error);
-        alert("Failed to promote user. Please try again.");
+        dialog.alert("Failed to promote user. Please try again.");
       }
     },
-    [groupId, promoteToAdmin, refetch]
+    [groupId, promoteToAdmin, refetch, dialog]
   );
 
   if (isLoading) {
@@ -277,106 +280,114 @@ export default function GroupDetailPage(props: {
         <EventsPage groupId={groupId} />
       </div>
 
-      {showInviteDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold mb-4">Invite Members</h2>
-            <form onSubmit={handleInvite} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Email Addresses
-                </label>
-                <div className="space-y-2 max-h-[280px] overflow-y-auto pr-2">
-                  {inviteEmails.map((email, index) => (
-                    <Input
-                      key={index}
-                      type="email"
-                      value={email}
-                      onChange={(e) => handleEmailChange(index, e.target.value)}
-                      placeholder="member@example.com"
-                      disabled={sendingInvites}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    setShowInviteDialog(false);
-                    setInviteEmails([""]);
-                  }}
+      <Dialog
+        open={showInviteDialog}
+        onClose={() => {
+          if (!sendingInvites) {
+            setShowInviteDialog(false);
+            setInviteEmails([""]);
+          }
+        }}
+      >
+        <h2 className="text-xl font-bold mb-4">Invite Members</h2>
+        <form onSubmit={handleInvite} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Email Addresses
+            </label>
+            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-2">
+              {inviteEmails.map((email, index) => (
+                <Input
+                  key={index}
+                  type="email"
+                  value={email}
+                  onChange={(e) => handleEmailChange(index, e.target.value)}
+                  placeholder="member@example.com"
                   disabled={sendingInvites}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={sendingInvites}>
-                  {sendingInvites ? "Sending..." : "Send Invites"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold mb-4">Delete Group</h2>
-            <p className="mb-6">
-              Are you sure you want to delete this group? This action cannot be
-              undone.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setShowDeleteConfirm(false)}
-                disabled={deleteGroup.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={deleteGroup.isPending}
-              >
-                {deleteGroup.isPending ? "Deleting..." : "Delete Group"}
-              </Button>
+                />
+              ))}
             </div>
           </div>
-        </div>
-      )}
-
-      {showLeaveConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold mb-4">Leave Group</h2>
-            <p className="mb-6">
-              Are you sure you want to leave this group? You will need to be
-              re-invited to rejoin.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setShowLeaveConfirm(false)}
-                disabled={leaveGroup.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleLeave}
-                disabled={leaveGroup.isPending}
-              >
-                {leaveGroup.isPending ? "Leaving..." : "Leave Group"}
-              </Button>
-            </div>
+          <div className="flex gap-2 justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setShowInviteDialog(false);
+                setInviteEmails([""]);
+              }}
+              disabled={sendingInvites}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={sendingInvites} data-autofocus>
+              {sendingInvites ? "Sending..." : "Send Invites"}
+            </Button>
           </div>
+        </form>
+      </Dialog>
+
+      <Dialog
+        open={showDeleteConfirm}
+        onClose={() => {
+          if (!deleteGroup.isPending) setShowDeleteConfirm(false);
+        }}
+      >
+        <h2 className="text-xl font-bold mb-4">Delete Group</h2>
+        <p className="mb-6">
+          Are you sure you want to delete this group? This action cannot be
+          undone.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setShowDeleteConfirm(false)}
+            disabled={deleteGroup.isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={deleteGroup.isPending}
+            data-autofocus
+          >
+            {deleteGroup.isPending ? "Deleting..." : "Delete Group"}
+          </Button>
         </div>
-      )}
+      </Dialog>
+
+      <Dialog
+        open={showLeaveConfirm}
+        onClose={() => {
+          if (!leaveGroup.isPending) setShowLeaveConfirm(false);
+        }}
+      >
+        <h2 className="text-xl font-bold mb-4">Leave Group</h2>
+        <p className="mb-6">
+          Are you sure you want to leave this group? You will need to be
+          re-invited to rejoin.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setShowLeaveConfirm(false)}
+            disabled={leaveGroup.isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleLeave}
+            disabled={leaveGroup.isPending}
+            data-autofocus
+          >
+            {leaveGroup.isPending ? "Leaving..." : "Leave Group"}
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }

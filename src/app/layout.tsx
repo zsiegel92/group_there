@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
 
+import { DialogProvider } from "@/components/dialog-provider";
 import { Nav, NavFallback } from "@/components/nav/nav";
 import { QueryProvider } from "@/components/query-provider";
 
@@ -38,10 +39,12 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <QueryProvider>
-          <Suspense fallback={<NavFallback />}>
-            <Nav />
-          </Suspense>
-          {children}
+          <DialogProvider>
+            <Suspense fallback={<NavFallback />}>
+              <Nav />
+            </Suspense>
+            {children}
+          </DialogProvider>
         </QueryProvider>
       </body>
     </html>

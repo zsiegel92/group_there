@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { differenceInSeconds, format } from "date-fns";
 
+import { useDialog } from "@/components/dialog-provider";
 import { EventLocationsMap } from "@/components/map/event-locations-map";
 import { AdminBadge, YouBadge } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import { YourTrip } from "./your-trip";
 
 export function SocialEventDetailPage({ eventId }: { eventId: string }) {
   const { data: session } = useSession();
+  const dialog = useDialog();
 
   const { data, isLoading, error } = useEventDetails(eventId);
   const unlockEvent = useUnlockEvent();
@@ -81,12 +83,11 @@ export function SocialEventDetailPage({ eventId }: { eventId: string }) {
           {event.isAdmin && event.locked && (
             <Button
               variant="secondary"
-              onClick={() => {
-                if (
-                  confirm(
-                    "Unlocking will delete the confirmed itinerary. Are you sure?"
-                  )
-                ) {
+              onClick={async () => {
+                const confirmed = await dialog.confirm(
+                  "Unlocking will delete the confirmed itinerary. Are you sure?"
+                );
+                if (confirmed) {
                   unlockEvent.mutate(eventId);
                 }
               }}
