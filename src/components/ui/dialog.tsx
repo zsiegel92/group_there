@@ -87,7 +87,10 @@ export function Dialog({ open, onClose, children, className }: DialogProps) {
     >
       <div
         ref={panelRef}
-        className={cn("bg-white p-6 rounded-lg max-w-md w-full mx-4", className)}
+        className={cn(
+          "bg-white p-6 rounded-lg max-w-md w-full mx-4",
+          className
+        )}
       >
         {children}
       </div>

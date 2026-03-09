@@ -152,9 +152,7 @@ export default function GroupDetailPage(props: {
   const adminCount = groupDetail.members.filter((m) => m.isAdmin).length;
   const isOnlyAdmin = isAdmin && adminCount === 1;
   const isTesting = groupDetail.group.type === "testing";
-  const visibleMembers = groupDetail.members.filter(
-    (m) => !m.user.isTestUser
-  );
+  const visibleMembers = groupDetail.members.filter((m) => !m.user.isTestUser);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">

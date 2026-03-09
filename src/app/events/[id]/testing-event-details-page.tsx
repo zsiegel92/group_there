@@ -130,7 +130,11 @@ export function TestingEventDetailPage({ eventId }: { eventId: string }) {
           message={event.message}
         />
 
-        <GenerateRidersPanel eventId={eventId} riderCount={riders.length} />
+        <GenerateRidersPanel
+          eventId={eventId}
+          riderCount={riders.length}
+          locked={event.locked}
+        />
 
         <TestingRiderTable
           riders={riders}
@@ -171,9 +175,11 @@ export function TestingEventDetailPage({ eventId }: { eventId: string }) {
 function GenerateRidersPanel({
   eventId,
   riderCount,
+  locked,
 }: {
   eventId: string;
   riderCount: number;
+  locked: boolean;
 }) {
   const [count, setCount] = useState(5);
   const [radiusMiles, setRadiusMiles] = useState(15);
@@ -221,7 +227,7 @@ function GenerateRidersPanel({
               input: { count, radiusMiles },
             })
           }
-          disabled={generateRiders.isPending}
+          disabled={locked || generateRiders.isPending}
         >
           {generateRiders.isPending ? "Generating..." : "Generate"}
         </Button>
@@ -234,7 +240,7 @@ function GenerateRidersPanel({
                 deleteAllRiders.mutate(eventId);
               }
             }}
-            disabled={deleteAllRiders.isPending}
+            disabled={locked || deleteAllRiders.isPending}
           >
             {deleteAllRiders.isPending ? "Deleting..." : "Delete All"}
           </Button>

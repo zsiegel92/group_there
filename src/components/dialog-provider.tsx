@@ -97,17 +97,13 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   }, [dialog]);
 
   return (
-    <DialogContext.Provider
-      value={{ alert: showAlert, confirm: showConfirm }}
-    >
+    <DialogContext.Provider value={{ alert: showAlert, confirm: showConfirm }}>
       {children}
       <Dialog open={dialog !== null} onClose={handleClose}>
         {dialog && (
           <>
             {dialog.options.title && (
-              <h2 className="text-xl font-bold mb-4">
-                {dialog.options.title}
-              </h2>
+              <h2 className="text-xl font-bold mb-4">{dialog.options.title}</h2>
             )}
             <p className="mb-6">{dialog.message}</p>
             <div className="flex gap-2 justify-end">
