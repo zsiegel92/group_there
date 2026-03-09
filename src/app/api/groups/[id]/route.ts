@@ -53,6 +53,7 @@ export async function GET(request: NextRequest, props: Params) {
       group: {
         id: group.id,
         name: group.name,
+        type: group.type,
         createdAt: group.createdAt,
       },
       members: group.groupsToUsers.map((gu) => ({
@@ -61,6 +62,7 @@ export async function GET(request: NextRequest, props: Params) {
           name: gu.user.name,
           email: gu.user.email,
           image: gu.user.image,
+          isTestUser: gu.user.isTestUser,
         },
         isAdmin: gu.isAdmin,
         joinedAt: gu.createdAt,

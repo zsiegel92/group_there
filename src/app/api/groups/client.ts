@@ -9,7 +9,7 @@ import { groupTypeValues } from "@/db/schema";
 const groupSchema = z.object({
   id: z.string(),
   name: z.string(),
-  type: z.enum(groupTypeValues).optional().default("social"),
+  type: z.enum(groupTypeValues),
   createdAt: z.coerce.date(),
 });
 
@@ -18,6 +18,7 @@ const userSchema = z.object({
   name: z.string(),
   email: z.string(),
   image: z.string().nullable(),
+  isTestUser: z.boolean(),
 });
 
 // Response schemas for specific endpoints
