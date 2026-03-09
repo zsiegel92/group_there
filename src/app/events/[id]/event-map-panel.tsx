@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 
 import { useDialog } from "@/components/dialog-provider";
@@ -38,11 +38,147 @@ type EventForPanel = {
   solution?: EventDetail["solution"];
 };
 
+/**
+ * Normalize persisted DB solution into the solver's canonical shape
+ * so we can use a single rendering path for both locked and ephemeral solutions.
+ */
+function normalizeSolution(
+  sol: EventDetail["solution"] | undefined
+): { solution: Solution; partyEstimates: PartyEstimate[] } | null {
+  if (!sol) return null;
+
+  const solution: Solution = {
+    id: sol.id,
+    successfully_completed: true,
+    feasible: sol.feasible,
+    optimal: sol.optimal,
+    total_drive_seconds: sol.totalDriveSeconds,
+    parties: sol.parties
+      .toSorted((a, b) => a.partyIndex - b.partyIndex)
+      .map((party) => ({
+        id: party.id,
+        driver_tripper_id: party.driverUserId,
+        passenger_tripper_ids: party.members
+          .filter((m) => m.pickupOrder > 0)
+          .toSorted((a, b) => a.pickupOrder - b.pickupOrder)
+          .map((m) => m.userId),
+      })),
+  };
+
+  const partyEstimates: PartyEstimate[] = sol.parties.map((party) => ({
+    partyId: party.id,
+    stops: party.members.map((m) => ({
+      userId: m.userId,
+      estimatedTime: m.estimatedPickup ?? null,
+    })),
+    estimatedEventArrival: party.estimatedEventArrival ?? null,
+  }));
+
+  return { solution, partyEstimates };
+}
+
+async function fetchAndBuildRoutes(
+  solution: Solution,
+  attendees: EventForPanel["attendees"],
+  eventLocationId: string,
+  eventId: string
+): Promise<Route[]> {
+  const userLocationMap = new Map<string, string>();
+  for (const att of attendees) {
+    if (att.userAttendance.originLocationId) {
+      userLocationMap.set(att.userId, att.userAttendance.originLocationId);
+    }
+  }
+
+  const userNameMap = new Map<string, string>();
+  for (const att of attendees) {
+    userNameMap.set(att.userId, att.userName);
+  }
+
+  const allPairs: {
+    originLocationId: string;
+    destinationLocationId: string;
+  }[] = [];
+  const partySequences: { locationIds: string[]; label: string }[] = [];
+
+  for (const party of solution.parties) {
+    const driverId = party.driver_tripper_id;
+    if (!driverId) continue;
+
+    const driverLocId = userLocationMap.get(driverId);
+    if (!driverLocId) continue;
+
+    const locationIds = [driverLocId];
+    for (const passId of party.passenger_tripper_ids) {
+      const locId = userLocationMap.get(passId);
+      if (locId) locationIds.push(locId);
+    }
+    locationIds.push(eventLocationId);
+
+    const driverName = userNameMap.get(driverId) ?? "Driver";
+    partySequences.push({ locationIds, label: `${driverName}'s car` });
+
+    for (let i = 0; i < locationIds.length - 1; i++) {
+      const originId = locationIds[i];
+      const destId = locationIds[i + 1];
+      if (originId && destId) {
+        allPairs.push({
+          originLocationId: originId,
+          destinationLocationId: destId,
+        });
+      }
+    }
+  }
+
+  if (allPairs.length === 0) return [];
+
+  const uniquePairs = [
+    ...new Map(
+      allPairs.map((p) => [
+        `${p.originLocationId}:${p.destinationLocationId}`,
+        p,
+      ])
+    ).values(),
+  ];
+
+  const { polylines } = await fetchRoutePolylines(eventId, uniquePairs);
+
+  const routes: Route[] = [];
+
+  for (let pi = 0; pi < partySequences.length; pi++) {
+    const seq = partySequences[pi];
+    if (!seq) continue;
+    const color =
+      ROUTE_COLORS[pi % ROUTE_COLORS.length] ?? ROUTE_COLORS[0] ?? "#16a34a";
+    const coordinates: [number, number][] = [];
+
+    for (let i = 0; i < seq.locationIds.length - 1; i++) {
+      const key = `${seq.locationIds[i]}:${seq.locationIds[i + 1]}`;
+      const encoded = polylines[key];
+      if (encoded) {
+        const decoded = decodePolyline(encoded);
+        if (coordinates.length > 0 && decoded.length > 0) {
+          coordinates.push(...decoded.slice(1));
+        } else {
+          coordinates.push(...decoded);
+        }
+      }
+    }
+
+    if (coordinates.length > 0) {
+      routes.push({ coordinates, color, label: seq.label });
+    }
+  }
+
+  return routes;
+}
+
 export function EventMapPanel({
   event,
   eventId,
   currentUserId,
   onSolutionGenerated,
+  onSolveStart,
 }: {
   event: EventForPanel;
   eventId: string;
@@ -51,67 +187,81 @@ export function EventMapPanel({
     problem: Problem;
     solution: Solution;
   }) => void;
+  onSolveStart?: () => void;
 }) {
-  if (event.locked) {
-    return (
-      <LockedSolutionView
-        event={event}
-        eventId={eventId}
-        currentUserId={currentUserId}
-      />
-    );
-  }
-
-  return (
-    <EphemeralSolutionView
-      event={event}
-      eventId={eventId}
-      currentUserId={currentUserId}
-      onSolutionGenerated={onSolutionGenerated}
-    />
-  );
-}
-
-function EphemeralSolutionView({
-  event,
-  eventId,
-  currentUserId,
-  onSolutionGenerated,
-}: {
-  event: EventForPanel;
-  eventId: string;
-  currentUserId: string | undefined;
-  onSolutionGenerated?: (result: {
-    problem: Problem;
+  const [ephemeralData, setEphemeralData] = useState<{
     solution: Solution;
-  }) => void;
-}) {
-  const [solution, setSolution] = useState<Solution | null>(null);
-  const [partyEstimates, setPartyEstimates] = useState<PartyEstimate[]>([]);
+    partyEstimates: PartyEstimate[];
+  } | null>(null);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [isSolving, setIsSolving] = useState(false);
   const [isFetchingRoutes, setIsFetchingRoutes] = useState(false);
   const confirmItinerary = useConfirmItinerary();
+  const unlockEvent = useUnlockEvent();
   const dialog = useDialog();
+
+  const lockedData = useMemo(
+    () => normalizeSolution(event.solution),
+    [event.solution]
+  );
+
+  const solution = ephemeralData?.solution ?? lockedData?.solution ?? null;
+  const partyEstimates =
+    ephemeralData?.partyEstimates ?? lockedData?.partyEstimates ?? [];
+
+  // Ref for attendees so route-fetching effect doesn't depend on the
+  // (potentially unstable) array reference from the parent's inline JSX
+  const attendeesRef = useRef(event.attendees);
+  attendeesRef.current = event.attendees;
+
+  // Fetch route polylines when solution becomes available
+  useEffect(() => {
+    const locationId = event.locationId;
+    if (!solution || !locationId || !solution.feasible) return;
+    if (solution.parties.length === 0) return;
+
+    let cancelled = false;
+    void (async () => {
+      setIsFetchingRoutes(true);
+      try {
+        const builtRoutes = await fetchAndBuildRoutes(
+          solution,
+          attendeesRef.current,
+          locationId,
+          eventId
+        );
+        if (!cancelled) setRoutes(builtRoutes);
+      } catch (err) {
+        if (!cancelled) console.error("Failed to fetch route polylines:", err);
+      } finally {
+        if (!cancelled) setIsFetchingRoutes(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [solution, event.locationId, eventId]);
+
+  // For locked events without solution data (e.g., non-admin users), render nothing
+  if (event.locked && !solution) return null;
 
   const handleSolveProblem = async () => {
     setIsSolving(true);
-    setSolution(null);
-    setPartyEstimates([]);
+    setEphemeralData(null);
     setRoutes([]);
+    onSolveStart?.();
     try {
       const result = await solveProblem(eventId);
-      setSolution(result.solution);
-      setPartyEstimates(result.partyEstimates);
-
+      setEphemeralData({
+        solution: result.solution,
+        partyEstimates: result.partyEstimates,
+      });
       if (result.solution.feasible) {
         onSolutionGenerated?.({
           problem: result.problem,
           solution: result.solution,
         });
-        if (result.solution.parties.length > 0) {
-          await fetchAndBuildRoutes(result.solution);
-        }
       }
     } catch (error) {
       console.error("Failed to solve problem:", error);
@@ -149,279 +299,6 @@ function EphemeralSolutionView({
     });
   };
 
-  const fetchAndBuildRoutes = async (sol: Solution) => {
-    if (!event.locationId) return;
-
-    setIsFetchingRoutes(true);
-    try {
-      const userLocationMap = new Map<string, string>();
-      for (const att of event.attendees) {
-        if (att.userAttendance.originLocationId) {
-          userLocationMap.set(att.userId, att.userAttendance.originLocationId);
-        }
-      }
-
-      const userNameMap = new Map<string, string>();
-      for (const att of event.attendees) {
-        userNameMap.set(att.userId, att.userName);
-      }
-
-      const allPairs: {
-        originLocationId: string;
-        destinationLocationId: string;
-      }[] = [];
-
-      const partySequences: { locationIds: string[]; label: string }[] = [];
-
-      for (const party of sol.parties) {
-        const driverId = party.driver_tripper_id;
-        if (!driverId) continue;
-
-        const driverLocId = userLocationMap.get(driverId);
-        if (!driverLocId) continue;
-
-        const locationIds = [driverLocId];
-        for (const passId of party.passenger_tripper_ids) {
-          const locId = userLocationMap.get(passId);
-          if (locId) locationIds.push(locId);
-        }
-        locationIds.push(event.locationId);
-
-        const driverName = userNameMap.get(driverId) ?? "Driver";
-        partySequences.push({ locationIds, label: `${driverName}'s car` });
-
-        for (let i = 0; i < locationIds.length - 1; i++) {
-          const originId = locationIds[i];
-          const destId = locationIds[i + 1];
-          if (originId && destId) {
-            allPairs.push({
-              originLocationId: originId,
-              destinationLocationId: destId,
-            });
-          }
-        }
-      }
-
-      if (allPairs.length === 0) {
-        setIsFetchingRoutes(false);
-        return;
-      }
-
-      const uniquePairs = [
-        ...new Map(
-          allPairs.map((p) => [
-            `${p.originLocationId}:${p.destinationLocationId}`,
-            p,
-          ])
-        ).values(),
-      ];
-
-      const { polylines } = await fetchRoutePolylines(eventId, uniquePairs);
-
-      const builtRoutes: Route[] = [];
-
-      for (let pi = 0; pi < partySequences.length; pi++) {
-        const seq = partySequences[pi];
-        if (!seq) continue;
-        const color =
-          ROUTE_COLORS[pi % ROUTE_COLORS.length] ??
-          ROUTE_COLORS[0] ??
-          "#16a34a";
-        const coordinates: [number, number][] = [];
-
-        for (let i = 0; i < seq.locationIds.length - 1; i++) {
-          const key = `${seq.locationIds[i]}:${seq.locationIds[i + 1]}`;
-          const encoded = polylines[key];
-          if (encoded) {
-            const decoded = decodePolyline(encoded);
-            if (coordinates.length > 0 && decoded.length > 0) {
-              coordinates.push(...decoded.slice(1));
-            } else {
-              coordinates.push(...decoded);
-            }
-          }
-        }
-
-        if (coordinates.length > 0) {
-          builtRoutes.push({ coordinates, color, label: seq.label });
-        }
-      }
-
-      setRoutes(builtRoutes);
-    } catch (error) {
-      console.error("Failed to fetch route polylines:", error);
-    } finally {
-      setIsFetchingRoutes(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <EventLocationsMap
-        event={event}
-        routes={routes}
-        currentUserId={currentUserId}
-      />
-
-      <div className="bg-gray-50 p-6 rounded-lg">
-        <h2 className="text-xl font-semibold mb-4">Solution</h2>
-        <div className="space-y-4">
-          <div className="flex gap-2">
-            <Button
-              onClick={handleSolveProblem}
-              disabled={isSolving}
-              size="default"
-            >
-              {isSolving ? "Generating Solution..." : "Generate Solution"}
-            </Button>
-            {solution && solution.feasible && (
-              <Button
-                onClick={handleConfirmItinerary}
-                disabled={confirmItinerary.isPending}
-                variant="default"
-              >
-                {confirmItinerary.isPending
-                  ? "Confirming..."
-                  : "Confirm Itineraries"}
-              </Button>
-            )}
-          </div>
-          {(isSolving || isFetchingRoutes) && (
-            <div className="flex items-center gap-2 text-gray-600">
-              <Spinner />
-              <span>
-                {isSolving
-                  ? "Solving the problem..."
-                  : "Loading route polylines..."}
-              </span>
-            </div>
-          )}
-          {solution && (
-            <SolutionCards
-              solution={solution}
-              partyEstimates={partyEstimates}
-              event={event}
-              currentUserId={currentUserId}
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LockedSolutionView({
-  event,
-  eventId,
-  currentUserId,
-}: {
-  event: EventForPanel;
-  eventId: string;
-  currentUserId: string | undefined;
-}) {
-  const unlockEvent = useUnlockEvent();
-  const [routes, setRoutes] = useState<Route[]>([]);
-  const [isFetchingRoutes, setIsFetchingRoutes] = useState(false);
-  const dialog = useDialog();
-
-  const sol = event.solution;
-
-  // Fetch route polylines on mount from persisted party data
-  useEffect(() => {
-    if (!sol || !event.locationId) return;
-
-    const allPairs: {
-      originLocationId: string;
-      destinationLocationId: string;
-    }[] = [];
-    const partySequences: { locationIds: string[]; label: string }[] = [];
-
-    for (const party of sol.parties) {
-      const locationIds: string[] = [];
-      for (const m of party.members) {
-        if (m.originLocationId) {
-          locationIds.push(m.originLocationId);
-        }
-      }
-      locationIds.push(event.locationId);
-
-      const driverName = party.driverName ?? "Driver";
-      partySequences.push({ locationIds, label: `${driverName}'s car` });
-
-      for (let i = 0; i < locationIds.length - 1; i++) {
-        const originId = locationIds[i];
-        const destId = locationIds[i + 1];
-        if (originId && destId) {
-          allPairs.push({
-            originLocationId: originId,
-            destinationLocationId: destId,
-          });
-        }
-      }
-    }
-
-    if (allPairs.length === 0) return;
-
-    const uniquePairs = [
-      ...new Map(
-        allPairs.map((p) => [
-          `${p.originLocationId}:${p.destinationLocationId}`,
-          p,
-        ])
-      ).values(),
-    ];
-
-    let cancelled = false;
-    void (async () => {
-      setIsFetchingRoutes(true);
-      try {
-        const { polylines } = await fetchRoutePolylines(eventId, uniquePairs);
-        if (cancelled) return;
-
-        const builtRoutes: Route[] = [];
-
-        for (let pi = 0; pi < partySequences.length; pi++) {
-          const seq = partySequences[pi];
-          if (!seq) continue;
-          const color =
-            ROUTE_COLORS[pi % ROUTE_COLORS.length] ??
-            ROUTE_COLORS[0] ??
-            "#16a34a";
-          const coordinates: [number, number][] = [];
-
-          for (let i = 0; i < seq.locationIds.length - 1; i++) {
-            const key = `${seq.locationIds[i]}:${seq.locationIds[i + 1]}`;
-            const encoded = polylines[key];
-            if (encoded) {
-              const decoded = decodePolyline(encoded);
-              if (coordinates.length > 0 && decoded.length > 0) {
-                coordinates.push(...decoded.slice(1));
-              } else {
-                coordinates.push(...decoded);
-              }
-            }
-          }
-
-          if (coordinates.length > 0) {
-            builtRoutes.push({ coordinates, color, label: seq.label });
-          }
-        }
-
-        setRoutes(builtRoutes);
-      } catch (err) {
-        if (!cancelled) console.error("Failed to fetch route polylines:", err);
-      } finally {
-        if (!cancelled) setIsFetchingRoutes(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [sol, event.locationId, eventId]);
-
-  if (!sol) return null;
-
   return (
     <div className="space-y-4">
       <EventLocationsMap
@@ -438,88 +315,76 @@ function LockedSolutionView({
       )}
 
       <div className="bg-gray-50 p-6 rounded-lg">
-        <h2 className="text-xl font-semibold mb-4">
-          Confirmed Solution — {sol.parties.length} carpool
-          {sol.parties.length === 1 ? "" : "s"},{" "}
-          {Math.round(sol.totalDriveSeconds / 60)} min total
-        </h2>
-        <div className="space-y-3">
-          {sol.parties.map((party, i) => {
-            const color = ROUTE_COLORS[i % ROUTE_COLORS.length] ?? "#16a34a";
-            const driver = party.members.find((m) => m.pickupOrder === 0);
-            const passengers = party.members
-              .filter((m) => m.pickupOrder > 0)
-              .sort((a, b) => a.pickupOrder - b.pickupOrder);
-
-            return (
-              <div
-                key={party.id}
-                className="bg-white rounded-lg border overflow-hidden"
+        {event.locked && solution ? (
+          <>
+            <h2 className="text-xl font-semibold mb-4">
+              Confirmed Solution — {solution.parties.length} carpool
+              {solution.parties.length === 1 ? "" : "s"},{" "}
+              {Math.round(solution.total_drive_seconds / 60)} min total
+            </h2>
+            <SolutionCards
+              solution={solution}
+              partyEstimates={partyEstimates}
+              event={event}
+              currentUserId={currentUserId}
+              showHeading={false}
+            />
+            <div className="mt-4">
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  const confirmed = await dialog.confirm(
+                    "Unlocking will delete the confirmed itinerary. Are you sure?"
+                  );
+                  if (confirmed) {
+                    unlockEvent.mutate(eventId);
+                  }
+                }}
+                disabled={unlockEvent.isPending}
               >
-                <div className="h-1.5" style={{ backgroundColor: color }} />
-                <div className="p-4 space-y-0">
-                  {driver && (
-                    <ItineraryRow
-                      time={driver.estimatedPickup ?? null}
-                      label="Depart"
-                      name={driver.userName}
-                      detail={driver.originLocation?.name ?? undefined}
-                      email={driver.userEmail}
-                      isYou={driver.userId === currentUserId}
-                      isLast={false}
-                    />
-                  )}
-
-                  {passengers.map((pass) => (
-                    <ItineraryRow
-                      key={pass.userId}
-                      time={pass.estimatedPickup ?? null}
-                      label="Pick up"
-                      name={pass.userName}
-                      detail={pass.originLocation?.name ?? undefined}
-                      email={pass.userEmail}
-                      isYou={pass.userId === currentUserId}
-                      isLast={false}
-                    />
-                  ))}
-
-                  {passengers.length === 0 && (
-                    <div className="text-sm text-gray-400 italic pl-20 py-1">
-                      Solo driver
-                    </div>
-                  )}
-
-                  {event.location && (
-                    <ItineraryRow
-                      time={party.estimatedEventArrival ?? null}
-                      label="Arrive"
-                      name={event.location.name}
-                      isYou={false}
-                      isLast={true}
-                    />
-                  )}
-                </div>
+                {unlockEvent.isPending ? "Unlocking..." : "Unlock Event"}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold mb-4">Solution</h2>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleSolveProblem}
+                disabled={isSolving}
+                size="default"
+              >
+                {isSolving ? "Generating Solution..." : "Generate Solution"}
+              </Button>
+              {solution && solution.feasible && (
+                <Button
+                  onClick={handleConfirmItinerary}
+                  disabled={confirmItinerary.isPending}
+                  variant="default"
+                >
+                  {confirmItinerary.isPending
+                    ? "Confirming..."
+                    : "Confirm Itineraries"}
+                </Button>
+              )}
+            </div>
+            {isSolving && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <Spinner />
+                <span>Solving the problem...</span>
               </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-4">
-          <Button
-            variant="secondary"
-            onClick={async () => {
-              const confirmed = await dialog.confirm(
-                "Unlocking will delete the confirmed itinerary. Are you sure?"
-              );
-              if (confirmed) {
-                unlockEvent.mutate(eventId);
-              }
-            }}
-            disabled={unlockEvent.isPending}
-          >
-            {unlockEvent.isPending ? "Unlocking..." : "Unlock Event"}
-          </Button>
-        </div>
+            )}
+            {solution && (
+              <SolutionCards
+                solution={solution}
+                partyEstimates={partyEstimates}
+                event={event}
+                currentUserId={currentUserId}
+              />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -530,19 +395,23 @@ function SolutionCards({
   partyEstimates,
   event,
   currentUserId,
+  showHeading = true,
 }: {
   solution: Solution;
   partyEstimates: PartyEstimate[];
   event: EventForPanel;
   currentUserId: string | undefined;
+  showHeading?: boolean;
 }) {
   return (
     <div>
-      <h3 className="font-medium mb-3">
-        {solution.feasible
-          ? `Solution found — ${solution.parties.length} carpool${solution.parties.length === 1 ? "" : "s"}, ${Math.round(solution.total_drive_seconds / 60)} min total`
-          : "No feasible solution found"}
-      </h3>
+      {showHeading && (
+        <h3 className="font-medium mb-3">
+          {solution.feasible
+            ? `Solution found — ${solution.parties.length} carpool${solution.parties.length === 1 ? "" : "s"}, ${Math.round(solution.total_drive_seconds / 60)} min total`
+            : "No feasible solution found"}
+        </h3>
+      )}
       {solution.feasible && (
         <div className="space-y-3">
           {solution.parties.map((party, i) => {

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 
+import { Spinner } from "@/components/ui/spinner";
 import type { Problem, Solution } from "@/python-client";
 
 function formatMinutes(seconds: number) {
@@ -12,40 +13,46 @@ function formatMinutes(seconds: number) {
   return `${hrs}h ${remainMins}m`;
 }
 
-function computeMetrics(problem: Problem, solution: Solution) {
-  const soloTotalDriveSeconds = problem.trippers.reduce(
-    (sum, t) => sum + t.distance_to_destination_seconds,
-    0
-  );
-  const optimalTotalDriveSeconds = solution.total_drive_seconds;
-  const savingsSeconds = soloTotalDriveSeconds - optimalTotalDriveSeconds;
-  const savingsPercent =
-    soloTotalDriveSeconds > 0
-      ? (savingsSeconds / soloTotalDriveSeconds) * 100
-      : 0;
-
-  return {
-    soloTotalDriveSeconds,
-    optimalTotalDriveSeconds,
-    savingsSeconds,
-    savingsPercent,
-  };
-}
-
 export function MetricsPanel({
   solveResult,
+  isLoading,
 }: {
   solveResult: { problem: Problem; solution: Solution } | null;
+  isLoading?: boolean;
 }) {
-  const metrics = useMemo(
-    () =>
-      solveResult
-        ? computeMetrics(solveResult.problem, solveResult.solution)
-        : null,
-    [solveResult]
-  );
+  const metrics = useMemo(() => {
+    if (!solveResult) return null;
+    const soloTotalDriveSeconds = solveResult.problem.trippers.reduce(
+      (sum, t) => sum + t.distance_to_destination_seconds,
+      0
+    );
+    const optimalTotalDriveSeconds = solveResult.solution.total_drive_seconds;
+    const savingsSeconds = soloTotalDriveSeconds - optimalTotalDriveSeconds;
+    const savingsPercent =
+      soloTotalDriveSeconds > 0
+        ? (savingsSeconds / soloTotalDriveSeconds) * 100
+        : 0;
+    return {
+      soloTotalDriveSeconds,
+      optimalTotalDriveSeconds,
+      savingsSeconds,
+      savingsPercent,
+    };
+  }, [solveResult]);
 
-  if (!solveResult || !metrics) {
+  if (isLoading) {
+    return (
+      <div className="bg-gray-50 p-6 rounded-lg">
+        <h2 className="text-xl font-semibold mb-2">Metrics</h2>
+        <div className="flex items-center gap-2 text-gray-500">
+          <Spinner className="size-3.5" />
+          <span className="text-sm">Computing metrics...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!metrics) {
     return (
       <div className="bg-gray-50 p-6 rounded-lg">
         <h2 className="text-xl font-semibold mb-2">Metrics</h2>

@@ -8,6 +8,7 @@ import {
   events,
   eventsToUsers,
   groupsToUsers,
+  locationDistances,
   locations,
   users,
 } from "@/db/schema";
@@ -56,6 +57,30 @@ export async function GET(request: NextRequest, props: Params) {
     },
   });
 
+  // Look up direct travel times from each rider's origin to the event location
+  const originIds = attendees
+    .map((a) => a.originLocationId)
+    .filter((id): id is string => id != null);
+
+  const distanceMap = new Map<string, number>();
+  if (verified.event.locationId && originIds.length > 0) {
+    const distances = await db
+      .select({
+        originLocationId: locationDistances.originLocationId,
+        durationSeconds: locationDistances.durationSeconds,
+      })
+      .from(locationDistances)
+      .where(
+        and(
+          inArray(locationDistances.originLocationId, originIds),
+          eq(locationDistances.destinationLocationId, verified.event.locationId)
+        )
+      );
+    for (const d of distances) {
+      distanceMap.set(d.originLocationId, d.durationSeconds);
+    }
+  }
+
   return NextResponse.json({
     riders: attendees.map((a) => ({
       userId: a.userId,
@@ -74,6 +99,9 @@ export async function GET(request: NextRequest, props: Params) {
             latitude: a.originLocation.latitude,
             longitude: a.originLocation.longitude,
           }
+        : null,
+      directTravelSeconds: a.originLocationId
+        ? (distanceMap.get(a.originLocationId) ?? null)
         : null,
     })),
   });

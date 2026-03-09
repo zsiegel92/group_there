@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 
 import { useDialog } from "@/components/dialog-provider";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,16 @@ import { EventDetailsCard } from "./event-details-card";
 import { EventMapPanel } from "./event-map-panel";
 import { EventStatus } from "./event-status";
 import { MetricsPanel } from "./metrics-panel";
+import { loadSolveResult } from "./solve-action";
 import { TestingRiderTable } from "./testing-rider-table";
+
+function useSolveResult(eventId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["events", eventId, "solve-result"],
+    queryFn: () => loadSolveResult(eventId),
+    enabled,
+  });
+}
 
 function buildLocation(r: {
   originLocation: {
@@ -55,20 +65,33 @@ function buildLocation(r: {
 export function TestingEventDetailPage({ eventId }: { eventId: string }) {
   const { data, isLoading, error } = useEventDetails(eventId);
   const { data: ridersData } = useTestRiders(eventId);
-  const [solveResult, setSolveResult] = useState<{
+  const [ephemeralSolveResult, setEphemeralSolveResult] = useState<{
     problem: Problem;
     solution: Solution;
   } | null>(null);
+  const [isSolving, setIsSolving] = useState(false);
 
   const event = data?.event;
-  const riders = ridersData?.riders ?? [];
+  const riders = ridersData?.riders;
+
+  const { data: persistedSolveResult, isLoading: isLoadingPersisted } =
+    useSolveResult(eventId, !!event?.locked);
+
+  const solveResult = ephemeralSolveResult ?? persistedSolveResult ?? null;
+  const isLoadingMetrics = isSolving || (!!event?.locked && isLoadingPersisted);
 
   const handleSolutionGenerated = useCallback(
     (result: { problem: Problem; solution: Solution }) => {
-      setSolveResult(result);
+      setEphemeralSolveResult(result);
+      setIsSolving(false);
     },
     []
   );
+
+  const handleSolveStart = useCallback(() => {
+    setIsSolving(true);
+    setEphemeralSolveResult(null);
+  }, []);
 
   if (isLoading) {
     return (
@@ -132,12 +155,12 @@ export function TestingEventDetailPage({ eventId }: { eventId: string }) {
 
         <GenerateRidersPanel
           eventId={eventId}
-          riderCount={riders.length}
+          riderCount={riders?.length ?? 0}
           locked={event.locked}
         />
 
         <TestingRiderTable
-          riders={riders}
+          riders={riders ?? []}
           eventId={eventId}
           eventTime={event.time}
         />
@@ -149,7 +172,7 @@ export function TestingEventDetailPage({ eventId }: { eventId: string }) {
             location: event.location,
             locationId: event.locationId,
             locked: event.locked,
-            attendees: riders.map((r) => ({
+            attendees: (riders ?? []).map((r) => ({
               userId: r.userId,
               userName: r.userName,
               userEmail: r.userEmail,
@@ -164,9 +187,10 @@ export function TestingEventDetailPage({ eventId }: { eventId: string }) {
           eventId={eventId}
           currentUserId={undefined}
           onSolutionGenerated={handleSolutionGenerated}
+          onSolveStart={handleSolveStart}
         />
 
-        <MetricsPanel solveResult={solveResult} />
+        <MetricsPanel solveResult={solveResult} isLoading={isLoadingMetrics} />
       </div>
     </div>
   );

@@ -26,6 +26,7 @@ const riderSchema = z.object({
   earliestLeaveTime: z.string().nullable(),
   originLocationId: z.string().nullable(),
   originLocation: riderLocationSchema,
+  directTravelSeconds: z.number().nullable(),
 });
 
 export type TestRider = z.infer<typeof riderSchema>;

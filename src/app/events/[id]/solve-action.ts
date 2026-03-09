@@ -3,10 +3,11 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "@/db/db";
-import { events, eventsToUsers } from "@/db/schema";
+import { events, eventsToUsers, solutions } from "@/db/schema";
 import { computePartyEstimates } from "@/lib/itinerary";
 import { solveSolvePost } from "@/lib/python-client";
 import { constructProblem } from "@/lib/solver/construct-problem";
+import type { Problem, Solution } from "@/python-client";
 
 export type PartyEstimate = {
   partyId: string;
@@ -84,4 +85,45 @@ export async function solveProblem(eventId: string) {
   );
 
   return { problem, solution, partyEstimates };
+}
+
+/**
+ * Reconstruct the Problem + Solution from persisted DB data.
+ * Used to show metrics for locked events without re-running the solver.
+ */
+export async function loadSolveResult(
+  eventId: string
+): Promise<{ problem: Problem; solution: Solution } | null> {
+  const sol = await db.query.solutions.findFirst({
+    where: eq(solutions.eventId, eventId),
+    with: {
+      parties: {
+        with: { members: true },
+      },
+    },
+  });
+
+  if (!sol) return null;
+
+  const problem = await constructProblem(eventId);
+
+  const solution: Solution = {
+    id: sol.id,
+    successfully_completed: true,
+    feasible: sol.feasible,
+    optimal: sol.optimal,
+    total_drive_seconds: sol.totalDriveSeconds,
+    parties: sol.parties
+      .sort((a, b) => a.partyIndex - b.partyIndex)
+      .map((party) => ({
+        id: party.id,
+        driver_tripper_id: party.driverUserId,
+        passenger_tripper_ids: party.members
+          .filter((m) => m.pickupOrder > 0)
+          .sort((a, b) => a.pickupOrder - b.pickupOrder)
+          .map((m) => m.userId),
+      })),
+  };
+
+  return { problem, solution };
 }
