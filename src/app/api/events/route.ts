@@ -6,6 +6,7 @@ import { db } from "@/db/db";
 import {
   events,
   eventsToUsers,
+  groups,
   groupsToUsers,
   locations,
   type LocationOwnerType,
@@ -65,6 +66,7 @@ export async function GET(request: NextRequest) {
         group: {
           id: ug.group.id,
           name: ug.group.name,
+          type: ug.group.type,
         },
         eventDetails: {
           id: event.id,
@@ -126,6 +128,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
+  // Look up group to check type
+  const group = await db.query.groups.findFirst({
+    where: eq(groups.id, groupId),
+  });
+
   // Verify the location exists and is an event location
   const expectedOwnerType: LocationOwnerType = "event";
   const location = await db.query.locations.findFirst({
@@ -151,7 +158,7 @@ export async function POST(request: NextRequest) {
       locationId,
       time: new Date(time),
       message: message || null,
-      scheduled: false,
+      scheduled: group?.type === "testing" ? true : false,
       haveSentInvitationEmails: false,
     })
     .returning();

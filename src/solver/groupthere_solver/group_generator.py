@@ -19,7 +19,9 @@ class FeasibleGroup:
         tripper_indices: Indices of trippers in this group
         driver_index: Index of the driver
         passenger_indices: Indices of passengers in optimal pickup order
-        drive_time: Total additional drive time needed for pickups (in seconds)
+        drive_time: Total car travel time for this group's route (in seconds).
+            For solo drivers: their direct drive to the destination.
+            For carpools: pickup chain + last stop to destination.
     """
 
     def __init__(
@@ -48,11 +50,11 @@ def calculate_party_drive_time(
     distance_lookup: dict[tuple[str, str], float],
 ) -> tuple[float, list[Tripper]]:
     """
-    Calculate the minimum drive time for a party and the optimal pickup order.
+    Calculate the minimum total car travel time for a party and the optimal pickup order.
 
-    This represents the pickup distances only (detours from the baseline).
-    Everyone needs to get to the destination, so we only count the extra
-    driving needed for carpooling.
+    This is the full time a car spends on the road: the pickup chain plus the
+    drive from the last stop to the event destination. For solo drivers, this
+    is simply their direct drive to the destination.
 
     Args:
         driver: The driver tripper
@@ -63,7 +65,7 @@ def calculate_party_drive_time(
         A tuple of (min_drive_time, optimal_passenger_order)
     """
     if not passengers:
-        return 0.0, []
+        return driver.distance_to_destination_seconds, []
 
     # Try all permutations of passenger pickup order and find minimum
     min_drive_time = float("inf")
@@ -79,6 +81,9 @@ def calculate_party_drive_time(
                 (current_location, passenger.user_id), 0.0
             )
             current_location = passenger.user_id
+
+        # Add the destination leg from the last pickup location
+        drive_time += perm[-1].distance_to_destination_seconds
 
         if drive_time < min_drive_time:
             min_drive_time = drive_time

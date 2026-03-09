@@ -3,10 +3,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
+import { groupTypeValues } from "@/db/schema";
+
 // Base schemas
 const groupSchema = z.object({
   id: z.string(),
   name: z.string(),
+  type: z.enum(groupTypeValues).optional().default("social"),
   createdAt: z.coerce.date(),
 });
 

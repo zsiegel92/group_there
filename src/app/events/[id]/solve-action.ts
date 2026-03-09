@@ -37,7 +37,7 @@ export async function solveProblem(eventId: string) {
   });
 
   if (!event || !solution.feasible) {
-    return { solution, partyEstimates: [] satisfies PartyEstimate[] };
+    return { problem, solution, partyEstimates: [] satisfies PartyEstimate[] };
   }
 
   const partyEstimates = await Promise.all(
@@ -83,5 +83,5 @@ export async function solveProblem(eventId: string) {
     })
   );
 
-  return { solution, partyEstimates };
+  return { problem, solution, partyEstimates };
 }

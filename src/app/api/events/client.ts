@@ -6,6 +6,7 @@ import { z } from "zod";
 import {
   blastTypeValues,
   drivingStatusEnumValues,
+  groupTypeValues,
   // type DrivingStatus,
 } from "@/db/schema";
 import { LocationSchema } from "@/lib/geo/schema";
@@ -14,6 +15,7 @@ import { LocationSchema } from "@/lib/geo/schema";
 const groupSchema = z.object({
   id: z.string(),
   name: z.string(),
+  type: z.enum(groupTypeValues).optional().default("social"),
 });
 
 const locationSummarySchema = z

@@ -8,7 +8,7 @@ from groupthere_solver.group_generator import (
 
 
 def test_calculate_party_drive_time_no_passengers():
-    """Test drive time calculation with no passengers."""
+    """Test drive time calculation with no passengers (solo driver)."""
     driver = Tripper(
         user_id="driver",
         origin_id="origin-driver",
@@ -22,7 +22,8 @@ def test_calculate_party_drive_time_no_passengers():
     distance_lookup = {}
     drive_time, order = calculate_party_drive_time(driver, [], distance_lookup)
 
-    assert drive_time == 0.0
+    # Solo driver: full car time = their direct drive to destination
+    assert drive_time == 300.0
     assert order == []
 
 
@@ -54,7 +55,8 @@ def test_calculate_party_drive_time_one_passenger():
 
     drive_time, order = calculate_party_drive_time(driver, [passenger], distance_lookup)
 
-    assert drive_time == 120.0
+    # Full car time = pickup (120) + passenger's drive to destination (300) = 420
+    assert drive_time == 420.0
     assert order == [passenger]
 
 
@@ -101,7 +103,8 @@ def test_calculate_party_drive_time_two_passengers():
 
     drive_time, order = calculate_party_drive_time(driver, [p1, p2], distance_lookup)
 
-    assert drive_time == 150.0  # Driver -> P1 -> P2
+    # Full car time = Driver -> P1 (100) + P1 -> P2 (50) + P2's dest (300) = 450
+    assert drive_time == 450.0
     assert order == [p1, p2]
 
 
@@ -143,7 +146,8 @@ def test_generate_feasible_groups_single_driver():
     assert len(groups) == 1
     assert groups[0].driver_index == 0
     assert groups[0].passenger_indices == []
-    assert groups[0].drive_time == 0.0
+    # Solo driver: full car time = their direct drive to destination (300)
+    assert groups[0].drive_time == 300.0
 
 
 def test_generate_feasible_groups_driver_and_rider():

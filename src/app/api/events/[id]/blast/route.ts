@@ -81,6 +81,14 @@ export async function POST(request: NextRequest, props: Params) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
+  // Block blasts for testing events
+  if (event.group.type === "testing") {
+    return NextResponse.json(
+      { error: "Cannot send blast emails for testing events" },
+      { status: 400 }
+    );
+  }
+
   // Validate event state matches blast type
   if (type === "event_scheduled" && !event.scheduled) {
     return NextResponse.json(

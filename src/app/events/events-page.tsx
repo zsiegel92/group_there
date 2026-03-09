@@ -40,6 +40,7 @@ type GroupedEvents = {
     createdAt: string;
     hasJoined: boolean;
     isGroupAdmin: boolean;
+    isTestingGroup: boolean;
   }>;
 };
 
@@ -117,6 +118,7 @@ export function EventsPage({ groupId }: { groupId?: string }) {
             createdAt: event.eventDetails.createdAt,
             hasJoined: event.hasJoined,
             isGroupAdmin: event.isGroupAdmin,
+            isTestingGroup: event.group.type === "testing",
           });
         }
         return acc;
@@ -124,7 +126,14 @@ export function EventsPage({ groupId }: { groupId?: string }) {
       new Map()
     );
 
-    return Array.from(groupMap.values());
+    // Sort testing groups to bottom
+    return Array.from(groupMap.values()).sort((a, b) => {
+      const aIsTesting = a.eventsForGroup[0]?.isTestingGroup ?? false;
+      const bIsTesting = b.eventsForGroup[0]?.isTestingGroup ?? false;
+      if (aIsTesting && !bIsTesting) return 1;
+      if (!aIsTesting && bIsTesting) return -1;
+      return 0;
+    });
   }, [data]);
 
   if (isLoading || (!groupId && groupsLoading)) {
@@ -191,20 +200,30 @@ export function EventsPage({ groupId }: { groupId?: string }) {
         </div>
       ) : (
         <div className="space-y-8">
-          {groupedEvents.map((groupData) => (
-            <div key={groupData.group.id} className="space-y-4">
-              <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                  {groupData.group.name}
-                </h2>
-                <div className="space-y-3">
-                  {groupData.eventsForGroup.map((event) => (
-                    <EventCard key={event.id} event={event} />
-                  ))}
+          {groupedEvents.map((groupData) => {
+            const isTesting =
+              groupData.eventsForGroup[0]?.isTestingGroup ?? false;
+            return (
+              <div key={groupData.group.id} className="space-y-4">
+                <div
+                  className={
+                    isTesting
+                      ? "bg-gray-50 p-6 rounded-lg border-2 border-dashed border-gray-300"
+                      : "bg-gray-50 p-6 rounded-lg border border-gray-200"
+                  }
+                >
+                  <h2 className="text-xl font-semibold mb-4 text-gray-800">
+                    {groupData.group.name}
+                  </h2>
+                  <div className="space-y-3">
+                    {groupData.eventsForGroup.map((event) => (
+                      <EventCard key={event.id} event={event} />
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

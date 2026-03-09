@@ -19,6 +19,7 @@ export const users = pgTable(
     email: text("email").notNull().unique(),
     emailVerified: boolean("email_verified").default(false).notNull(),
     image: text("image"),
+    isTestUser: boolean("is_test_user").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -92,10 +93,17 @@ export const verifications = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)]
 );
 
+export const groupTypeValues = ["social", "testing"] as const;
+
+export type GroupType = (typeof groupTypeValues)[number];
+
+export const groupTypeEnum = pgEnum("group_type", groupTypeValues);
+
 export const groups = pgTable("groups", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   secret: text("secret").notNull(), // hashed group secret for invite verification
+  type: groupTypeEnum("type").default("social").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -126,7 +134,7 @@ export const locationOwnerTypeValues = ["user", "event"] as const;
 
 export type LocationOwnerType = (typeof locationOwnerTypeValues)[number];
 
-const locationOwnerTypeEnum = pgEnum(
+export const locationOwnerTypeEnum = pgEnum(
   "location_owner_type",
   locationOwnerTypeValues
 );
@@ -222,6 +230,7 @@ export const locationDistances = pgTable(
   },
   (table) => [
     primaryKey({
+      name: "location_distances_pk",
       columns: [table.originLocationId, table.destinationLocationId],
     }),
   ]
@@ -268,7 +277,9 @@ export const solutionParties = pgTable(
     solutionId: text("solution_id")
       .notNull()
       .references(() => solutions.id, { onDelete: "cascade" }),
-    driverUserId: text("driver_user_id").references(() => users.id),
+    driverUserId: text("driver_user_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
     partyIndex: integer("party_index").notNull(),
   },
   (table) => [index("solutionParties_solutionId_idx").on(table.solutionId)]
@@ -303,7 +314,7 @@ export const solutionPartyMembers = pgTable(
       .references(() => solutionParties.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }),
     pickupOrder: integer("pickup_order").notNull(), // 0=driver, 1+=passengers in order
   },
   (table) => [

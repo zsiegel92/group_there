@@ -63,6 +63,30 @@ const googleRouteMatrixElementSchema = z.object({
 
 const googleRouteMatrixResponseSchema = z.array(googleRouteMatrixElementSchema);
 
+// -- Geocoding API response schemas (internal) --
+
+const googleGeocodingResultSchema = z.object({
+  formatted_address: z.string(),
+  address_components: z.array(
+    z.object({
+      long_name: z.string(),
+      types: z.array(z.string()),
+    })
+  ),
+  geometry: z.object({
+    location: z.object({
+      lat: z.number(),
+      lng: z.number(),
+    }),
+  }),
+  place_id: z.string(),
+});
+
+const googleGeocodingResponseSchema = z.object({
+  status: z.string(),
+  results: z.array(googleGeocodingResultSchema).default([]),
+});
+
 // -- Public API functions --
 
 export async function googleAutocomplete(query: string) {
@@ -287,4 +311,54 @@ export async function googleComputeRoute(
   }
 
   return { encodedPolyline: route.polyline.encodedPolyline };
+}
+
+/**
+ * Reverse-geocode a lat/lng pair into a PlaceDetails-compatible shape
+ * using the Google Geocoding API.
+ */
+export async function googleReverseGeocode(lat: number, lng: number) {
+  const response = await fetch(
+    `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${getApiKey()}`
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(
+      `Google Reverse Geocode API error: ${response.status} ${text}`
+    );
+  }
+
+  const data = googleGeocodingResponseSchema.parse(await response.json());
+
+  if (data.status !== "OK" || data.results.length === 0) {
+    throw new Error(`Reverse geocoding failed: status=${data.status}`);
+  }
+
+  const result = data.results[0]!;
+
+  function findComponent(type: string) {
+    return (
+      result.address_components.find((c) => c.types.includes(type))
+        ?.long_name ?? null
+    );
+  }
+
+  const streetNumber = findComponent("street_number") ?? "";
+  const route = findComponent("route") ?? "";
+  const street1 =
+    streetNumber || route ? `${streetNumber} ${route}`.trim() || null : null;
+
+  return PlaceDetailsSchema.parse({
+    placeId: result.place_id,
+    name: result.formatted_address,
+    formattedAddress: result.formatted_address,
+    street1,
+    street2: findComponent("subpremise"),
+    city: findComponent("locality") ?? findComponent("sublocality_level_1"),
+    state: findComponent("administrative_area_level_1"),
+    zip: findComponent("postal_code"),
+    latitude: result.geometry.location.lat,
+    longitude: result.geometry.location.lng,
+  });
 }

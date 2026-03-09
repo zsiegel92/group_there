@@ -1,6 +1,10 @@
 from groupthere_solver.solve import solve_problem
-from groupthere_solver.models import Problem, Solution, Party
-from groupthere_solver.mock_problem import mock_problem, mock_problem_expected_solution, solutions_are_equivalent
+from groupthere_solver.models import Problem, Solution
+from groupthere_solver.mock_problem import (
+    mock_problem,
+    mock_problem_expected_solution,
+    solutions_are_equivalent,
+)
 
 
 def test_solve_empty_problem():
@@ -28,9 +32,9 @@ def test_solve_simple_driver_and_rider():
     - Tripper B: no car
     - B is 5 minutes from A
 
-    Expected solution: A picks up B (5 minutes total drive time)
+    Expected solution: A picks up B (10s total: 5s pickup + 5s to destination)
     """
     solution = solve_problem(mock_problem)
-    assert solutions_are_equivalent(
-        solution, mock_problem_expected_solution
-    ), f"Expected solution with A driving B (5 min), but got: {solution}"
+    assert solutions_are_equivalent(solution, mock_problem_expected_solution), (
+        f"Expected solution with A driving B (10s total), but got: {solution}"
+    )

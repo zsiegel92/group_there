@@ -8,11 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
 import { useGroups } from "../api/groups/client";
+import {
+  useCreateTestingGroup,
+  useTestingGroup,
+} from "../api/testing-group/client";
 
 export default function GroupsPage() {
   const { data, isLoading, error } = useGroups();
+  const { data: testingGroupData, isLoading: testingGroupLoading } =
+    useTestingGroup();
+  const createTestingGroup = useCreateTestingGroup();
 
-  if (isLoading) {
+  if (isLoading || testingGroupLoading) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
         <Spinner />
@@ -30,7 +37,9 @@ export default function GroupsPage() {
     );
   }
 
-  const groups = data?.groups || [];
+  const allGroups = data?.groups || [];
+  const socialGroups = allGroups.filter((g) => g.group.type !== "testing");
+  const testingGroup = testingGroupData?.testingGroup;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -41,7 +50,7 @@ export default function GroupsPage() {
         </Link>
       </div>
 
-      {groups.length === 0 ? (
+      {socialGroups.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-600 mb-4">
             You&apos;re not a member of any groups yet.
@@ -52,7 +61,7 @@ export default function GroupsPage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {groups.map((groupMembership) => (
+          {socialGroups.map((groupMembership) => (
             <Link
               key={groupMembership.group.id}
               href={`/groups/${groupMembership.group.id}`}
@@ -72,6 +81,37 @@ export default function GroupsPage() {
           ))}
         </div>
       )}
+
+      {/* Testing Playground section */}
+      <div className="mt-8 pt-8 border-t border-dashed border-gray-300">
+        {testingGroup ? (
+          <Link
+            href={`/groups/${testingGroup.id}`}
+            className="block p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors bg-gray-50"
+          >
+            <h2 className="text-xl font-semibold mb-2">{testingGroup.name}</h2>
+            <p className="text-sm text-gray-500">
+              Generate fake riders and test the optimization solver
+            </p>
+          </Link>
+        ) : (
+          <button
+            onClick={() => createTestingGroup.mutate()}
+            disabled={createTestingGroup.isPending}
+            className="block w-full p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors bg-gray-50 text-left cursor-pointer"
+          >
+            <h2 className="text-xl font-semibold mb-2">
+              {createTestingGroup.isPending
+                ? "Creating..."
+                : "Create Testing Playground"}
+            </h2>
+            <p className="text-sm text-gray-500">
+              Generate fake riders and test the optimization solver at arbitrary
+              scale
+            </p>
+          </button>
+        )}
+      </div>
     </div>
   );
 }

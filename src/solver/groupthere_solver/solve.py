@@ -75,6 +75,8 @@ def solve_problem(problem: Problem) -> Solution:
         )
 
     # Phase 3: Convert to Solution format
+    # group.drive_time already includes full car travel time
+    # (pickup chain + destination leg), so we use assignment.total_drive_time directly
     parties = []
     for idx, group in enumerate(assignment.selected_groups):
         driver_user_id = problem.trippers[group.driver_index].user_id

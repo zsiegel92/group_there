@@ -1,78 +1,82 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
 
 import { db } from "@/db/db";
 import { groups, groupsToUsers } from "@/db/schema";
 import { getUser } from "@/lib/auth";
 import { generateGroupSecret, hashGroupSecret } from "@/lib/group-invite";
 
-const createGroupSchema = z.object({
-  name: z.string().min(1).max(100),
-});
-
-// GET /api/groups - Get all groups for the current user
+// GET /api/testing-group - Get the current user's testing group (or null)
 export async function GET(request: NextRequest) {
   const user = await getUser(request);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userGroups = await db.query.groupsToUsers.findMany({
+  const allMemberships = await db.query.groupsToUsers.findMany({
     where: eq(groupsToUsers.userId, user.id),
     with: {
       group: true,
     },
   });
 
+  const testingMembership = allMemberships.find(
+    (m) => m.group.type === "testing"
+  );
+
+  if (!testingMembership) {
+    return NextResponse.json({ testingGroup: null });
+  }
+
   return NextResponse.json({
-    groups: userGroups.map((ug) => ({
-      group: {
-        id: ug.group.id,
-        name: ug.group.name,
-        type: ug.group.type,
-        createdAt: ug.group.createdAt,
-      },
-      isAdmin: ug.isAdmin,
-    })),
+    testingGroup: {
+      id: testingMembership.group.id,
+      name: testingMembership.group.name,
+      createdAt: testingMembership.group.createdAt,
+    },
   });
 }
 
-// POST /api/groups - Create a new group
+// POST /api/testing-group - Create a testing group for the current user
 export async function POST(request: NextRequest) {
   const user = await getUser(request);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const body = await request.json();
-  const result = createGroupSchema.safeParse(body);
 
-  if (!result.success) {
-    return NextResponse.json(
-      { error: "Invalid input", details: result.error.issues },
-      { status: 400 }
-    );
+  // Check if user already has a testing group
+  const allMemberships = await db.query.groupsToUsers.findMany({
+    where: eq(groupsToUsers.userId, user.id),
+    with: {
+      group: true,
+    },
+  });
+
+  const existing = allMemberships.find((m) => m.group.type === "testing");
+  if (existing) {
+    return NextResponse.json({
+      testingGroup: {
+        id: existing.group.id,
+        name: existing.group.name,
+        createdAt: existing.group.createdAt,
+      },
+    });
   }
 
-  const { name } = result.data;
-
-  // Generate a group secret and hash it
+  const groupId = `group_${crypto.randomUUID()}`;
   const groupSecret = generateGroupSecret();
   const hashedSecret = hashGroupSecret(groupSecret);
-
-  // Create the group with a unique ID
-  const groupId = `group_${crypto.randomUUID()}`;
 
   const [createdGroup] = await db
     .insert(groups)
     .values({
       id: groupId,
-      name,
+      name: "Testing Playground",
       secret: hashedSecret,
+      type: "testing",
     })
     .returning();
 
-  // Add the creator as an admin
   await db.insert(groupsToUsers).values({
     groupId,
     userId: user.id,
@@ -80,7 +84,7 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({
-    group: {
+    testingGroup: {
       id: createdGroup.id,
       name: createdGroup.name,
       createdAt: createdGroup.createdAt,

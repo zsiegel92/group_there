@@ -21,6 +21,7 @@ import { BlastControls } from "./blast-controls";
 import { DeleteEventButton } from "./delete-event-button";
 import { DistanceStatus } from "./distance-status";
 import { EditEventButton } from "./edit-event-button";
+import { EventDetailsCard } from "./event-details-card";
 import { EventMapPanel } from "./event-map-panel";
 import { EventStatus } from "./event-status";
 import { ScheduleEventButtons } from "./schedule-event-button";
@@ -48,7 +49,6 @@ export function SocialEventDetailPage({ eventId }: { eventId: string }) {
 
   if (!event) return null;
 
-  const eventDate = new Date(event.time);
   const currentUserId = session?.user?.id;
 
   return (
@@ -104,36 +104,11 @@ export function SocialEventDetailPage({ eventId }: { eventId: string }) {
 
       <div className="space-y-6">
         {/* Event Details */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold mb-4">Event Details</h2>
-          <div className="space-y-2 text-gray-700">
-            <div>
-              <span className="font-medium">When:</span>{" "}
-              {format(eventDate, "MM/dd/yyyy")} at {format(eventDate, "h:mm a")}
-            </div>
-            <div>
-              <span className="font-medium">Where:</span>{" "}
-              {event.location ? (
-                <span>
-                  {event.location.name}
-                  {event.location.addressString && (
-                    <span className="text-gray-500 text-sm ml-1">
-                      ({event.location.addressString})
-                    </span>
-                  )}
-                </span>
-              ) : (
-                <span className="text-gray-400">No location set</span>
-              )}
-            </div>
-            {event.message && (
-              <div>
-                <span className="font-medium">Message:</span>
-                <p className="mt-1">{event.message}</p>
-              </div>
-            )}
-          </div>
-        </div>
+        <EventDetailsCard
+          time={event.time}
+          location={event.location}
+          message={event.message}
+        />
 
         {/* Your Trip card (locked + has party assignment) */}
         {event.locked && event.myParty && currentUserId && (

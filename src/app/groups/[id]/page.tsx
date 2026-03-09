@@ -148,6 +148,7 @@ export default function GroupDetailPage(props: {
   // Check if the current user is the only admin
   const adminCount = groupDetail.members.filter((m) => m.isAdmin).length;
   const isOnlyAdmin = isAdmin && adminCount === 1;
+  const isTesting = groupDetail.group.type === "testing";
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -164,37 +165,43 @@ export default function GroupDetailPage(props: {
                     Create Event
                   </Button>
                 </Link>
-                <Button
-                  onClick={() => setShowInviteDialog(true)}
-                  size="sm"
-                  className="sm:h-10"
-                >
-                  Invite Members
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  size="sm"
-                  className="sm:h-10"
-                >
-                  Delete Group
-                </Button>
+                {!isTesting && (
+                  <>
+                    <Button
+                      onClick={() => setShowInviteDialog(true)}
+                      size="sm"
+                      className="sm:h-10"
+                    >
+                      Invite Members
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      size="sm"
+                      className="sm:h-10"
+                    >
+                      Delete Group
+                    </Button>
+                  </>
+                )}
               </>
             )}
-            <Button
-              variant="destructive"
-              onClick={() => setShowLeaveConfirm(true)}
-              disabled={isOnlyAdmin}
-              size="sm"
-              className="sm:h-10"
-              title={
-                isOnlyAdmin
-                  ? "You cannot leave the group as the only admin. Promote another member to admin first or delete the group."
-                  : undefined
-              }
-            >
-              Leave Group
-            </Button>
+            {!isTesting && (
+              <Button
+                variant="destructive"
+                onClick={() => setShowLeaveConfirm(true)}
+                disabled={isOnlyAdmin}
+                size="sm"
+                className="sm:h-10"
+                title={
+                  isOnlyAdmin
+                    ? "You cannot leave the group as the only admin. Promote another member to admin first or delete the group."
+                    : undefined
+                }
+              >
+                Leave Group
+              </Button>
+            )}
           </div>
         </div>
         {isAdmin && <AdminBadge>You are an admin</AdminBadge>}
@@ -246,7 +253,7 @@ export default function GroupDetailPage(props: {
                 <div className="flex items-center gap-2 sm:shrink-0">
                   {membershipInfo.isAdmin ? (
                     <AdminBadge />
-                  ) : isAdmin ? (
+                  ) : isAdmin && !isTesting ? (
                     <Button
                       size="sm"
                       variant="secondary"

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { decodePolyline } from "@/lib/geo/polyline";
 import type { Location } from "@/lib/geo/schema";
-import type { Solution } from "@/python-client";
+import type { Problem, Solution } from "@/python-client";
 
 import {
   fetchRoutePolylines,
@@ -41,10 +41,15 @@ export function EventMapPanel({
   event,
   eventId,
   currentUserId,
+  onSolutionGenerated,
 }: {
   event: EventForPanel;
   eventId: string;
   currentUserId: string | undefined;
+  onSolutionGenerated?: (result: {
+    problem: Problem;
+    solution: Solution;
+  }) => void;
 }) {
   if (event.locked) {
     return (
@@ -61,6 +66,7 @@ export function EventMapPanel({
       event={event}
       eventId={eventId}
       currentUserId={currentUserId}
+      onSolutionGenerated={onSolutionGenerated}
     />
   );
 }
@@ -69,10 +75,15 @@ function EphemeralSolutionView({
   event,
   eventId,
   currentUserId,
+  onSolutionGenerated,
 }: {
   event: EventForPanel;
   eventId: string;
   currentUserId: string | undefined;
+  onSolutionGenerated?: (result: {
+    problem: Problem;
+    solution: Solution;
+  }) => void;
 }) {
   const [solution, setSolution] = useState<Solution | null>(null);
   const [partyEstimates, setPartyEstimates] = useState<PartyEstimate[]>([]);
@@ -91,8 +102,14 @@ function EphemeralSolutionView({
       setSolution(result.solution);
       setPartyEstimates(result.partyEstimates);
 
-      if (result.solution.feasible && result.solution.parties.length > 0) {
-        await fetchAndBuildRoutes(result.solution);
+      if (result.solution.feasible) {
+        onSolutionGenerated?.({
+          problem: result.problem,
+          solution: result.solution,
+        });
+        if (result.solution.parties.length > 0) {
+          await fetchAndBuildRoutes(result.solution);
+        }
       }
     } catch (error) {
       console.error("Failed to solve problem:", error);
