@@ -8,6 +8,12 @@ import {
   type RouteMatrixEntry,
 } from "./schema";
 
+// -- Cost control flags --
+// TRAFFIC_AWARE doubles Routes API costs (Essentials $5/1K -> Pro $10/1K per element)
+const USE_TRAFFIC_AWARE_DISTANCES = false;
+// displayName in Place Details pushes from Essentials $5/1K to Pro $17/1K
+const USE_API_DISPLAY_NAMES = false;
+
 function getApiKey() {
   const key = process.env.GOOGLE_ROUTES_API_KEY;
   if (!key) {
@@ -134,8 +140,9 @@ export async function googlePlaceDetails(placeId: string) {
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": getApiKey(),
-        "X-Goog-FieldMask":
-          "id,displayName,formattedAddress,addressComponents,location",
+        "X-Goog-FieldMask": USE_API_DISPLAY_NAMES
+          ? "id,displayName,formattedAddress,addressComponents,location"
+          : "id,formattedAddress,addressComponents,location",
       },
     }
   );
@@ -161,9 +168,13 @@ export async function googlePlaceDetails(placeId: string) {
   const street1 =
     streetNumber || route ? `${streetNumber} ${route}`.trim() || null : null;
 
+  const name = USE_API_DISPLAY_NAMES
+    ? (data.displayName?.text ?? "")
+    : (street1 ?? data.formattedAddress ?? "");
+
   return PlaceDetailsSchema.parse({
     placeId: data.id,
-    name: data.displayName?.text ?? "",
+    name,
     formattedAddress: data.formattedAddress ?? "",
     street1,
     street2: findComponent("subpremise"),
@@ -217,7 +228,9 @@ async function fetchRouteMatrixBlock(
         origins,
         destinations,
         travelMode: "DRIVE",
-        routingPreference: "TRAFFIC_AWARE",
+        ...(USE_TRAFFIC_AWARE_DISTANCES
+          ? { routingPreference: "TRAFFIC_AWARE" satisfies string }
+          : {}),
       }),
     }
   );
@@ -327,7 +340,9 @@ export async function googleComputeRoute(
           },
         },
         travelMode: "DRIVE",
-        routingPreference: "TRAFFIC_AWARE",
+        ...(USE_TRAFFIC_AWARE_DISTANCES
+          ? { routingPreference: "TRAFFIC_AWARE" satisfies string }
+          : {}),
       }),
     }
   );
