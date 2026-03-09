@@ -21,7 +21,11 @@ export async function GET(request: NextRequest) {
   const userGroups = await db.query.groupsToUsers.findMany({
     where: eq(groupsToUsers.userId, user.id),
     with: {
-      group: true,
+      group: {
+        with: {
+          groupsToUsers: true,
+        },
+      },
     },
   });
 
@@ -34,6 +38,7 @@ export async function GET(request: NextRequest) {
         createdAt: ug.group.createdAt,
       },
       isAdmin: ug.isAdmin,
+      memberCount: ug.group.groupsToUsers.length,
     })),
   });
 }

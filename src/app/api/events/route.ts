@@ -5,7 +5,6 @@ import { z } from "zod";
 import { db } from "@/db/db";
 import {
   events,
-  eventsToUsers,
   groups,
   groupsToUsers,
   locations,
@@ -44,9 +43,7 @@ export async function GET(request: NextRequest) {
           events: {
             with: {
               location: true,
-              eventsToUsers: {
-                where: eq(eventsToUsers.userId, user.id),
-              },
+              eventsToUsers: true,
             },
           },
         },
@@ -87,7 +84,8 @@ export async function GET(request: NextRequest) {
           locked: event.locked,
           createdAt: event.createdAt.toISOString(),
         },
-        hasJoined: event.eventsToUsers.length > 0,
+        attendeeCount: event.eventsToUsers.length,
+        hasJoined: event.eventsToUsers.some((etu) => etu.userId === user.id),
         isGroupAdmin,
       }));
   });

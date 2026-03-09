@@ -25,6 +25,7 @@ const userSchema = z.object({
 const groupWithMembershipSchema = z.object({
   group: groupSchema,
   isAdmin: z.boolean(),
+  memberCount: z.number(),
 });
 
 const groupsResponseSchema = z.object({

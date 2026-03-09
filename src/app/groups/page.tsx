@@ -70,8 +70,13 @@ export default function GroupsPage() {
               <h2 className="text-xl font-semibold mb-2">
                 {groupMembership.group.name}
               </h2>
-              <div className="flex gap-2 text-sm text-gray-600">
+              <div className="flex flex-wrap gap-2 text-sm text-gray-600">
                 {groupMembership.isAdmin && <AdminBadge />}
+                <span className="text-gray-500">
+                  {groupMembership.memberCount}{" "}
+                  {groupMembership.memberCount === 1 ? "member" : "members"}
+                </span>
+                <span className="text-gray-400">·</span>
                 <span className="text-gray-500">
                   Created{" "}
                   {format(groupMembership.group.createdAt, "MM/dd/yyyy")}

@@ -38,6 +38,7 @@ type GroupedEvents = {
     scheduled: boolean;
     locked: boolean;
     createdAt: string;
+    attendeeCount: number;
     hasJoined: boolean;
     isGroupAdmin: boolean;
     isTestingGroup: boolean;
@@ -72,6 +73,10 @@ function EventCard({
         <div>
           <span className="font-medium">Where:</span>{" "}
           {event.location ? event.location.name : "No location set"}
+        </div>
+        <div>
+          <span className="font-medium">Participants:</span>{" "}
+          {event.attendeeCount}
         </div>
         {event.message && (
           <div className="mt-2 text-gray-700">{event.message}</div>
@@ -116,6 +121,7 @@ export function EventsPage({ groupId }: { groupId?: string }) {
             scheduled: event.eventDetails.scheduled,
             locked: event.eventDetails.locked,
             createdAt: event.eventDetails.createdAt,
+            attendeeCount: event.attendeeCount,
             hasJoined: event.hasJoined,
             isGroupAdmin: event.isGroupAdmin,
             isTestingGroup: event.group.type === "testing",

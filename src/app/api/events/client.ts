@@ -43,6 +43,7 @@ const eventDetailsSchema = z.object({
 const denormalizedEventSchema = z.object({
   group: groupSchema,
   eventDetails: eventDetailsSchema,
+  attendeeCount: z.number(),
   hasJoined: z.boolean(),
   isGroupAdmin: z.boolean(),
 });
