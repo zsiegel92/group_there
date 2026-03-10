@@ -8,6 +8,8 @@ a MILP-based approach:
 3. Convert the solution to the expected format
 """
 
+import time
+
 from groupthere_solver.models import Problem, Solution, Party
 from groupthere_solver.group_generator import generate_feasible_groups
 from groupthere_solver.milp import solve_assignment
@@ -39,7 +41,7 @@ def solve_problem(problem: Problem) -> Solution:
             parties=[],
             total_drive_seconds=0,
         )
-
+    start = time.time()
     # Build distance lookup for O(1) access
     distance_lookup: dict[tuple[str, str], float] = {}
     for dist in problem.tripper_distances:
@@ -48,8 +50,14 @@ def solve_problem(problem: Problem) -> Solution:
         )
 
     # Phase 1: Generate all feasible groups
-    feasible_groups = generate_feasible_groups(problem.trippers, distance_lookup)
-
+    feasible_groups = generate_feasible_groups(
+        problem.trippers,
+        distance_lookup,
+    )
+    constructed_groups_end = time.time()
+    print(
+        f"Generated {len(feasible_groups)} feasible groups, took {constructed_groups_end - start:.2f} seconds"
+    )
     if not feasible_groups:
         # No feasible groups exist
         return Solution(
@@ -63,7 +71,10 @@ def solve_problem(problem: Problem) -> Solution:
 
     # Phase 2: Solve MILP to assign trippers to groups
     assignment = solve_assignment(len(problem.trippers), feasible_groups)
-
+    finished_milp = time.time()
+    print(
+        f"Solved MILP assignment, took {finished_milp - constructed_groups_end:.2f} seconds"
+    )
     if not assignment.feasible:
         return Solution(
             id=f"solution-{problem.id}",
@@ -91,7 +102,9 @@ def solve_problem(problem: Problem) -> Solution:
                 passenger_tripper_ids=passenger_user_ids,
             )
         )
-
+    print(
+        f"Constructed solution with {len(parties)} parties, took {time.time() - finished_milp:.2f} seconds"
+    )
     return Solution(
         id=f"solution-{problem.id}",
         successfully_completed=True,

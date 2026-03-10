@@ -44,13 +44,16 @@ def solve_test_problem() -> Solution:
     )
 
     solution = solve_problem(mock_problem)
-    assert solutions_are_equivalent(solution, mock_problem_expected_solution), (
-        f"Expected solution with A driving B (5 min), but got: {solution}"
-    )
+    assert solutions_are_equivalent(
+        solution, mock_problem_expected_solution
+    ), f"Expected solution with A driving B (5 min), but got: {solution}"
     return solution
 
 
-@app.function()
+@app.function(
+    cpu=4,
+    memory=8_000,
+)
 @modal.asgi_app()
 def serve_webapp():
     return webapp
