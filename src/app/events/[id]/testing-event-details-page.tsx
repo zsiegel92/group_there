@@ -163,6 +163,7 @@ export function TestingEventDetailPage({ eventId }: { eventId: string }) {
           riders={riders ?? []}
           eventId={eventId}
           eventTime={event.time}
+          locked={event.locked}
         />
 
         <DistanceStatus eventId={eventId} isAdmin={true} />

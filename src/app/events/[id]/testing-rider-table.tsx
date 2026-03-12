@@ -24,10 +24,12 @@ export function TestingRiderTable({
   riders,
   eventId,
   eventTime,
+  locked,
 }: {
   riders: TestRider[];
   eventId: string;
   eventTime: string;
+  locked: boolean;
 }) {
   const queryClient = useQueryClient();
   const updateRiders = useUpdateRiders();
@@ -110,6 +112,7 @@ export function TestingRiderTable({
           onUpdate={scheduleUpdate}
           onDelete={() => deleteRider.mutate({ eventId, userId: rider.userId })}
           isPending={dirtyUserIds.has(rider.userId)}
+          locked={locked}
         />
       ))}
     </div>
@@ -123,6 +126,7 @@ function RiderRow({
   onUpdate,
   onDelete,
   isPending,
+  locked,
 }: {
   rider: TestRider;
   eventId: string;
@@ -130,6 +134,7 @@ function RiderRow({
   onUpdate: (userId: string, fields: RiderFieldUpdate) => void;
   onDelete: () => void;
   isPending: boolean;
+  locked: boolean;
 }) {
   const eventDate = new Date(eventTime);
 
@@ -153,12 +158,14 @@ function RiderRow({
             <span className="inline-block size-1.5 rounded-full bg-blue-400 animate-pulse" />
           )}
         </div>
-        <button
-          onClick={onDelete}
-          className="text-red-500 hover:text-red-700 text-xs shrink-0 cursor-pointer"
-        >
-          Delete
-        </button>
+        {!locked && (
+          <button
+            onClick={onDelete}
+            className="text-red-500 hover:text-red-700 text-xs shrink-0 cursor-pointer"
+          >
+            Delete
+          </button>
+        )}
       </div>
 
       <div className="text-gray-500 text-xs truncate">
@@ -170,16 +177,22 @@ function RiderRow({
         {drivingStatusEnumValues.map((status) => (
           <button
             key={status}
-            onClick={() => {
-              onUpdate(rider.userId, {
-                drivingStatus: status,
-                ...(status === "cannot_drive" ? { carFits: 0 } : {}),
-              });
-            }}
-            className={`px-2 py-0.5 rounded text-xs cursor-pointer ${
+            onClick={
+              locked
+                ? undefined
+                : () => {
+                    onUpdate(rider.userId, {
+                      drivingStatus: status,
+                      ...(status === "cannot_drive" ? { carFits: 0 } : {}),
+                    });
+                  }
+            }
+            className={`px-2 py-0.5 rounded text-xs ${
               rider.drivingStatus === status
                 ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                : locked
+                  ? "bg-gray-100 text-gray-400"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer"
             }`}
           >
             {STATUS_LABELS[status]}
@@ -191,25 +204,29 @@ function RiderRow({
       {rider.drivingStatus !== "cannot_drive" && (
         <div className="flex items-center gap-2">
           <span className="text-gray-500 text-xs">Seats:</span>
-          <button
-            onClick={() =>
-              onUpdate(rider.userId, {
-                carFits: Math.max(1, rider.carFits - 1),
-              })
-            }
-            className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-xs cursor-pointer"
-          >
-            -
-          </button>
+          {!locked && (
+            <button
+              onClick={() =>
+                onUpdate(rider.userId, {
+                  carFits: Math.max(1, rider.carFits - 1),
+                })
+              }
+              className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-xs cursor-pointer"
+            >
+              -
+            </button>
+          )}
           <span className="text-xs w-4 text-center">{rider.carFits}</span>
-          <button
-            onClick={() =>
-              onUpdate(rider.userId, { carFits: rider.carFits + 1 })
-            }
-            className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-xs cursor-pointer"
-          >
-            +
-          </button>
+          {!locked && (
+            <button
+              onClick={() =>
+                onUpdate(rider.userId, { carFits: rider.carFits + 1 })
+              }
+              className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-xs cursor-pointer"
+            >
+              +
+            </button>
+          )}
         </div>
       )}
 
@@ -220,18 +237,24 @@ function RiderRow({
           {DEPARTURE_OFFSETS.map((mins) => (
             <button
               key={mins}
-              onClick={() => {
-                const leaveTime = new Date(
-                  eventDate.getTime() - mins * 60 * 1000
-                );
-                onUpdate(rider.userId, {
-                  earliestLeaveTime: leaveTime.toISOString(),
-                });
-              }}
-              className={`px-2 py-0.5 rounded text-xs cursor-pointer ${
+              onClick={
+                locked
+                  ? undefined
+                  : () => {
+                      const leaveTime = new Date(
+                        eventDate.getTime() - mins * 60 * 1000
+                      );
+                      onUpdate(rider.userId, {
+                        earliestLeaveTime: leaveTime.toISOString(),
+                      });
+                    }
+              }
+              className={`px-2 py-0.5 rounded text-xs ${
                 currentOffset === mins
                   ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  : locked
+                    ? "bg-gray-100 text-gray-400"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer"
               }`}
             >
               -{mins}m
