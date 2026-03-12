@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { Spinner } from "@/components/ui/spinner";
 import type { User } from "@/lib/auth";
@@ -69,11 +70,20 @@ function LoggedInNavParts({ user }: { user: User }) {
 function LoggedOutNavParts({ isPending }: { isPending: boolean }) {
   const pathname = usePathname();
   const isLoginPage = pathname === "/login";
+  // Once the initial session check completes, keep SignIn mounted so that
+  // better-auth's refetchOnWindowFocus doesn't destroy OTP form state.
+  const [sessionChecked, setSessionChecked] = useState(false);
+
+  useEffect(() => {
+    if (!isPending) {
+      setSessionChecked(true);
+    }
+  }, [isPending]);
 
   return (
     <div className="ml-auto flex items-center gap-2 sm:gap-4">
-      {!isLoginPage && !isPending && <SignIn />}
-      {isPending && <Spinner />}
+      {!sessionChecked && isPending && <Spinner />}
+      {!isLoginPage && sessionChecked && <SignIn />}
     </div>
   );
 }

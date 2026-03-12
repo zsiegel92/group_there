@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
     group: {
       id: createdGroup.id,
       name: createdGroup.name,
+      type: createdGroup.type,
       createdAt: createdGroup.createdAt,
     },
   });
