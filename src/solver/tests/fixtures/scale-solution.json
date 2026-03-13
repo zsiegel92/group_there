@@ -1,0 +1,116 @@
+{
+  "id": "solution-problem-event_0d20db85-91b1-40e0-aa72-28b2ea2fda4f",
+  "successfully_completed": true,
+  "feasible": true,
+  "optimal": true,
+  "parties": [
+    {
+      "id": "party-1",
+      "driver_tripper_id": "test_736130e6-35a2-4aa5-a4bb-b55d334bdbc5",
+      "passenger_tripper_ids": []
+    },
+    {
+      "id": "party-2",
+      "driver_tripper_id": "test_8d8d0780-be4b-4a4a-9bb8-d3953cd11bb7",
+      "passenger_tripper_ids": []
+    },
+    {
+      "id": "party-3",
+      "driver_tripper_id": "test_6d64d214-b10b-4a32-b597-fa0369cc665b",
+      "passenger_tripper_ids": [
+        "test_b66b2bc4-64ef-4b94-bb75-72b52be9c628"
+      ]
+    },
+    {
+      "id": "party-4",
+      "driver_tripper_id": "test_99b922f0-4156-4961-8e29-ce36d2f446ab",
+      "passenger_tripper_ids": [
+        "test_b99c06dd-f7e9-45b1-872b-37d440961649",
+        "test_ab57e738-4b48-4cfe-b853-87527daa4b70"
+      ]
+    },
+    {
+      "id": "party-5",
+      "driver_tripper_id": "test_c9cb0459-80cf-42a6-acfb-567fe0811ae9",
+      "passenger_tripper_ids": [
+        "test_0987ca5a-046b-417c-a7a2-58040403b589",
+        "test_56777c34-6d88-4b5d-aab6-8278ea20449e"
+      ]
+    },
+    {
+      "id": "party-6",
+      "driver_tripper_id": "test_08f4d913-b57c-4582-984f-b2d5b5532838",
+      "passenger_tripper_ids": [
+        "test_e5be1239-319d-4a3c-89ce-c8fe3ebaf22f",
+        "test_1234794a-3186-4c6f-bc7c-cbb17f1b0160"
+      ]
+    },
+    {
+      "id": "party-7",
+      "driver_tripper_id": "test_9608725f-707b-4795-a54c-59ec3d1ad309",
+      "passenger_tripper_ids": [
+        "test_e8fa2e0f-384a-482d-93eb-e47bef9225c0",
+        "test_222bbc8b-fdd9-4397-b818-111e6ada2d2a"
+      ]
+    },
+    {
+      "id": "party-8",
+      "driver_tripper_id": "test_b27713b1-3b55-414b-af37-70ac1dbe837b",
+      "passenger_tripper_ids": [
+        "test_c181c67b-858c-40fb-983c-95bcbb8d84e1",
+        "test_bf1e69f8-0277-4709-941f-d644c1bf205b"
+      ]
+    },
+    {
+      "id": "party-9",
+      "driver_tripper_id": "test_26fdb6f3-52a2-40f3-8a39-8e91b2112337",
+      "passenger_tripper_ids": [
+        "test_a64462cb-0a4b-4549-a2e0-19149dddf810",
+        "test_26ca5265-03dd-483a-aa04-af4823d73c61"
+      ]
+    },
+    {
+      "id": "party-10",
+      "driver_tripper_id": "test_2668439a-a568-4ee9-8045-05a3f7f83f8b",
+      "passenger_tripper_ids": [
+        "test_24efb6ef-fc64-4d0f-a60d-7f0753fd3ea3",
+        "test_7cce034c-9b9c-4c78-a6a4-0a50dcbc5928"
+      ]
+    },
+    {
+      "id": "party-11",
+      "driver_tripper_id": "test_8d5d2f26-4914-4d15-8848-83e8afee2a2d",
+      "passenger_tripper_ids": [
+        "test_20235ffa-4c6e-4753-b85f-baf6ef3b228e",
+        "test_786a99ee-51ed-4be1-89e5-83bfc2b01e0a"
+      ]
+    },
+    {
+      "id": "party-12",
+      "driver_tripper_id": "test_ac1ed5bd-4c20-4468-a2f1-62930eb8908e",
+      "passenger_tripper_ids": [
+        "test_d131909f-4e83-4fe0-8194-26ada8c40cef",
+        "test_dee3dae9-4427-4fb3-bddb-d963bece2981"
+      ]
+    },
+    {
+      "id": "party-13",
+      "driver_tripper_id": "test_676b67ef-55c2-4692-9d5f-52d31c3bf69f",
+      "passenger_tripper_ids": [
+        "test_87660085-e454-42ae-af41-700af19b2b42",
+        "test_4425876c-e7d0-4b4b-9467-3d8d62bd31a1",
+        "test_41ea7576-0dec-401d-b2c5-86f043470b8f"
+      ]
+    },
+    {
+      "id": "party-14",
+      "driver_tripper_id": "test_534b787a-5534-4383-bee5-7c8e78d0caae",
+      "passenger_tripper_ids": [
+        "test_40a06800-23a0-4a6c-b2d7-6c1fbd83f2eb",
+        "test_fb758960-8b8a-4c47-8dfd-ab686d092489",
+        "test_6b24df87-8094-48a3-9fd7-a05383a7ad15"
+      ]
+    }
+  ],
+  "total_drive_seconds": 28127.0
+}
