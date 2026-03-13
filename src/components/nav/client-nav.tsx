@@ -1,9 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 
 import { Spinner } from "@/components/ui/spinner";
 import type { User } from "@/lib/auth";
@@ -67,18 +67,15 @@ function LoggedInNavParts({ user }: { user: User }) {
   );
 }
 
-function LoggedOutNavParts({ isPending }: { isPending: boolean }) {
+function LoggedOutNavParts({
+  isPending,
+  sessionChecked,
+}: {
+  isPending: boolean;
+  sessionChecked: boolean;
+}) {
   const pathname = usePathname();
   const isLoginPage = pathname === "/login";
-  // Once the initial session check completes, keep SignIn mounted so that
-  // better-auth's refetchOnWindowFocus doesn't destroy OTP form state.
-  const [sessionChecked, setSessionChecked] = useState(false);
-
-  useEffect(() => {
-    if (!isPending) {
-      setSessionChecked(true);
-    }
-  }, [isPending]);
 
   return (
     <div className="ml-auto flex items-center gap-2 sm:gap-4">
@@ -90,6 +87,12 @@ function LoggedOutNavParts({ isPending }: { isPending: boolean }) {
 
 export function ClientNav() {
   const { data: session, isPending } = useSession();
+  // Once the initial session check completes, keep SignIn mounted so that
+  // better-auth's refetchOnWindowFocus doesn't destroy OTP form state.
+  const [sessionChecked, setSessionChecked] = useState(false);
+  if (!isPending && !sessionChecked) {
+    setSessionChecked(true);
+  }
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -99,7 +102,10 @@ export function ClientNav() {
             <span className="text-lg sm:text-xl font-bold">GROUPTHERE</span>
           </Link>
           {!session?.user || isPending ? (
-            <LoggedOutNavParts isPending={isPending} />
+            <LoggedOutNavParts
+              isPending={isPending}
+              sessionChecked={sessionChecked}
+            />
           ) : (
             <LoggedInNavParts user={session.user} />
           )}
