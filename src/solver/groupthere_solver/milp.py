@@ -10,7 +10,7 @@ from typing import Literal
 import pyomo.environ as pyo
 from groupthere_solver.group_generator import FeasibleGroup
 
-MilpSolver = Literal["glpk", "cbc"]
+MilpSolver = Literal["glpk", "cbc", "cuopt"]
 
 
 class AssignmentSolution:
