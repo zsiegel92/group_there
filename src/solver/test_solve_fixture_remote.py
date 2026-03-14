@@ -34,7 +34,9 @@ def main():
         assert len(solution.parties) == len(expected.parties), (
             f"Party count mismatch: expected {len(expected.parties)}, got {len(solution.parties)}"
         )
-        assert abs(solution.total_drive_seconds - expected.total_drive_seconds) < 0.01, (
+        assert (
+            abs(solution.total_drive_seconds - expected.total_drive_seconds) < 0.01
+        ), (
             f"Drive time mismatch: expected {expected.total_drive_seconds}, got {solution.total_drive_seconds}"
         )
         print("Solutions match (same cost, different optimal assignment)!")

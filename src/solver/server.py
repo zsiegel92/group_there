@@ -10,9 +10,9 @@ from groupthere_solver.solve import solve_problem
 # 3. Python deps via uv (changes when pyproject.toml changes)
 # 4. Mojo source + build (changes when .mojo files change)
 # 5. Python solver source (changes most often)
-image = (
+cpu_image = (
     modal.Image.from_registry("ubuntu:22.04", add_python="3.12")
-    .apt_install("glpk-utils", "build-essential", "curl", "file")
+    .apt_install("glpk-utils", "coinor-cbc", "build-essential", "curl", "file")
     .pip_install("uv")
     .run_commands("uv pip install --compile-bytecode --system modal")
     # Install pixi for Mojo toolchain
@@ -39,9 +39,25 @@ image = (
     .add_local_python_source("groupthere_solver", copy=True)
 )
 
+# GPU image with cuOpt for GPU-accelerated MILP solving
+cuopt_image = (
+    modal.Image.from_registry(
+        "nvidia/cuopt:latest-cuda13.0-py3.13",
+        add_python="3.13",
+    )
+    .uv_sync()
+    .uv_pip_install(
+        "cuopt-sh-client",
+        "cuopt-server-cu13",
+        "cuopt-cu13==25.10.*",
+        extra_index_url="https://pypi.nvidia.com",
+    )
+    .add_local_python_source("groupthere_solver", copy=True)
+)
+
 app = modal.App(
     name="groupthere-solver",
-    image=image,
+    image=cpu_image,
     secrets=[modal.Secret.from_name("groupthere-solver-secrets")],
 )
 
@@ -80,9 +96,32 @@ def solve_test_problem() -> Solution:
 @app.function(
     cpu=4,
     memory=8_000,
+    timeout=1800,
 )
-def solve_problem_remote(problem: Problem) -> Solution:
-    return solve_problem(problem)
+def solve_problem_remote(
+    problem: Problem,
+    *,
+    use_mojo: bool = True,
+    milp_solver: str = "cbc",
+    mip_gap: float | None = None,
+) -> Solution:
+    return solve_problem(
+        problem, use_mojo=use_mojo, milp_solver=milp_solver, mip_gap=mip_gap
+    )
+
+
+@app.function(
+    image=cuopt_image,
+    gpu="A100",
+    memory=16_000,
+    timeout=1800,
+)
+def solve_problem_cuopt(
+    problem: Problem,
+    *,
+    mip_gap: float | None = None,
+) -> Solution:
+    return solve_problem(problem, use_mojo=False, milp_solver="cuopt", mip_gap=mip_gap)
 
 
 @app.function(
