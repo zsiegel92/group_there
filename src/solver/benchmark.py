@@ -7,13 +7,10 @@ Tests all combinations of:
 - Problem sizes: 10, 39, 80 trippers
 - MIP gap: exact (None), 5%, 1%, 0.5%
 
-All Modal conditions run in parallel via .spawn() + gather for maximum throughput.
+All Modal conditions run in parallel via .spawn() for maximum throughput.
 
 Usage:
-    # Run full benchmark on Modal (spawns all conditions in parallel)
-    uv run --directory src/solver modal run benchmark.py
-
-    # Results are written to benchmark_results.json
+    pnpm run python:benchmark
 """
 
 import json
@@ -22,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from groupthere_solver.models import Problem
-from server import app, cuopt_image
+from server import app
 
 FIXTURES_DIR = Path(__file__).parent / "tests" / "fixtures"
 
@@ -157,7 +154,7 @@ def _run_benchmark_config(
     return json.dumps(result)
 
 
-# Modal functions for remote execution
+# CPU benchmark function (glpk, cbc)
 @app.function(cpu=4, memory=8_000, timeout=1800)
 def benchmark_cpu(
     problem_json: str,
@@ -174,18 +171,19 @@ def benchmark_cpu(
     )
 
 
-@app.function(image=cuopt_image, gpu="A100", memory=16_000, timeout=1800)
+# GPU benchmark function (cuopt, or CPU solvers on GPU instance for comparison)
+@app.function(gpu="A100", memory=16_000, timeout=1800)
 def benchmark_gpu(
     problem_json: str,
     *,
     use_mojo: bool,
+    milp_solver: str,
     mip_gap: float | None,
 ) -> str:
-    # cuopt doesn't have Mojo installed — always use Python group gen
     return _run_benchmark_config(
         problem_json,
-        use_mojo=False,
-        milp_solver="cuopt",
+        use_mojo=use_mojo,
+        milp_solver=milp_solver,
         mip_gap=mip_gap,
     )
 
@@ -234,23 +232,26 @@ def main():
                     )
                     handles.append((meta, handle))
 
-        # GPU conditions: cuopt × mip_gaps (always Python group gen — no Mojo on GPU image)
-        for mip_gap in MIP_GAPS:
-            gap_label = _format_gap(mip_gap)
-            meta = {
-                "size": size,
-                "n": n_trippers,
-                "gen": "python",
-                "solver": "cuopt",
-                "gap": gap_label,
-                "env": "modal_gpu_a100",
-            }
-            handle = benchmark_gpu.spawn(
-                problem_json,
-                use_mojo=False,
-                mip_gap=mip_gap,
-            )
-            handles.append((meta, handle))
+        # GPU conditions: cuopt × python/mojo × mip_gaps
+        for use_mojo in group_gen_methods:
+            for mip_gap in MIP_GAPS:
+                gen_label = "mojo" if use_mojo else "python"
+                gap_label = _format_gap(mip_gap)
+                meta = {
+                    "size": size,
+                    "n": n_trippers,
+                    "gen": gen_label,
+                    "solver": "cuopt",
+                    "gap": gap_label,
+                    "env": "modal_gpu_a100",
+                }
+                handle = benchmark_gpu.spawn(
+                    problem_json,
+                    use_mojo=use_mojo,
+                    milp_solver="cuopt",
+                    mip_gap=mip_gap,
+                )
+                handles.append((meta, handle))
 
     total_conditions = len(handles)
     print(f"Spawned {total_conditions} conditions. Collecting results...\n")

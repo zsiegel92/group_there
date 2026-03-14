@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 from groupthere_solver.models import Problem
-from server import app, solve_problem_cuopt, solve_problem_remote
+from server import app, solve_problem_gpu, solve_problem_remote
 
 FIXTURES_DIR = Path(__file__).parent / "tests" / "fixtures"
 
@@ -27,7 +27,7 @@ def main():
     print("Launching CBC (CPU) and cuOpt (GPU) in parallel...")
     start = time.time()
     cbc_handle = solve_problem_remote.spawn(problem)
-    cuopt_handle = solve_problem_cuopt.spawn(problem)
+    cuopt_handle = solve_problem_gpu.spawn(problem)
 
     # Wait for cuOpt first (should be faster)
     cuopt_solution = cuopt_handle.get()

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from groupthere_solver.mock_problem import solutions_are_equivalent
 from groupthere_solver.models import Problem, Solution
-from server import app, solve_problem_cuopt
+from server import app, solve_problem_gpu
 
 FIXTURES_DIR = Path(__file__).parent / "tests" / "fixtures"
 
@@ -25,7 +25,7 @@ def main():
     print(f"Loaded problem ({len(problem.trippers)} trippers) and expected solution")
     print("Solving with cuOpt on GPU...")
 
-    solution = solve_problem_cuopt.remote(problem)
+    solution = solve_problem_gpu.remote(problem)
     print(
         f"Got solution: {len(solution.parties)} parties, {solution.total_drive_seconds}s total"
     )

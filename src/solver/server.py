@@ -4,14 +4,19 @@ from groupthere_solver.models import Problem, ProblemReceivedResponse, Solution
 from groupthere_solver.solve import solve_problem
 
 
-# Build the Modal image in dependency order so frequently-changed layers are last:
-# 1. System deps (rarely change)
-# 2. Pixi + Mojo toolchain (changes when pixi.toml changes)
-# 3. Python deps via uv (changes when pyproject.toml changes)
-# 4. Mojo source + build (changes when .mojo files change)
+# Single image with everything: GLPK, CBC, Mojo, and cuOpt.
+# Runtime parameters control which solver/group generator is used.
+# Layer order optimized for cache hits (most-changed layers last):
+# 1. System deps + CUDA base (rarely change)
+# 2. Pixi + Mojo toolchain
+# 3. Python deps via uv + cuOpt pip packages
+# 4. Mojo source + build
 # 5. Python solver source (changes most often)
-cpu_image = (
-    modal.Image.from_registry("ubuntu:22.04", add_python="3.12")
+image = (
+    modal.Image.from_registry(
+        "nvidia/cuopt:latest-cuda13.0-py3.13",
+        add_python="3.13",
+    )
     .apt_install("glpk-utils", "coinor-cbc", "build-essential", "curl", "file")
     .pip_install("uv")
     .run_commands("uv pip install --compile-bytecode --system modal")
@@ -33,18 +38,7 @@ cpu_image = (
             "file /mojo_app/group_generator.so",
         ]
     )
-    # Python deps
-    .uv_sync()
-    # Python solver source (most frequently changed — last for fast rebuilds)
-    .add_local_python_source("groupthere_solver", copy=True)
-)
-
-# GPU image with cuOpt for GPU-accelerated MILP solving
-cuopt_image = (
-    modal.Image.from_registry(
-        "nvidia/cuopt:latest-cuda13.0-py3.13",
-        add_python="3.13",
-    )
+    # Python deps + cuOpt
     .uv_sync()
     .uv_pip_install(
         "cuopt-sh-client",
@@ -52,12 +46,13 @@ cuopt_image = (
         "cuopt-cu13==25.10.*",
         extra_index_url="https://pypi.nvidia.com",
     )
+    # Python solver source (most frequently changed — last for fast rebuilds)
     .add_local_python_source("groupthere_solver", copy=True)
 )
 
 app = modal.App(
     name="groupthere-solver",
-    image=cpu_image,
+    image=image,
     secrets=[modal.Secret.from_name("groupthere-solver-secrets")],
 )
 
@@ -111,17 +106,20 @@ def solve_problem_remote(
 
 
 @app.function(
-    image=cuopt_image,
     gpu="A100",
     memory=16_000,
     timeout=1800,
 )
-def solve_problem_cuopt(
+def solve_problem_gpu(
     problem: Problem,
     *,
+    use_mojo: bool = True,
+    milp_solver: str = "cuopt",
     mip_gap: float | None = None,
 ) -> Solution:
-    return solve_problem(problem, use_mojo=False, milp_solver="cuopt", mip_gap=mip_gap)
+    return solve_problem(
+        problem, use_mojo=use_mojo, milp_solver=milp_solver, mip_gap=mip_gap
+    )
 
 
 @app.function(
