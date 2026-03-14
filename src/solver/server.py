@@ -129,3 +129,86 @@ def solve_problem_gpu(
 @modal.asgi_app()
 def serve_webapp():
     return webapp
+
+
+# ---------- Benchmark functions (different hardware configs) ----------
+# These are called by benchmark.py's local entrypoint via .spawn()
+
+
+def _benchmark_solve(
+    problem_json: str,
+    *,
+    use_mojo: bool,
+    milp_solver: str,
+    mip_gap: float | None,
+) -> str:
+    from groupthere_solver.benchmark_runner import run_solve
+
+    return run_solve(
+        problem_json, use_mojo=use_mojo, milp_solver=milp_solver, mip_gap=mip_gap
+    )
+
+
+@app.function(cpu=2, memory=4_000, timeout=1800)
+def benchmark_cpu_2c4g(
+    problem_json: str,
+    *,
+    use_mojo: bool,
+    milp_solver: str,
+    mip_gap: float | None,
+) -> str:
+    return _benchmark_solve(
+        problem_json, use_mojo=use_mojo, milp_solver=milp_solver, mip_gap=mip_gap
+    )
+
+
+@app.function(cpu=4, memory=8_000, timeout=1800)
+def benchmark_cpu_4c8g(
+    problem_json: str,
+    *,
+    use_mojo: bool,
+    milp_solver: str,
+    mip_gap: float | None,
+) -> str:
+    return _benchmark_solve(
+        problem_json, use_mojo=use_mojo, milp_solver=milp_solver, mip_gap=mip_gap
+    )
+
+
+@app.function(cpu=8, memory=16_000, timeout=1800)
+def benchmark_cpu_8c16g(
+    problem_json: str,
+    *,
+    use_mojo: bool,
+    milp_solver: str,
+    mip_gap: float | None,
+) -> str:
+    return _benchmark_solve(
+        problem_json, use_mojo=use_mojo, milp_solver=milp_solver, mip_gap=mip_gap
+    )
+
+
+@app.function(gpu="A10G", memory=16_000, timeout=1800)
+def benchmark_gpu_a10g(
+    problem_json: str,
+    *,
+    use_mojo: bool,
+    milp_solver: str,
+    mip_gap: float | None,
+) -> str:
+    return _benchmark_solve(
+        problem_json, use_mojo=use_mojo, milp_solver=milp_solver, mip_gap=mip_gap
+    )
+
+
+@app.function(gpu="A100", memory=16_000, timeout=1800)
+def benchmark_gpu_a100(
+    problem_json: str,
+    *,
+    use_mojo: bool,
+    milp_solver: str,
+    mip_gap: float | None,
+) -> str:
+    return _benchmark_solve(
+        problem_json, use_mojo=use_mojo, milp_solver=milp_solver, mip_gap=mip_gap
+    )
