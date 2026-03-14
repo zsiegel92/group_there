@@ -8,11 +8,14 @@ a MILP-based approach:
 3. Convert the solution to the expected format
 """
 
+import os
 import time
 
 from groupthere_solver.models import Problem, Solution, Party
 from groupthere_solver.group_generator import generate_feasible_groups
 from groupthere_solver.milp import solve_assignment
+
+USE_MOJO = os.environ.get("GROUPTHERE_USE_MOJO", "1") == "1"
 
 
 def solve_problem(problem: Problem) -> Solution:
@@ -50,10 +53,27 @@ def solve_problem(problem: Problem) -> Solution:
         )
 
     # Phase 1: Generate all feasible groups
-    feasible_groups = generate_feasible_groups(
-        problem.trippers,
-        distance_lookup,
-    )
+    if USE_MOJO:
+        try:
+            from groupthere_solver.mojo_group_generator import (
+                generate_feasible_groups_mojo,
+            )
+
+            feasible_groups = generate_feasible_groups_mojo(
+                problem.trippers,
+                distance_lookup,
+            )
+        except Exception as e:
+            print(f"Mojo group generator failed ({e}), falling back to Python")
+            feasible_groups = generate_feasible_groups(
+                problem.trippers,
+                distance_lookup,
+            )
+    else:
+        feasible_groups = generate_feasible_groups(
+            problem.trippers,
+            distance_lookup,
+        )
     constructed_groups_end = time.time()
     print(
         f"Generated {len(feasible_groups)} feasible groups, took {constructed_groups_end - start:.2f} seconds"
