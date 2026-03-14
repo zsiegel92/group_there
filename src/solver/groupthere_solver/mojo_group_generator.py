@@ -12,14 +12,20 @@ from pathlib import Path
 from groupthere_solver.group_generator import FeasibleGroup
 from groupthere_solver.models import Tripper
 
-# The Mojo shared library lives in mojo_app/ relative to this file's parent
-_MOJO_APP_DIR = str(Path(__file__).resolve().parent.parent / "mojo_app")
+# Search paths for the Mojo shared library:
+# - Local dev: mojo_app/ relative to this file's parent (src/solver/)
+# - Modal: /mojo_app/ (absolute path in container)
+_MOJO_SEARCH_PATHS = [
+    str(Path(__file__).resolve().parent.parent / "mojo_app"),
+    "/mojo_app",
+]
 
 
 def _import_mojo_module():
     """Import the Mojo group_generator module, handling path setup."""
-    if _MOJO_APP_DIR not in sys.path:
-        sys.path.insert(0, _MOJO_APP_DIR)
+    for path in _MOJO_SEARCH_PATHS:
+        if path not in sys.path:
+            sys.path.insert(0, path)
 
     try:
         import max.mojo.importer  # noqa: F401
