@@ -5,8 +5,12 @@ This module uses Pyomo to formulate and solve the problem of assigning
 trippers to feasible groups to minimize total drive time.
 """
 
+from typing import Literal
+
 import pyomo.environ as pyo
 from groupthere_solver.group_generator import FeasibleGroup
+
+MilpSolver = Literal["glpk", "cbc"]
 
 
 class AssignmentSolution:
@@ -45,6 +49,8 @@ class AssignmentSolution:
 def solve_assignment(
     num_trippers: int,
     feasible_groups: list[FeasibleGroup],
+    *,
+    solver: MilpSolver = "glpk",
 ) -> AssignmentSolution:
     """
     Solve the carpooling assignment problem using MILP.
@@ -121,10 +127,10 @@ def solve_assignment(
     )
 
     # Solve the model
-    solver = pyo.SolverFactory("glpk")
+    pyomo_solver = pyo.SolverFactory(solver)
 
     try:
-        results = solver.solve(model, tee=False)
+        results = pyomo_solver.solve(model, tee=False)
     except Exception:
         # Solver failed - return infeasible solution
         return AssignmentSolution(

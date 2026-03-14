@@ -12,10 +12,12 @@ import time
 
 from groupthere_solver.models import Problem, Solution, Party
 from groupthere_solver.group_generator import generate_feasible_groups
-from groupthere_solver.milp import solve_assignment
+from groupthere_solver.milp import MilpSolver, solve_assignment
 
 
-def solve_problem(problem: Problem) -> Solution:
+def solve_problem(
+    problem: Problem, *, milp_solver: MilpSolver = "glpk"
+) -> Solution:
     """
     Solve a carpooling optimization problem using MILP.
 
@@ -70,7 +72,9 @@ def solve_problem(problem: Problem) -> Solution:
         )
 
     # Phase 2: Solve MILP to assign trippers to groups
-    assignment = solve_assignment(len(problem.trippers), feasible_groups)
+    assignment = solve_assignment(
+        len(problem.trippers), feasible_groups, solver=milp_solver
+    )
     finished_milp = time.time()
     print(
         f"Solved MILP assignment, took {finished_milp - constructed_groups_end:.2f} seconds"

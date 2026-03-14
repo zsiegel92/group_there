@@ -9,7 +9,7 @@ app = modal.App(
     image=modal.Image.debian_slim(
         python_version="3.12",
     )
-    .apt_install("glpk-utils")
+    .apt_install("glpk-utils", "coinor-cbc")
     .uv_sync()
     .add_local_python_source(
         "groupthere_solver",
