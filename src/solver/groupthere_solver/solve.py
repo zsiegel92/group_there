@@ -8,17 +8,14 @@ a MILP-based approach:
 3. Convert the solution to the expected format
 """
 
-import os
 import time
 
 from groupthere_solver.models import Problem, Solution, Party
 from groupthere_solver.group_generator import generate_feasible_groups
 from groupthere_solver.milp import solve_assignment
 
-USE_MOJO = os.environ.get("GROUPTHERE_USE_MOJO", "1") == "1"
 
-
-def solve_problem(problem: Problem) -> Solution:
+def solve_problem(problem: Problem, *, use_mojo: bool = True) -> Solution:
     """
     Solve a carpooling optimization problem using MILP.
 
@@ -53,7 +50,7 @@ def solve_problem(problem: Problem) -> Solution:
         )
 
     # Phase 1: Generate all feasible groups
-    if USE_MOJO:
+    if use_mojo:
         try:
             from groupthere_solver.mojo_group_generator import (
                 generate_feasible_groups_mojo,
