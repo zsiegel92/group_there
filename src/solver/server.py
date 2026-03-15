@@ -4,17 +4,44 @@ from groupthere_solver.models import Problem, ProblemReceivedResponse, Solution
 from groupthere_solver.solve import solve_problem
 
 
+# Build the Modal image in dependency order so frequently-changed layers are last:
+# 1. System deps (rarely change)
+# 2. Pixi + Mojo toolchain (changes when pixi.toml changes)
+# 3. Python deps via uv (changes when pyproject.toml changes)
+# 4. Mojo source + build (changes when .mojo files change)
+# 5. Python solver source (changes most often)
+image = (
+    modal.Image.from_registry("ubuntu:22.04", add_python="3.12")
+    .apt_install("glpk-utils", "build-essential", "curl", "file")
+    .pip_install("uv")
+    .run_commands("uv pip install --compile-bytecode --system modal")
+    # Install pixi for Mojo toolchain
+    .run_commands("curl -fsSL https://pixi.sh/install.sh | sh")
+    .env({"PATH": "/root/.pixi/bin:$PATH"})
+    # Copy Mojo project and install toolchain (cached unless pixi.toml changes)
+    .add_local_dir(
+        "mojo_app",
+        remote_path="/mojo_app",
+        copy=True,
+        ignore=["**/.pixi/*", "**/__mojocache__/*", "*.so", "*.dylib"],
+    )
+    .run_commands(
+        [
+            "cd /mojo_app && /root/.pixi/bin/pixi install",
+            "cd /mojo_app && /root/.pixi/bin/pixi run pip install max",
+            "cd /mojo_app && /root/.pixi/bin/pixi run mojo build group_generator.mojo --emit shared-lib -o group_generator.so",
+            "file /mojo_app/group_generator.so",
+        ]
+    )
+    # Python deps
+    .uv_sync()
+    # Python solver source (most frequently changed — last for fast rebuilds)
+    .add_local_python_source("groupthere_solver", copy=True)
+)
+
 app = modal.App(
     name="groupthere-solver",
-    image=modal.Image.debian_slim(
-        python_version="3.12",
-    )
-    .apt_install("glpk-utils")
-    .uv_sync()
-    .add_local_python_source(
-        "groupthere_solver",
-        copy=True,
-    ),
+    image=image,
     secrets=[modal.Secret.from_name("groupthere-solver-secrets")],
 )
 

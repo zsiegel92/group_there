@@ -55,3 +55,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Mojo
+**/.pixi/
+**/pixi.lock
+**/__mojocache__/
+*.so
+*.dylib

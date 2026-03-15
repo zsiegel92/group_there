@@ -15,7 +15,7 @@ from groupthere_solver.group_generator import generate_feasible_groups
 from groupthere_solver.milp import solve_assignment
 
 
-def solve_problem(problem: Problem) -> Solution:
+def solve_problem(problem: Problem, *, use_mojo: bool = True) -> Solution:
     """
     Solve a carpooling optimization problem using MILP.
 
@@ -50,10 +50,27 @@ def solve_problem(problem: Problem) -> Solution:
         )
 
     # Phase 1: Generate all feasible groups
-    feasible_groups = generate_feasible_groups(
-        problem.trippers,
-        distance_lookup,
-    )
+    if use_mojo:
+        try:
+            from groupthere_solver.mojo_group_generator import (
+                generate_feasible_groups_mojo,
+            )
+
+            feasible_groups = generate_feasible_groups_mojo(
+                problem.trippers,
+                distance_lookup,
+            )
+        except Exception as e:
+            print(f"Mojo group generator failed ({e}), falling back to Python")
+            feasible_groups = generate_feasible_groups(
+                problem.trippers,
+                distance_lookup,
+            )
+    else:
+        feasible_groups = generate_feasible_groups(
+            problem.trippers,
+            distance_lookup,
+        )
     constructed_groups_end = time.time()
     print(
         f"Generated {len(feasible_groups)} feasible groups, took {constructed_groups_end - start:.2f} seconds"
