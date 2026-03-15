@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 
 import { EventLocationsMap } from "@/components/map/event-locations-map";
@@ -43,11 +43,18 @@ export function YourTrip({
     [eventLocation, myParty.members]
   );
 
+  // Use a stable scalar so React Query refetches (new object, same data)
+  // don't cancel in-flight polyline fetches.
+  const myPartyRef = useRef(myParty);
+  myPartyRef.current = myParty;
+  const partyIndex = myParty.partyIndex;
+
   useEffect(() => {
     if (!eventLocationId) return;
+    const party = myPartyRef.current;
 
     const locationIds: string[] = [];
-    for (const m of myParty.members) {
+    for (const m of party.members) {
       if (m.originLocationId) locationIds.push(m.originLocationId);
     }
     locationIds.push(eventLocationId);
@@ -90,7 +97,7 @@ export function YourTrip({
 
         if (coordinates.length > 0) {
           const color =
-            ROUTE_COLORS[myParty.partyIndex % ROUTE_COLORS.length] ??
+            ROUTE_COLORS[party.partyIndex % ROUTE_COLORS.length] ??
             ROUTE_COLORS[0] ??
             "#16a34a";
           setRoutes([{ coordinates, color, label: "Your trip" }]);
@@ -106,7 +113,7 @@ export function YourTrip({
     return () => {
       cancelled = true;
     };
-  }, [eventId, eventLocationId, myParty]);
+  }, [eventId, eventLocationId, partyIndex]);
 
   const driver = myParty.members.find((m) => m.pickupOrder === 0);
   const passengers = myParty.members

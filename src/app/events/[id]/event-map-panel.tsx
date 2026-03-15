@@ -209,23 +209,35 @@ export function EventMapPanel({
   const partyEstimates =
     ephemeralData?.partyEstimates ?? lockedData?.partyEstimates ?? [];
 
-  // Ref for attendees so route-fetching effect doesn't depend on the
-  // (potentially unstable) array reference from the parent's inline JSX
+  // Refs so route-fetching effect doesn't depend on unstable object references
   const attendeesRef = useRef(event.attendees);
   attendeesRef.current = event.attendees;
+  const solutionRef = useRef(solution);
+  solutionRef.current = solution;
 
-  // Fetch route polylines when solution becomes available
+  // Use a stable scalar so React Query refetches (new object, same data)
+  // don't cancel in-flight polyline fetches.
+  const solutionId = solution?.id ?? null;
+
+  // Fetch route polylines when solution becomes available, clear when removed
   useEffect(() => {
     const locationId = event.locationId;
-    if (!solution || !locationId || !solution.feasible) return;
-    if (solution.parties.length === 0) return;
+    const sol = solutionRef.current;
+    if (!sol || !solutionId || !locationId || !sol.feasible) {
+      setRoutes([]);
+      return;
+    }
+    if (sol.parties.length === 0) {
+      setRoutes([]);
+      return;
+    }
 
     let cancelled = false;
     void (async () => {
       setIsFetchingRoutes(true);
       try {
         const builtRoutes = await fetchAndBuildRoutes(
-          solution,
+          sol,
           attendeesRef.current,
           locationId,
           eventId
@@ -241,7 +253,7 @@ export function EventMapPanel({
     return () => {
       cancelled = true;
     };
-  }, [solution, event.locationId, eventId]);
+  }, [solutionId, event.locationId, eventId]);
 
   // For locked events without solution data (e.g., non-admin users), render nothing
   if (event.locked && !solution) return null;
