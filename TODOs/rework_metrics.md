@@ -1,1 +1,0 @@
-Rework src/app/api/testing-events/[id]/metrics/route.ts so that it takes a post request containing a full json problem and solution. It's okay that the frontend client will have to do more to assemble all that stuff. It shouldn't have to do anything with the database.
