@@ -28,7 +28,7 @@ def _import_mojo_module():
             sys.path.insert(0, path)
 
     try:
-        import max.mojo.importer  # noqa: F401  # type: ignore[unresolved-import]
+        import max.mojo.importer  # noqa: F401  # pyright: ignore[reportMissingImports]
     except ImportError:
         pass  # If max isn't available, the pre-built .so may still work
 
