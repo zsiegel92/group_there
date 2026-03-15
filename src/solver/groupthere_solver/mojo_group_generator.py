@@ -28,7 +28,7 @@ def _import_mojo_module():
             sys.path.insert(0, path)
 
     try:
-        import max.mojo.importer  # noqa: F401
+        import max.mojo.importer  # noqa: F401  # type: ignore[unresolved-import]
     except ImportError:
         pass  # If max isn't available, the pre-built .so may still work
 
@@ -68,7 +68,7 @@ def generate_feasible_groups_mojo(
                 )
 
     # Call Mojo
-    raw_groups = mojo_mod.generate_feasible_groups_mojo(
+    raw_groups = mojo_mod.generate_feasible_groups_mojo(  # pyright: ignore[reportAttributeAccessIssue]
         n, car_fits, must_drive, distance_to_dest, dist_matrix
     )
 

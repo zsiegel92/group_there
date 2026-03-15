@@ -81,20 +81,17 @@ def solve_assignment(
     model = pyo.ConcreteModel()
 
     # Sets
-    model.GROUPS = pyo.Set(initialize=range(len(feasible_groups)))  # type: ignore
-    model.TRIPPERS = pyo.Set(initialize=range(num_trippers))  # type: ignore
+    model.GROUPS = pyo.Set(initialize=range(len(feasible_groups)))  # pyright: ignore[reportAttributeAccessIssue]
+    model.TRIPPERS = pyo.Set(initialize=range(num_trippers))  # pyright: ignore[reportAttributeAccessIssue]
 
     # Decision variables: x[g] = 1 if group g is selected
-    model.x = pyo.Var(model.GROUPS, domain=pyo.Binary)  # type: ignore
+    model.x = pyo.Var(model.GROUPS, domain=pyo.Binary)  # pyright: ignore[reportAttributeAccessIssue]
 
     # Objective: minimize total drive time
-    def objective_rule(m):  # type: ignore
-        return sum(
-            feasible_groups[g].drive_time * m.x[g]  # type: ignore
-            for g in m.GROUPS  # type: ignore
-        )
+    def objective_rule(m):
+        return sum(feasible_groups[g].drive_time * m.x[g] for g in m.GROUPS)
 
-    model.objective = pyo.Objective(rule=objective_rule, sense=pyo.minimize)  # type: ignore
+    model.objective = pyo.Objective(rule=objective_rule, sense=pyo.minimize)  # pyright: ignore[reportAttributeAccessIssue]
 
     # Check if all trippers are covered by at least one group
     for t in range(num_trippers):
@@ -113,17 +110,15 @@ def solve_assignment(
             )
 
     # Constraints: each tripper in exactly one group
-    def tripper_coverage_rule(m, t):  # type: ignore
+    def tripper_coverage_rule(m, t):
         # Find all groups containing tripper t
         groups_with_tripper = [
-            g
-            for g in m.GROUPS  # type: ignore
-            if t in feasible_groups[g].tripper_indices
+            g for g in m.GROUPS if t in feasible_groups[g].tripper_indices
         ]
-        return sum(m.x[g] for g in groups_with_tripper) == 1  # type: ignore
+        return sum(m.x[g] for g in groups_with_tripper) == 1
 
-    model.tripper_coverage = pyo.Constraint(  # type: ignore
-        model.TRIPPERS,  # type: ignore
+    model.tripper_coverage = pyo.Constraint(  # pyright: ignore[reportAttributeAccessIssue]
+        model.TRIPPERS,  # pyright: ignore[reportAttributeAccessIssue]
         rule=tripper_coverage_rule,
     )
 
@@ -174,9 +169,9 @@ def solve_assignment(
 
     # Extract selected groups
     selected_groups = [
-        feasible_groups[g]  # type: ignore
-        for g in model.GROUPS  # type: ignore
-        if pyo.value(model.x[g]) > 0.5  # type: ignore
+        feasible_groups[g]  # pyright: ignore[reportCallIssue, reportArgumentType]
+        for g in model.GROUPS  # pyright: ignore[reportAttributeAccessIssue]
+        if pyo.value(model.x[g]) > 0.5  # pyright: ignore[reportAttributeAccessIssue, reportOptionalOperand]
     ]
 
     total_drive_time = sum(g.drive_time for g in selected_groups)

@@ -7,12 +7,14 @@ This module lives inside groupthere_solver so it's available on Modal workers.
 import json
 import time
 
+from groupthere_solver.milp import MilpSolver
+
 
 def run_solve(
     problem_json: str,
     *,
     use_mojo: bool,
-    milp_solver: str,
+    milp_solver: MilpSolver,
     mip_gap: float | None = None,
 ) -> str:
     """Run a single solve and return JSON string with timing results."""
@@ -84,7 +86,7 @@ def run_solve(
         assignment = solve_assignment(
             n,
             feasible_groups,
-            solver=milp_solver,  # type: ignore[arg-type]
+            solver=milp_solver,
             mip_gap=mip_gap,
         )
     t3 = time.time()

@@ -2,7 +2,7 @@ import modal
 from groupthere_solver.fastapi_utils import webapp
 from groupthere_solver.models import Problem, ProblemReceivedResponse, Solution
 from groupthere_solver.solve import solve_problem
-
+from groupthere_solver.milp import MilpSolver
 
 # Single image with everything: GLPK, CBC, Mojo, and cuOpt.
 # Runtime parameters control which solver/group generator is used.
@@ -97,7 +97,7 @@ def solve_problem_remote(
     problem: Problem,
     *,
     use_mojo: bool = True,
-    milp_solver: str = "cbc",
+    milp_solver: MilpSolver = "cbc",
     mip_gap: float | None = None,
 ) -> Solution:
     return solve_problem(
@@ -114,7 +114,7 @@ def solve_problem_gpu(
     problem: Problem,
     *,
     use_mojo: bool = True,
-    milp_solver: str = "cuopt",
+    milp_solver: MilpSolver = "cuopt",
     mip_gap: float | None = None,
 ) -> Solution:
     return solve_problem(
@@ -139,7 +139,7 @@ def _benchmark_solve(
     problem_json: str,
     *,
     use_mojo: bool,
-    milp_solver: str,
+    milp_solver: MilpSolver,
     mip_gap: float | None,
 ) -> str:
     from groupthere_solver.benchmark_runner import run_solve
@@ -154,7 +154,7 @@ def benchmark_cpu_2c4g(
     problem_json: str,
     *,
     use_mojo: bool,
-    milp_solver: str,
+    milp_solver: MilpSolver,
     mip_gap: float | None,
 ) -> str:
     return _benchmark_solve(
@@ -167,7 +167,7 @@ def benchmark_cpu_4c8g(
     problem_json: str,
     *,
     use_mojo: bool,
-    milp_solver: str,
+    milp_solver: MilpSolver,
     mip_gap: float | None,
 ) -> str:
     return _benchmark_solve(
@@ -180,7 +180,7 @@ def benchmark_cpu_8c16g(
     problem_json: str,
     *,
     use_mojo: bool,
-    milp_solver: str,
+    milp_solver: MilpSolver,
     mip_gap: float | None,
 ) -> str:
     return _benchmark_solve(
@@ -193,7 +193,7 @@ def benchmark_gpu_a10g(
     problem_json: str,
     *,
     use_mojo: bool,
-    milp_solver: str,
+    milp_solver: MilpSolver,
     mip_gap: float | None,
 ) -> str:
     return _benchmark_solve(
@@ -206,7 +206,7 @@ def benchmark_gpu_a100(
     problem_json: str,
     *,
     use_mojo: bool,
-    milp_solver: str,
+    milp_solver: MilpSolver,
     mip_gap: float | None,
 ) -> str:
     return _benchmark_solve(
