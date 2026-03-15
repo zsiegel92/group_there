@@ -26,6 +26,7 @@ from server import (
     benchmark_cpu_8c16g,
     benchmark_gpu_a10g,
     benchmark_gpu_a100,
+    benchmark_gpu_a100_8c64g,
 )
 
 FIXTURES_DIR = Path(__file__).parent / "tests" / "fixtures"
@@ -49,6 +50,7 @@ CPU_CONFIGS: list[dict[str, Any]] = [
 GPU_CONFIGS: list[dict[str, Any]] = [
     {"label": "a10g", "fn": benchmark_gpu_a10g},
     {"label": "a100", "fn": benchmark_gpu_a100},
+    {"label": "a100_8c64g", "fn": benchmark_gpu_a100_8c64g},
 ]
 
 

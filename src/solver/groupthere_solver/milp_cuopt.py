@@ -103,10 +103,12 @@ def solve_assignment_cuopt(
     data_model.set_variable_types(var_types)
 
     # Configure solver
+    # Parameter names: remove CUOPT_ prefix and lowercase
+    # See https://docs.nvidia.com/cuopt/user-guide/latest/lp-milp-settings.html
     settings = SolverSettings()
     settings.set_parameter("time_limit", 600)
     if mip_gap is not None:
-        settings.set_parameter("relative_gap", mip_gap)
+        settings.set_parameter("mip_relative_gap", mip_gap)
 
     # Solve
     try:

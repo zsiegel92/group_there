@@ -212,3 +212,16 @@ def benchmark_gpu_a100(
     return _benchmark_solve(
         problem_json, use_mojo=use_mojo, milp_solver=milp_solver, mip_gap=mip_gap
     )
+
+
+@app.function(gpu="A100", cpu=8, memory=64_000, timeout=1800)
+def benchmark_gpu_a100_8c64g(
+    problem_json: str,
+    *,
+    use_mojo: bool,
+    milp_solver: MilpSolver,
+    mip_gap: float | None,
+) -> str:
+    return _benchmark_solve(
+        problem_json, use_mojo=use_mojo, milp_solver=milp_solver, mip_gap=mip_gap
+    )
