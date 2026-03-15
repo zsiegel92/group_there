@@ -135,9 +135,13 @@ export async function POST(request: NextRequest, props: Params) {
     });
 
     // Driver at pickupOrder 0, passengers at pickupOrder 1+
+    // Filter out the driver from passengers to avoid PK violation
+    const passengerIds = party.passengerUserIds.filter(
+      (id) => id !== party.driverUserId
+    );
     const memberRows = [
       { partyId, userId: party.driverUserId, pickupOrder: 0 },
-      ...party.passengerUserIds.map((passId, j) => ({
+      ...passengerIds.map((passId, j) => ({
         partyId,
         userId: passId,
         pickupOrder: j + 1,

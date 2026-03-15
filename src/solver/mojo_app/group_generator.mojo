@@ -193,6 +193,7 @@ def _check_group_into_slot(
     var best_drive_time = Float64(1e18)
     var best_driver_idx = -1
     var best_passenger_order = alloc[Int](k)
+    var candidate_passenger_order = alloc[Int](k)
     var passengers = alloc[Int](k)
 
     for di in range(num_group_drivers):
@@ -219,15 +220,18 @@ def _check_group_into_slot(
         if not can_all_ride:
             continue
 
-        # Find optimal pickup order
+        # Find optimal pickup order (writes into candidate buffer)
         var drive_time = _best_pickup_order_unsafe(
             driver_idx, passengers, num_passengers, n,
-            distance_to_dest, dist_matrix, best_passenger_order
+            distance_to_dest, dist_matrix, candidate_passenger_order
         )
 
         if drive_time < best_drive_time:
             best_drive_time = drive_time
             best_driver_idx = driver_idx
+            # Copy candidate order to best order
+            for pi in range(num_passengers):
+                best_passenger_order[pi] = candidate_passenger_order[pi]
 
     if best_driver_idx >= 0:
         # Write result to slot
@@ -244,6 +248,7 @@ def _check_group_into_slot(
     group_drivers.free()
     passengers.free()
     best_passenger_order.free()
+    candidate_passenger_order.free()
 
 
 def _best_pickup_order_unsafe(
