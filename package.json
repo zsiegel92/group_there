@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "concurrently \"pnpm run python:dev\" \"pnpm run next:dev\"",
     "dev:prod-python": "dotenv -e .env -- sh -c 'GROUPTHERE_SOLVER_API_URL=$PRODUCTION_GROUPTHERE_SOLVER_API_URL next dev'",
+    "docs:to-html-one": "scripts/shell/docs_md_to_html.sh",
+    "docs:to-html": "find docs -path 'docs/html' -prune -o -type f -name '*.md' -print0 | xargs -0 scripts/shell/docs_md_to_html.sh",
     "next:dev": "next dev",
     "build": "next build",
     "start": "next start",
