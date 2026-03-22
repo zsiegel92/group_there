@@ -6,7 +6,7 @@ interface as `generate_feasible_groups` in group_generator.py but delegates
 the heavy computation to a precompiled Mojo shared library.
 """
 
-import sys
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import ModuleType
 from typing import Protocol, TypeAlias, cast
@@ -15,12 +15,13 @@ from pydantic import RootModel
 from groupthere_solver.group_generator import FeasibleGroup
 from groupthere_solver.models import Tripper
 
-# Search paths for the Mojo shared library:
+# Search paths for the compiled Mojo shared library:
 # - Local dev: mojo_app/ relative to this file's parent (src/solver/)
 # - Modal: /mojo_app/ (absolute path in container)
-_MOJO_SEARCH_PATHS = [
-    str(Path(__file__).resolve().parent.parent / "mojo_app"),
-    "/mojo_app",
+_MOJO_MODULE_NAME = "group_generator_mojo"
+_MOJO_SEARCH_DIRS = [
+    Path(__file__).resolve().parent.parent / "mojo_app",
+    Path("/mojo_app"),
 ]
 
 
@@ -47,20 +48,36 @@ class MojoGroupGeneratorModule(Protocol):
     ) -> object: ...
 
 
-def _import_mojo_module() -> MojoGroupGeneratorModule:
-    """Import the Mojo group_generator module, handling path setup."""
-    for path in _MOJO_SEARCH_PATHS:
-        if path not in sys.path:
-            sys.path.insert(0, path)
+def _load_mojo_module() -> MojoGroupGeneratorModule:
+    """Load the compiled Mojo extension module directly from disk."""
+    for search_dir in _MOJO_SEARCH_DIRS:
+        module_path = search_dir / f"{_MOJO_MODULE_NAME}.so"
+        if not module_path.exists():
+            continue
 
-    try:
-        import max.mojo.importer  # noqa: F401  # pyright: ignore[reportMissingImports]
-    except ImportError:
-        pass  # If max isn't available, the pre-built .so may still work
+        spec = spec_from_file_location(_MOJO_MODULE_NAME, module_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Could not create import spec for {module_path}")
 
-    import group_generator  # type: ignore[import-untyped]
+        module = module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return cast(MojoGroupGeneratorModule, cast(ModuleType, module))
 
-    return cast(MojoGroupGeneratorModule, cast(ModuleType, group_generator))
+    searched_paths = ", ".join(
+        str(search_dir / f"{_MOJO_MODULE_NAME}.so") for search_dir in _MOJO_SEARCH_DIRS
+    )
+    raise ModuleNotFoundError(
+        f"Could not find compiled Mojo module {_MOJO_MODULE_NAME!r}. "
+        f"Searched: {searched_paths}"
+    )
+
+
+try:
+    _MOJO_MODULE: MojoGroupGeneratorModule | None = _load_mojo_module()
+    _MOJO_IMPORT_ERROR: Exception | None = None
+except Exception as exc:
+    _MOJO_MODULE = None
+    _MOJO_IMPORT_ERROR = exc
 
 
 def generate_feasible_groups_mojo(
@@ -76,7 +93,8 @@ def generate_feasible_groups_mojo(
     if n == 0:
         return []
 
-    mojo_mod = _import_mojo_module()
+    if _MOJO_MODULE is None:
+        raise RuntimeError("Failed to import compiled Mojo module") from _MOJO_IMPORT_ERROR
 
     # Pack data into flat lists for the Mojo interface
     car_fits = [t.car_fits for t in trippers]
@@ -94,7 +112,7 @@ def generate_feasible_groups_mojo(
                 )
 
     # Call Mojo
-    raw_groups = mojo_mod.generate_feasible_groups_mojo(
+    raw_groups = _MOJO_MODULE.generate_feasible_groups_mojo(
         n,
         car_fits,
         must_drive,

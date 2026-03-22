@@ -34,8 +34,8 @@ image = (
         [
             "cd /mojo_app && /root/.pixi/bin/pixi install",
             "cd /mojo_app && /root/.pixi/bin/pixi run pip install max",
-            "cd /mojo_app && /root/.pixi/bin/pixi run mojo build group_generator.mojo --emit shared-lib -o group_generator.so",
-            "file /mojo_app/group_generator.so",
+            "cd /mojo_app && /root/.pixi/bin/pixi run mojo build group_generator_mojo.mojo --emit shared-lib -o group_generator_mojo.so",
+            "file /mojo_app/group_generator_mojo.so",
         ]
     )
     # Python deps + cuOpt

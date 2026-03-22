@@ -16,16 +16,16 @@ comptime INTS_PER_SLOT = 3 + 2 * MAX_K  # valid, k, driver_idx, tripper[MAX_K], 
 
 
 @export
-def PyInit_group_generator() -> PythonObject:
+def PyInit_group_generator_mojo() -> PythonObject:
     try:
-        var m = PythonModuleBuilder("group_generator")
+        var m = PythonModuleBuilder("group_generator_mojo")
         m.def_function[generate_feasible_groups_mojo](
             "generate_feasible_groups_mojo",
             docstring="Generate all feasible carpooling groups (parallel).",
         )
         return m.finalize()
     except e:
-        abort(String("error creating group_generator module: ", e))
+        abort(String("error creating group_generator_mojo module: ", e))
 
 
 def generate_feasible_groups_mojo(

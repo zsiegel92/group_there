@@ -13,7 +13,7 @@
     "format-fix": "prettier --write .",
     "tsgo-check": "tsgo -p tsconfig.json --noEmit",
     "mojo:install": "cd src/solver/mojo_app && ~/.pixi/bin/pixi install",
-    "mojo:build": "cd src/solver/mojo_app && ~/.pixi/bin/pixi run mojo build group_generator.mojo --emit shared-lib -o group_generator.so",
+    "mojo:build": "cd src/solver/mojo_app && ~/.pixi/bin/pixi run mojo build group_generator_mojo.mojo --emit shared-lib -o group_generator_mojo.so",
     "mojo:test-local": "uv run --directory src/solver -m test_solve_fixture_local",
     "mojo:test-local-python": "uv run --directory src/solver -m test_solve_fixture_local -- --no-mojo",
     "python:type-check": "uv run --directory src/solver pyright",
