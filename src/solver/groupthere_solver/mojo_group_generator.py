@@ -8,7 +8,10 @@ the heavy computation to a precompiled Mojo shared library.
 
 import sys
 from pathlib import Path
+from types import ModuleType
+from typing import Protocol, TypeAlias, cast
 
+from pydantic import RootModel
 from groupthere_solver.group_generator import FeasibleGroup
 from groupthere_solver.models import Tripper
 
@@ -21,7 +24,30 @@ _MOJO_SEARCH_PATHS = [
 ]
 
 
-def _import_mojo_module():
+RawGroup: TypeAlias = tuple[
+    list[int],  # All tripper indices in the feasible group, in (sorted) subset order.
+    int,  # The chosen driver index within the original trippers list.
+    list[int],  # Passenger tripper indices in the optimal pickup order.
+    float,  # Total drive time in seconds for that driver + pickup order.
+]
+
+
+class RawGroupsResponse(RootModel[list[RawGroup]]):
+    pass
+
+
+class MojoGroupGeneratorModule(Protocol):
+    def generate_feasible_groups_mojo(
+        self,
+        n: int,
+        car_fits: list[int],
+        must_drive: list[bool],
+        distance_to_dest: list[float],
+        dist_matrix: list[float],
+    ) -> object: ...
+
+
+def _import_mojo_module() -> MojoGroupGeneratorModule:
     """Import the Mojo group_generator module, handling path setup."""
     for path in _MOJO_SEARCH_PATHS:
         if path not in sys.path:
@@ -34,7 +60,7 @@ def _import_mojo_module():
 
     import group_generator  # type: ignore[import-untyped]
 
-    return group_generator
+    return cast(MojoGroupGeneratorModule, cast(ModuleType, group_generator))
 
 
 def generate_feasible_groups_mojo(
@@ -68,18 +94,23 @@ def generate_feasible_groups_mojo(
                 )
 
     # Call Mojo
-    raw_groups = mojo_mod.generate_feasible_groups_mojo(  # pyright: ignore[reportAttributeAccessIssue]
-        n, car_fits, must_drive, distance_to_dest, dist_matrix
+    raw_groups = mojo_mod.generate_feasible_groups_mojo(
+        n,
+        car_fits,
+        must_drive,
+        distance_to_dest,
+        dist_matrix,
     )
+    validated_groups = RawGroupsResponse.model_validate(raw_groups)
 
     # Convert back to FeasibleGroup objects
     feasible_groups: list[FeasibleGroup] = []
-    for group_tuple in raw_groups:
-        tripper_indices = [int(x) for x in group_tuple[0]]
-        driver_index = int(group_tuple[1])
-        passenger_indices = [int(x) for x in group_tuple[2]]
-        drive_time = float(group_tuple[3])
-
+    for (
+        tripper_indices,
+        driver_index,
+        passenger_indices,
+        drive_time,
+    ) in validated_groups.root:
         feasible_groups.append(
             FeasibleGroup(
                 tripper_indices=tripper_indices,

@@ -16,7 +16,7 @@ comptime INTS_PER_SLOT = 3 + 2 * MAX_K  # valid, k, driver_idx, tripper[MAX_K], 
 
 
 @export
-fn PyInit_group_generator() -> PythonObject:
+def PyInit_group_generator() -> PythonObject:
     try:
         var m = PythonModuleBuilder("group_generator")
         m.def_function[generate_feasible_groups_mojo](
@@ -29,13 +29,26 @@ fn PyInit_group_generator() -> PythonObject:
 
 
 def generate_feasible_groups_mojo(
-    py_n: PythonObject,
-    py_car_fits: PythonObject,
-    py_must_drive: PythonObject,
-    py_distance_to_dest: PythonObject,
-    py_dist_matrix: PythonObject,
+    py_n: PythonObject,  # Int
+    py_car_fits: PythonObject,  # Python sequence[Int]
+    py_must_drive: PythonObject,  # Python sequence[Bool]
+    py_distance_to_dest: PythonObject,  # Python sequence[Float64]
+    py_dist_matrix: PythonObject,  # Python sequence[Float64]
 ) raises -> PythonObject:
-    """Main entry point called from Python."""
+    """
+    Main Python entry point.
+
+    Expected Python inputs:
+    - py_n: int
+    - py_car_fits: list[int] with length n
+    - py_must_drive: list[bool] with length n
+    - py_distance_to_dest: list[float] with length n
+    - py_dist_matrix: flat list[float] with length n * n in row-major order
+
+    Returns:
+    - list[tuple[list[int], int, list[int], float]]
+      Each tuple is (tripper_indices, driver_index, passenger_indices, drive_time).
+    """
     var n = Int(py=py_n)
 
     # Unpack into raw pointer arrays for thread-safe reads
@@ -46,7 +59,7 @@ def generate_feasible_groups_mojo(
 
     for i in range(n):
         car_fits[i] = Int(py=py_car_fits[i])
-        must_drive_flags[i] = Bool(py_must_drive[i])
+        must_drive_flags[i] = Bool(py=py_must_drive[i])
         distance_to_dest[i] = Float64(py=py_distance_to_dest[i])
 
     for i in range(n * n):
@@ -81,7 +94,7 @@ def generate_feasible_groups_mojo(
         drive_times[i] = 0.0
 
     @parameter
-    fn process_work_item(work_idx: Int) capturing:
+    def process_work_item(work_idx: Int) capturing:
         # Find which group size this work item belongs to
         var k = 0
         var subset_idx = 0
