@@ -24,6 +24,14 @@ image = (
     .run_commands("curl -fsSL https://pixi.sh/install.sh | sh")
     .env({"PATH": "/root/.pixi/bin:$PATH"})
     # Copy Mojo project and install toolchain (cached unless pixi.toml changes)
+    # Python deps + cuOpt
+    .uv_pip_install(
+        "cuopt-sh-client",
+        "cuopt-server-cu13",
+        "cuopt-cu13==25.10.*",
+        extra_index_url="https://pypi.nvidia.com",
+    )
+    .uv_sync()
     .add_local_dir(
         "mojo_app",
         remote_path="/mojo_app",
@@ -37,14 +45,6 @@ image = (
             "cd /mojo_app && /root/.pixi/bin/pixi run mojo build group_generator_mojo.mojo --emit shared-lib -o group_generator_mojo.so",
             "file /mojo_app/group_generator_mojo.so",
         ]
-    )
-    # Python deps + cuOpt
-    .uv_sync()
-    .uv_pip_install(
-        "cuopt-sh-client",
-        "cuopt-server-cu13",
-        "cuopt-cu13==25.10.*",
-        extra_index_url="https://pypi.nvidia.com",
     )
     # Python solver source (most frequently changed — last for fast rebuilds)
     .add_local_python_source("groupthere_solver", copy=True)
@@ -82,9 +82,9 @@ def solve_test_problem() -> Solution:
     )
 
     solution = solve_problem(mock_problem)
-    assert solutions_are_equivalent(solution, mock_problem_expected_solution), (
-        f"Expected solution with A driving B (5 min), but got: {solution}"
-    )
+    assert solutions_are_equivalent(
+        solution, mock_problem_expected_solution
+    ), f"Expected solution with A driving B (5 min), but got: {solution}"
     return solution
 
 

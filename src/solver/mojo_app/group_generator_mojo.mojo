@@ -49,6 +49,7 @@ def generate_feasible_groups_mojo(
     - list[tuple[list[int], int, list[int], float]]
       Each tuple is (tripper_indices, driver_index, passenger_indices, drive_time).
     """
+    print('Generating feasible groups in mojo environment!')
     var n = Int(py=py_n)
 
     # Unpack into raw pointer arrays for thread-safe reads
