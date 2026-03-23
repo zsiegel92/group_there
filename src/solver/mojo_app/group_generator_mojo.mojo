@@ -82,7 +82,7 @@ def generate_feasible_groups_mojo(
     py_must_drive: PythonObject,  # Python sequence[Bool]
     py_distance_to_dest: PythonObject,  # Python sequence[Float64]
     py_dist_matrix: PythonObject,  # Python sequence[Float64]
-) raises -> PythonObject: # list[tuple[list[int], int, list[int], float]]
+) raises -> PythonObject:  # list[tuple[list[int], int, list[int], float]]
     """
     Main Python entry point.
 
@@ -97,12 +97,12 @@ def generate_feasible_groups_mojo(
     - list[tuple[list[int], int, list[int], float]]
       Each tuple is (tripper_indices, driver_index, passenger_indices, drive_time).
     """
-    print('Constructing groups in Mojo.')
+    print("Constructing groups in Mojo.")
     var native_inputs = _unpack_python_inputs(
-        py_n, 
-        py_car_fits, 
-        py_must_drive, 
-        py_distance_to_dest, 
+        py_n,
+        py_car_fits,
+        py_must_drive,
+        py_distance_to_dest,
         py_dist_matrix,
     )
     var native_groups = _generate_feasible_groups_native(
@@ -194,7 +194,15 @@ def _generate_feasible_groups_native(
         # Check feasibility and write into pre-allocated slot
         var slot = result_slots + work_idx * INTS_PER_SLOT
         _check_group_into_slot(
-            group, k, n, car_fits, must_drive_flags, distance_to_dest, dist_matrix, slot, drive_times + work_idx
+            group,
+            k,
+            n,
+            car_fits,
+            must_drive_flags,
+            distance_to_dest,
+            dist_matrix,
+            slot,
+            drive_times + work_idx,
         )
 
         group.free()
@@ -207,7 +215,9 @@ def _generate_feasible_groups_native(
     return NativeGeneratedGroups(total_work, result_slots, drive_times)
 
 
-def _pack_generated_groups_py(groups: NativeGeneratedGroups) raises -> PythonObject:
+def _pack_generated_groups_py(
+    groups: NativeGeneratedGroups,
+) raises -> PythonObject:
     var py_results = Python.list()
     for wi in range(groups.total_work):
         var slot = groups.result_slots + wi * INTS_PER_SLOT
@@ -226,7 +236,12 @@ def _pack_generated_groups_py(groups: NativeGeneratedGroups) raises -> PythonObj
                 _ = py_passenger_indices.append(Int(slot[3 + MAX_K + pi]))
 
             _ = py_results.append(
-                Python.tuple(py_tripper_indices, driver_idx, py_passenger_indices, drive_time)
+                Python.tuple(
+                    py_tripper_indices,
+                    driver_idx,
+                    py_passenger_indices,
+                    drive_time,
+                )
             )
 
     return py_results^
@@ -314,8 +329,13 @@ def _check_group_into_slot(
 
         # Find optimal pickup order (writes into candidate buffer)
         var drive_time = _best_pickup_order_unsafe(
-            driver_idx, passengers, num_passengers, n,
-            distance_to_dest, dist_matrix, candidate_passenger_order
+            driver_idx,
+            passengers,
+            num_passengers,
+            n,
+            distance_to_dest,
+            dist_matrix,
+            candidate_passenger_order,
         )
 
         if drive_time < best_drive_time:
@@ -373,7 +393,14 @@ def _best_pickup_order_unsafe(
     var best_time = Float64(1e18)
 
     # Evaluate initial permutation
-    var t = _eval_route(driver_idx, perm, num_passengers, n, distance_to_dest, dist_matrix)
+    var t = _eval_route(
+        driver_idx,
+        perm,
+        num_passengers,
+        n,
+        distance_to_dest,
+        dist_matrix,
+    )
     if t < best_time:
         best_time = t
         for j in range(num_passengers):
@@ -392,7 +419,14 @@ def _best_pickup_order_unsafe(
                 perm[c[i]] = perm[i]
                 perm[i] = tmp
 
-            t = _eval_route(driver_idx, perm, num_passengers, n, distance_to_dest, dist_matrix)
+            t = _eval_route(
+                driver_idx,
+                perm,
+                num_passengers,
+                n,
+                distance_to_dest,
+                dist_matrix,
+            )
             if t < best_time:
                 best_time = t
                 for j in range(num_passengers):
@@ -432,6 +466,7 @@ def _eval_route(
 
 # --- Combinatorial utilities ---
 
+
 def _binomial(n: Int, k: Int) -> Int:
     """Compute C(n, k)."""
     if k > n or k < 0:
@@ -447,7 +482,12 @@ def _binomial(n: Int, k: Int) -> Int:
     return result
 
 
-def _unrank_combination(n: Int, k: Int, index: Int, out_buf: UnsafePointer[Int, MutAnyOrigin]):
+def _unrank_combination(
+    n: Int,
+    k: Int,
+    index: Int,
+    out_buf: UnsafePointer[Int, MutAnyOrigin],
+):
     """Generate the index-th k-subset of {0..n-1} into out_buf."""
     var offset = 0
     var remaining = index
