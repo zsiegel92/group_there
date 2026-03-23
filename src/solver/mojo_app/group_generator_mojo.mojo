@@ -15,6 +15,54 @@ comptime MAX_K = 6  # max group size (car_fits max=5 + driver)
 comptime INTS_PER_SLOT = 3 + 2 * MAX_K  # valid, k, driver_idx, tripper[MAX_K], passenger[MAX_K]
 
 
+struct NativeGroupGeneratorInputs:
+    var n: Int
+    var car_fits: UnsafePointer[Int, MutExternalOrigin]
+    var must_drive_flags: UnsafePointer[Bool, MutExternalOrigin]
+    var distance_to_dest: UnsafePointer[Float64, MutExternalOrigin]
+    var dist_matrix: UnsafePointer[Float64, MutExternalOrigin]
+
+    def __init__(
+        out self,
+        n: Int,
+        car_fits: UnsafePointer[Int, MutExternalOrigin],
+        must_drive_flags: UnsafePointer[Bool, MutExternalOrigin],
+        distance_to_dest: UnsafePointer[Float64, MutExternalOrigin],
+        dist_matrix: UnsafePointer[Float64, MutExternalOrigin],
+    ):
+        self.n = n
+        self.car_fits = car_fits
+        self.must_drive_flags = must_drive_flags
+        self.distance_to_dest = distance_to_dest
+        self.dist_matrix = dist_matrix
+
+    def __del__(deinit self):
+        self.car_fits.free()
+        self.must_drive_flags.free()
+        self.distance_to_dest.free()
+        self.dist_matrix.free()
+
+
+struct NativeGeneratedGroups:
+    var total_work: Int
+    var result_slots: UnsafePointer[Int64, MutExternalOrigin]
+    var drive_times: UnsafePointer[Float64, MutExternalOrigin]
+
+    def __init__(
+        out self,
+        total_work: Int,
+        result_slots: UnsafePointer[Int64, MutExternalOrigin],
+        drive_times: UnsafePointer[Float64, MutExternalOrigin],
+    ):
+        self.total_work = total_work
+        self.result_slots = result_slots
+        self.drive_times = drive_times
+
+    def __del__(deinit self):
+        self.result_slots.free()
+        self.drive_times.free()
+
+
 @export
 def PyInit_group_generator_mojo() -> PythonObject:
     try:
@@ -34,7 +82,7 @@ def generate_feasible_groups_mojo(
     py_must_drive: PythonObject,  # Python sequence[Bool]
     py_distance_to_dest: PythonObject,  # Python sequence[Float64]
     py_dist_matrix: PythonObject,  # Python sequence[Float64]
-) raises -> PythonObject:
+) raises -> PythonObject: # list[tuple[list[int], int, list[int], float]]
     """
     Main Python entry point.
 
@@ -49,10 +97,32 @@ def generate_feasible_groups_mojo(
     - list[tuple[list[int], int, list[int], float]]
       Each tuple is (tripper_indices, driver_index, passenger_indices, drive_time).
     """
-    print('Generating feasible groups in mojo environment!')
-    var n = Int(py=py_n)
+    print('Constructing groups in Mojo.')
+    var native_inputs = _unpack_python_inputs(
+        py_n, 
+        py_car_fits, 
+        py_must_drive, 
+        py_distance_to_dest, 
+        py_dist_matrix,
+    )
+    var native_groups = _generate_feasible_groups_native(
+        native_inputs.n,
+        native_inputs.car_fits,
+        native_inputs.must_drive_flags,
+        native_inputs.distance_to_dest,
+        native_inputs.dist_matrix,
+    )
+    return _pack_generated_groups_py(native_groups)
 
-    # Unpack into raw pointer arrays for thread-safe reads
+
+def _unpack_python_inputs(
+    py_n: PythonObject,
+    py_car_fits: PythonObject,
+    py_must_drive: PythonObject,
+    py_distance_to_dest: PythonObject,
+    py_dist_matrix: PythonObject,
+) raises -> NativeGroupGeneratorInputs:
+    var n = Int(py=py_n)
     var car_fits = alloc[Int](n)
     var must_drive_flags = alloc[Bool](n)
     var distance_to_dest = alloc[Float64](n)
@@ -66,6 +136,18 @@ def generate_feasible_groups_mojo(
     for i in range(n * n):
         dist_matrix[i] = Float64(py=py_dist_matrix[i])
 
+    return NativeGroupGeneratorInputs(
+        n, car_fits, must_drive_flags, distance_to_dest, dist_matrix
+    )
+
+
+def _generate_feasible_groups_native(
+    n: Int,
+    car_fits: UnsafePointer[Int, MutAnyOrigin],
+    must_drive_flags: UnsafePointer[Bool, MutAnyOrigin],
+    distance_to_dest: UnsafePointer[Float64, MutAnyOrigin],
+    dist_matrix: UnsafePointer[Float64, MutAnyOrigin],
+) -> NativeGeneratedGroups:
     # Find max capacity
     var max_capacity = 0
     for i in range(n):
@@ -119,14 +201,20 @@ def generate_feasible_groups_mojo(
 
     parallelize[process_work_item](total_work)
 
-    # Collect results into Python
+    size_offsets.free()
+    size_k_values.free()
+
+    return NativeGeneratedGroups(total_work, result_slots, drive_times)
+
+
+def _pack_generated_groups_py(groups: NativeGeneratedGroups) raises -> PythonObject:
     var py_results = Python.list()
-    for wi in range(total_work):
-        var slot = result_slots + wi * INTS_PER_SLOT
+    for wi in range(groups.total_work):
+        var slot = groups.result_slots + wi * INTS_PER_SLOT
         if slot[0] == 1:  # valid
             var k = Int(slot[1])
             var driver_idx = Int(slot[2])
-            var drive_time = drive_times[wi]
+            var drive_time = groups.drive_times[wi]
 
             var py_tripper_indices = Python.list()
             for ti in range(k):
@@ -140,16 +228,6 @@ def generate_feasible_groups_mojo(
             _ = py_results.append(
                 Python.tuple(py_tripper_indices, driver_idx, py_passenger_indices, drive_time)
             )
-
-    # Free allocated memory
-    car_fits.free()
-    must_drive_flags.free()
-    distance_to_dest.free()
-    dist_matrix.free()
-    size_offsets.free()
-    size_k_values.free()
-    result_slots.free()
-    drive_times.free()
 
     return py_results^
 

@@ -22,6 +22,7 @@
     "python:lint": "uv run --directory src/solver ruff check",
     "python:format": "uv run --directory src/solver ruff format --check",
     "python:format-fix": "uv run --directory src/solver ruff format",
+    "mojo:format": "cd src/solver/mojo_app && ~/.pixi/bin/pixi run mojo format group_generator_mojo.mojo",
     "python:test": "uv run --directory src/solver/tests pytest",
     "python:test-server": "uv run --directory src/solver modal run -m test_server",
     "python:test-fixture-remote": "uv run --directory src/solver modal run test_solve_fixture_remote.py",

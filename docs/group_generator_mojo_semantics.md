@@ -6,6 +6,7 @@ The shortest summary is:
 
 - The algorithm is basically the same as the Python version.
 - The big differences are about data representation, memory management, Python interop, and parallel execution.
+- The code now has a cleaner boundary: Python marshalling at the edge, typed native business logic in the middle.
 - Mojo in this file is being used much more like a systems language than like Python-with-types.
 
 ## Mental Model
@@ -21,9 +22,11 @@ If you read the Python version as:
 then the Mojo version does the same thing, but with these structural changes:
 
 - Input Python lists are copied into raw contiguous arrays.
+- Those native arrays are wrapped in a small owned input struct.
 - Each subset is represented by an integer `work_idx`.
 - A parallel worker reconstructs the subset from `work_idx`.
 - Each worker writes its answer into a pre-allocated fixed-size result slot.
+- Those result buffers are wrapped in a small owned output struct.
 - Only after parallel work finishes does the code rebuild Python lists/tuples.
 
 That design choice explains most of the "why does this look like C?" feeling in the file.
@@ -44,12 +47,13 @@ So when reading this file, it helps to think:
 
 ## File Structure
 
-The module has four main layers:
+The module has five main layers:
 
 1. Python extension export
 2. Python-to-native data unpacking
-3. parallel subset processing
-4. helper routines for route evaluation and subset unranking
+3. a typed native group-generation function
+4. native-to-Python result packing
+5. helper routines for route evaluation and subset unranking
 
 ## Key Mojo Semantics
 
@@ -105,7 +109,7 @@ This is more explicit than Python, where any function can raise.
 
 ## `PythonObject`
 
-The public entrypoint takes and returns `PythonObject` values:
+The public entrypoint still takes and returns `PythonObject` values:
 
 ```mojo
 py_n: PythonObject
@@ -129,6 +133,14 @@ That is roughly:
 - convert it into a native Mojo value of the requested type
 
 The inverse happens when constructing the return value with `Python.list()` and `Python.tuple(...)`.
+
+The important refactor in the current file is that `PythonObject` is now confined to boundary helpers:
+
+- `generate_feasible_groups_mojo(...)`
+- `_unpack_python_inputs(...)`
+- `_pack_generated_groups_py(...)`
+
+The core algorithm itself now lives in `_generate_feasible_groups_native(...)`, which has typed native arguments and a typed native return value.
 
 ## `var`
 
@@ -188,6 +200,55 @@ In this file, almost all hot-path data is stored this way:
 
 That is one of the core performance differences from the Python implementation.
 
+What changed in the refactor is ownership style:
+
+- temporary scratch arrays are still manually freed inline
+- longer-lived arrays are now grouped into small structs that free their buffers in `__del__`
+
+So the code is still low-level, but the cleanup responsibility is more localized.
+
+## Structs with owned native buffers
+
+The file now defines two wrapper structs:
+
+```mojo
+struct NativeGroupGeneratorInputs:
+    var n: Int
+    var car_fits: UnsafePointer[Int, MutExternalOrigin]
+    ...
+
+    def __del__(deinit self):
+        self.car_fits.free()
+        ...
+```
+
+and:
+
+```mojo
+struct NativeGeneratedGroups:
+    var total_work: Int
+    var result_slots: UnsafePointer[Int64, MutExternalOrigin]
+    var drive_times: UnsafePointer[Float64, MutExternalOrigin]
+
+    def __del__(deinit self):
+        self.result_slots.free()
+        self.drive_times.free()
+```
+
+This is an important Mojo idiom in the refactored code:
+
+- use a struct to make ownership explicit
+- store raw pointers as fields
+- use `MutExternalOrigin` for owned heap-backed pointer fields
+- free those buffers in `__del__`
+
+For a Python developer, the mental model is roughly:
+
+- a tiny object whose job is to own native buffers
+- with deterministic cleanup when the value is destroyed
+
+That is much closer to RAII in C++ or a resource-owning struct in Rust than to Python GC-based cleanup.
+
 ## `UnsafePointer[...]`
 
 Helper functions take parameters like:
@@ -207,6 +268,16 @@ You should read this as:
 If Python lists are "safe containers", these are much closer to `int*` in C or a mutable raw slice backed by unmanaged memory.
 
 `MutAnyOrigin` is part of the pointer origin/lifetime system. For understanding this file, the main point is just that the function accepts mutable pointers regardless of where they originated.
+
+The refactored file now uses two different origin styles for two different roles:
+
+- `MutExternalOrigin` on struct fields that own heap allocations
+- `MutAnyOrigin` on helper-function parameters that should accept compatible mutable pointers from callers
+
+That is a useful distinction:
+
+- field types encode how the struct stores data
+- helper signatures stay flexible about pointer provenance
 
 ## Pointer arithmetic
 
@@ -316,6 +387,23 @@ This part reads much more like Python than like Java or C++.
 
 So the syntax jump is mostly not about loops and conditionals. It is about types, memory, and interop.
 
+## Boundary split: interop vs business logic
+
+One of the biggest readability improvements in the current file is that the top-level entrypoint is no longer doing everything.
+
+It now follows this shape:
+
+1. `generate_feasible_groups_mojo(...)` receives Python objects
+2. `_unpack_python_inputs(...)` converts them into `NativeGroupGeneratorInputs`
+3. `_generate_feasible_groups_native(...)` runs the actual algorithm
+4. `_pack_generated_groups_py(...)` rebuilds Python lists/tuples
+
+That separation is worth preserving. It keeps:
+
+- Python interop code in one place
+- native business logic in one place
+- ownership of native buffers explicit in the intermediate structs
+
 ## Mapping the Mojo Entry Point to the Python Version
 
 The public Mojo function corresponds roughly to `generate_feasible_groups(...)` in Python, but with a different API shape.
@@ -330,6 +418,7 @@ Mojo version:
 
 - accepts primitive Python lists and a flat matrix
 - converts them into native arrays
+- runs the algorithm in a typed native helper
 - returns Python tuples/lists rather than `FeasibleGroup` objects
 
 The Python bridge in [`mojo_group_generator.py`](/Users/zach/Dropbox/code/groupthere/src/solver/groupthere_solver/mojo_group_generator.py) does the translation.
@@ -377,6 +466,28 @@ This is a better fit for parallelization because:
 - workers do not need to coordinate through a shared iterator
 
 This is one of the main algorithm-structure changes between the implementations.
+
+## `_generate_feasible_groups_native`: the actual business logic
+
+This function is now the cleanest "core logic" entrypoint in the module:
+
+```mojo
+def _generate_feasible_groups_native(
+    n: Int,
+    car_fits: UnsafePointer[Int, MutAnyOrigin],
+    must_drive_flags: UnsafePointer[Bool, MutAnyOrigin],
+    distance_to_dest: UnsafePointer[Float64, MutAnyOrigin],
+    dist_matrix: UnsafePointer[Float64, MutAnyOrigin],
+) -> NativeGeneratedGroups:
+```
+
+That signature is useful because it says exactly what the algorithm needs:
+
+- one scalar size
+- four native read buffers
+- one native result value
+
+No `PythonObject` values appear in the business-logic signature anymore.
 
 ## `_check_group_into_slot`: Python `best_group` logic without objects
 
@@ -504,19 +615,43 @@ var can_all_ride = True
 
 Nothing special here; these behave as you would expect.
 
+## `__del__` and deterministic cleanup
+
+```mojo
+def __del__(deinit self):
+    self.result_slots.free()
+    self.drive_times.free()
+```
+
+`__del__` here is not Python-style "maybe the GC calls this eventually". In this file it is being used as deterministic native cleanup for owned resources.
+
+The most useful beginner reading is:
+
+- if a struct owns a raw allocation, `__del__` is where cleanup belongs
+
+That makes the refactored code easier to maintain because the buffer-freeing logic for long-lived values is attached to the type that owns the buffers.
+
 ## How to read this file efficiently
 
 A good reading order is:
 
 1. [`generate_feasible_groups_mojo`](/Users/zach/Dropbox/code/groupthere/src/solver/mojo_app/group_generator_mojo.mojo)
-2. `_check_group_into_slot`
-3. `_best_pickup_order_unsafe`
-4. `_eval_route`
-5. `_unrank_combination`
+2. `NativeGroupGeneratorInputs`
+3. `NativeGeneratedGroups`
+4. `_unpack_python_inputs`
+5. `_generate_feasible_groups_native`
+6. `_pack_generated_groups_py`
+7. `_check_group_into_slot`
+8. `_best_pickup_order_unsafe`
+9. `_eval_route`
+10. `_unrank_combination`
 
 If you do that, the file becomes:
 
 - entrypoint and marshalling
+- owned native data containers
+- typed native algorithm
+- Python repacking
 - group feasibility
 - route optimization
 - subset reconstruction
@@ -530,6 +665,7 @@ instead of one long block of unfamiliar syntax.
 | `list[int]` | `alloc[Int](n)` plus manual `free()` |
 | `dict[(i, j)] -> float` | flat `Float64` matrix with `i * n + j` indexing |
 | generator/iterator over subsets | integer `work_idx` plus `_unrank_combination(...)` |
+| dataclass/object holding native resources | struct with pointer fields and `__del__` |
 | build result objects incrementally | write into pre-allocated fixed slots |
 | `itertools.permutations` | Heap's algorithm over mutable arrays |
 | Python object return values | explicit `Python.list()` / `Python.tuple(...)` construction |
@@ -544,8 +680,10 @@ Some things are specifically Mojo:
 - `PythonModuleBuilder`
 - `PythonObject`
 - `raises`
+- `MutExternalOrigin`
 - `@parameter`
 - `capturing`
+- `__del__(deinit self)`
 - return ownership syntax like `^`
 
 Some things are not uniquely Mojo so much as "native systems programming written in Mojo":
