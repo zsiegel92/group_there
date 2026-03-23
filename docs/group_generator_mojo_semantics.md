@@ -242,6 +242,14 @@ This is an important Mojo idiom in the refactored code:
 - use `MutExternalOrigin` for owned heap-backed pointer fields
 - free those buffers in `__del__`
 
+The confusing part is the name. In this file, `MutExternalOrigin` does **not** mean:
+
+- "this memory came from Python"
+- "this pointer points outside the process"
+- "this is borrowed from some external library"
+
+Here it is better read operationally: this struct field is storing a mutable raw pointer whose provenance is not tied to a narrow local stack lifetime, and the struct is responsible for eventually freeing that allocation. In other words, the important fact in this file is not the exact formal lifetime theory behind the name, but that these pointer-typed fields are the struct's owned heap resources.
+
 For a Python developer, the mental model is roughly:
 
 - a tiny object whose job is to own native buffers
@@ -278,6 +286,13 @@ That is a useful distinction:
 
 - field types encode how the struct stores data
 - helper signatures stay flexible about pointer provenance
+
+You can see that split directly in the code:
+
+- [`NativeGroupGeneratorInputs.car_fits`](/Users/zach/Dropbox/code/groupthere/src/solver/mojo_app/group_generator_mojo.mojo#L20) is stored on the struct as `UnsafePointer[Int, MutExternalOrigin]`
+- [`_generate_feasible_groups_native(...)`](/Users/zach/Dropbox/code/groupthere/src/solver/mojo_app/group_generator_mojo.mojo#L171) accepts `UnsafePointer[..., MutAnyOrigin]` parameters so callers can pass in compatible mutable pointers without matching one exact field-origin spelling
+
+That is why the same underlying allocation may appear as `MutExternalOrigin` in a struct field and then be passed to a helper that accepts `MutAnyOrigin`: the first is about how the struct stores owned pointer state, and the second is about a more permissive function interface.
 
 ## Pointer arithmetic
 
