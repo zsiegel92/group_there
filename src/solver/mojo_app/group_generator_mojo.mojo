@@ -9,6 +9,7 @@ from std.os import abort
 from std.python import Python, PythonObject
 from std.python.bindings import PythonModuleBuilder
 from std.algorithm import parallelize
+from std.iter import StopIteration
 
 
 comptime MAX_K = 6  # max group size (car_fits max=5 + driver)
@@ -98,6 +99,84 @@ struct BinomialLookup:
         if k < 0 or k > n or n > self.max_n or k > self.max_k:
             return 0
         return self.table[n * self.stride + k]
+
+
+struct HeapPermutationIterator:
+    comptime Element = UnsafePointer[Int, MutExternalOrigin]
+
+    var num_items: Int
+    var perm: UnsafePointer[Int, MutExternalOrigin]
+    var c: UnsafePointer[Int, MutExternalOrigin]
+    var i: Int
+    var yielded_initial: Bool
+
+    def __init__(
+        out self,
+        items: UnsafePointer[Int, MutAnyOrigin],
+        num_items: Int,
+    ):
+        self.num_items = num_items
+        self.perm = alloc[Int](num_items)
+        self.c = alloc[Int](num_items)
+        self.i = 0
+        self.yielded_initial = False
+
+        for idx in range(num_items):
+            self.perm[idx] = items[idx]
+            self.c[idx] = 0
+
+    def __del__(deinit self):
+        self.perm.free()
+        self.c.free()
+
+    def __has_next__(self) -> Bool:
+        return not (self.yielded_initial and self.i >= self.num_items)
+
+    def __next__(mut self) raises StopIteration -> Self.Element:
+        if not self.yielded_initial:
+            self.yielded_initial = True
+            return self.perm
+
+        while self.i < self.num_items:
+            if self.c[self.i] < self.i:
+                if self.i % 2 == 0:
+                    var tmp = self.perm[0]
+                    self.perm[0] = self.perm[self.i]
+                    self.perm[self.i] = tmp
+                else:
+                    var swap_idx = self.c[self.i]
+                    var tmp = self.perm[swap_idx]
+                    self.perm[swap_idx] = self.perm[self.i]
+                    self.perm[self.i] = tmp
+
+                self.c[self.i] += 1
+                self.i = 0
+                return self.perm
+
+            self.c[self.i] = 0
+            self.i += 1
+
+        raise StopIteration()
+
+
+struct HeapPermutations:
+    comptime IteratorType[
+        iterable_mut: Bool, //, iterable_origin: Origin[mut=iterable_mut]
+    ] = HeapPermutationIterator
+
+    var items: UnsafePointer[Int, MutAnyOrigin]
+    var num_items: Int
+
+    def __init__(
+        out self,
+        items: UnsafePointer[Int, MutAnyOrigin],
+        num_items: Int,
+    ):
+        self.items = items
+        self.num_items = num_items
+
+    def __iter__(ref self) -> Self.IteratorType[origin_of(self)]:
+        return HeapPermutationIterator(self.items, self.num_items)
 
 
 @export
@@ -419,65 +498,21 @@ def _best_pickup_order_unsafe(
         best_order_out[0] = p
         return dist_matrix[driver_idx * n + p] + distance_to_dest[p]
 
-    # Working permutation array
-    var perm = alloc[Int](num_passengers)
-    for i in range(num_passengers):
-        perm[i] = passengers[i]
-
-    var c = alloc[Int](num_passengers)
-    for i in range(num_passengers):
-        c[i] = 0
-
     var best_time = Float64(1e18)
+    for perm in HeapPermutations(passengers, num_passengers):
+        var t = _eval_route(
+            driver_idx,
+            perm,
+            num_passengers,
+            n,
+            distance_to_dest,
+            dist_matrix,
+        )
+        if t < best_time:
+            best_time = t
+            for j in range(num_passengers):
+                best_order_out[j] = perm[j]
 
-    # Evaluate initial permutation
-    var t = _eval_route(
-        driver_idx,
-        perm,
-        num_passengers,
-        n,
-        distance_to_dest,
-        dist_matrix,
-    )
-    if t < best_time:
-        best_time = t
-        for j in range(num_passengers):
-            best_order_out[j] = perm[j]
-
-    # Heap's algorithm
-    var i = 0
-    while i < num_passengers:
-        if c[i] < i:
-            if i % 2 == 0:
-                var tmp = perm[0]
-                perm[0] = perm[i]
-                perm[i] = tmp
-            else:
-                var tmp = perm[c[i]]
-                perm[c[i]] = perm[i]
-                perm[i] = tmp
-
-            t = _eval_route(
-                driver_idx,
-                perm,
-                num_passengers,
-                n,
-                distance_to_dest,
-                dist_matrix,
-            )
-            if t < best_time:
-                best_time = t
-                for j in range(num_passengers):
-                    best_order_out[j] = perm[j]
-
-            c[i] += 1
-            i = 0
-        else:
-            c[i] = 0
-            i += 1
-
-    perm.free()
-    c.free()
     return best_time
 
 
