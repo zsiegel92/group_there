@@ -63,6 +63,43 @@ struct NativeGeneratedGroups:
         self.drive_times.free()
 
 
+struct BinomialLookup:
+    var max_n: Int
+    var max_k: Int
+    var stride: Int
+    var table: UnsafePointer[Int, MutExternalOrigin]
+
+    def __init__(out self, max_n: Int, max_k: Int):
+        self.max_n = max_n
+        self.max_k = max_k
+        self.stride = max_k + 1
+        self.table = alloc[Int]((max_n + 1) * self.stride)
+
+        for n in range(max_n + 1):
+            for k in range(self.stride):
+                self._set(n, k, 0)
+
+        for n in range(max_n + 1):
+            self._set(n, 0, 1)
+            var upper_k = min(n, max_k)
+            for k in range(1, upper_k + 1):
+                if k == n:
+                    self._set(n, k, 1)
+                else:
+                    self._set(n, k, self.get(n - 1, k - 1) + self.get(n - 1, k))
+
+    def __del__(deinit self):
+        self.table.free()
+
+    def _set(mut self, n: Int, k: Int, value: Int):
+        self.table[n * self.stride + k] = value
+
+    def get(self, n: Int, k: Int) -> Int:
+        if k < 0 or k > n or n > self.max_n or k > self.max_k:
+            return 0
+        return self.table[n * self.stride + k]
+
+
 @export
 def PyInit_group_generator_mojo() -> PythonObject:
     try:
@@ -157,6 +194,7 @@ def _generate_feasible_groups_native(
 
     # Compute total work items across all group sizes
     var num_sizes = min(n, max_group_size)
+    var binomial_lookup = BinomialLookup(n, num_sizes)
     var size_offsets = alloc[Int](num_sizes + 1)
     var size_k_values = alloc[Int](num_sizes + 1)
     var total_work = 0
@@ -164,7 +202,7 @@ def _generate_feasible_groups_native(
     for k in range(1, num_sizes + 1):
         size_offsets[k - 1] = total_work
         size_k_values[k - 1] = k
-        total_work += _binomial(n, k)
+        total_work += binomial_lookup.get(n, k)
     size_offsets[num_sizes] = total_work  # sentinel
 
     # Allocate flat result slots — one per work item
@@ -189,7 +227,7 @@ def _generate_feasible_groups_native(
 
         # Generate the subset from its combinatorial index
         var group = alloc[Int](k)
-        _unrank_combination(n, k, subset_idx, group)
+        _unrank_combination(n, k, subset_idx, group, binomial_lookup)
 
         # Check feasibility and write into pre-allocated slot
         var slot = result_slots + work_idx * INTS_PER_SLOT
@@ -466,27 +504,12 @@ def _eval_route(
 
 # --- Combinatorial utilities ---
 
-
-def _binomial(n: Int, k: Int) -> Int:
-    """Compute C(n, k)."""
-    if k > n or k < 0:
-        return 0
-    if k == 0 or k == n:
-        return 1
-    var kk = k
-    if kk > n - kk:
-        kk = n - kk
-    var result = 1
-    for i in range(kk):
-        result = result * (n - i) // (i + 1)
-    return result
-
-
 def _unrank_combination(
     n: Int,
     k: Int,
     index: Int,
     out_buf: UnsafePointer[Int, MutAnyOrigin],
+    binomial_lookup: BinomialLookup,
 ):
     """Generate the index-th k-subset of {0..n-1} into out_buf."""
     var offset = 0
@@ -494,7 +517,7 @@ def _unrank_combination(
 
     for pos in range(k):
         while offset < n:
-            var count = _binomial(n - offset - 1, k - pos - 1)
+            var count = binomial_lookup.get(n - offset - 1, k - pos - 1)
             if remaining < count:
                 out_buf[pos] = offset
                 offset += 1
