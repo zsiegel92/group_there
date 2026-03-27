@@ -13,23 +13,35 @@ import { SignIn } from "../sign-in";
 import { SignOut } from "../sign-out";
 
 function SignedInDetails({ user }: { user: User }) {
+  const showMobileIdentity = Boolean(user.image);
+
   return (
     <>
-      <div className="flex items-center gap-3">
-        {user.image && (
-          <Image
-            src={user.image}
-            alt={user.name ?? "User"}
-            width={32}
-            height={32}
-            className="rounded-full ring-2 ring-border"
-          />
-        )}
-        <div className="hidden sm:block text-sm">
-          <div className="font-medium">{user.name}</div>
-          <div className="text-muted-foreground text-xs">{user.email}</div>
+      {(showMobileIdentity || user.name || user.email) && (
+        <div
+          className={
+            showMobileIdentity
+              ? "flex min-w-0 items-center gap-3"
+              : "hidden min-w-0 items-center gap-3 sm:flex"
+          }
+        >
+          {user.image && (
+            <Image
+              src={user.image}
+              alt={user.name ?? "User"}
+              width={32}
+              height={32}
+              className="rounded-full ring-2 ring-border"
+            />
+          )}
+          <div className="hidden min-w-0 sm:block text-sm">
+            <div className="truncate font-medium">{user.name}</div>
+            <div className="text-muted-foreground truncate text-xs">
+              {user.email}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
       <SignOut />
     </>
   );
@@ -60,7 +72,7 @@ function LoggedInNavParts({ user }: { user: User }) {
           </Link>
         );
       })}
-      <div className="ml-auto flex items-center gap-2 sm:gap-4">
+      <div className="ml-auto flex min-w-0 items-center gap-3 sm:gap-4">
         <SignedInDetails user={user} />
       </div>
     </>
@@ -76,11 +88,21 @@ function LoggedOutNavParts({
 }) {
   const pathname = usePathname();
   const isLoginPage = pathname === "/login";
+  const showSpinner = !sessionChecked && isPending;
+  const showAuth = !isLoginPage && sessionChecked;
+
+  if (!showSpinner && !showAuth) {
+    return null;
+  }
 
   return (
-    <div className="ml-auto flex items-center gap-2 sm:gap-4">
-      {!sessionChecked && isPending && <Spinner />}
-      {!isLoginPage && sessionChecked && <SignIn />}
+    <div className="flex w-full min-w-0 items-center gap-2 sm:ml-auto sm:w-auto sm:justify-end sm:gap-4">
+      {showSpinner && <Spinner />}
+      {showAuth && (
+        <div className="min-w-0 flex-1 sm:flex-none">
+          <SignIn variant="nav" />
+        </div>
+      )}
     </div>
   );
 }
@@ -97,8 +119,8 @@ export function ClientNav() {
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center gap-3 sm:gap-8">
-          <Link href="/" className="flex items-center gap-2">
+        <div className="flex min-h-16 flex-wrap items-center gap-x-3 gap-y-3 py-3 sm:h-16 sm:flex-nowrap sm:gap-8 sm:py-0">
+          <Link href="/" className="flex shrink-0 items-center gap-2">
             <span className="text-lg sm:text-xl font-bold">GROUPTHERE</span>
           </Link>
           {!session?.user || isPending ? (

@@ -5,12 +5,17 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { emailOtp, signIn } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
 
 type SignInProps = {
   callbackUrl?: string;
+  variant?: "nav" | "page";
 };
 
-export function SignIn({ callbackUrl = "/" }: SignInProps) {
+export function SignIn({
+  callbackUrl = "/",
+  variant = "nav",
+}: SignInProps) {
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -18,6 +23,35 @@ export function SignIn({ callbackUrl = "/" }: SignInProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [githubError, setGithubError] = useState(false);
+  const isPage = variant === "page";
+
+  const resetEmailFlow = () => {
+    setShowEmailForm(false);
+    setEmail("");
+    setOtp("");
+    setOtpSent(false);
+    setError("");
+  };
+
+  const returnToEmailStep = () => {
+    setOtpSent(false);
+    setOtp("");
+    setError("");
+  };
+
+  const containerClassName = cn(
+    "flex w-full min-w-0 flex-col gap-3",
+    isPage && "rounded-2xl border bg-card px-4 py-5 shadow-sm sm:px-6 sm:py-6"
+  );
+
+  const stackedRowClassName =
+    "flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-start";
+  const actionGroupClassName =
+    "flex w-full flex-col gap-2 sm:w-auto sm:flex-row";
+  const choiceButtonClassName = cn(
+    "w-full sm:w-auto",
+    isPage && "sm:flex-1"
+  );
 
   const handleGithubSignIn = async () => {
     setGithubError(false);
@@ -94,8 +128,8 @@ export function SignIn({ callbackUrl = "/" }: SignInProps) {
 
   if (showEmailForm) {
     return (
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className={containerClassName}>
+        <div className={stackedRowClassName}>
           {!otpSent ? (
             <>
               <Input
@@ -104,26 +138,31 @@ export function SignIn({ callbackUrl = "/" }: SignInProps) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
-                className="w-full sm:w-64"
+                autoComplete="email"
+                className={cn(
+                  "w-full min-w-0",
+                  isPage ? "sm:flex-1" : "sm:w-64"
+                )}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     void handleSendOTP();
                   }
                 }}
               />
-              <div className="flex gap-2">
-                <Button onClick={() => void handleSendOTP()} disabled={loading}>
+              <div className={actionGroupClassName}>
+                <Button
+                  onClick={() => void handleSendOTP()}
+                  disabled={loading}
+                  className="w-full sm:w-auto"
+                >
                   {loading ? "Sending..." : "Send code"}
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    setShowEmailForm(false);
-                    setEmail("");
-                    setError("");
-                  }}
+                  onClick={resetEmailFlow}
                   disabled={loading}
+                  className="w-full sm:w-auto"
                 >
                   Cancel
                 </Button>
@@ -135,32 +174,38 @@ export function SignIn({ callbackUrl = "/" }: SignInProps) {
                 type="text"
                 placeholder="Enter 6-digit code"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value)}
+                onChange={(e) =>
+                  setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                }
                 disabled={loading}
                 maxLength={6}
-                className="w-full sm:w-48"
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                className={cn(
+                  "w-full min-w-0",
+                  isPage ? "sm:flex-1" : "sm:w-48",
+                  "text-center tracking-[0.3em]"
+                )}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     void handleVerifyOTP();
                   }
                 }}
               />
-              <div className="flex gap-2">
+              <div className={actionGroupClassName}>
                 <Button
                   onClick={() => void handleVerifyOTP()}
                   disabled={loading}
+                  className="w-full sm:w-auto"
                 >
                   {loading ? "Verifying..." : "Verify"}
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    setOtpSent(false);
-                    setOtp("");
-                    setError("");
-                  }}
+                  onClick={returnToEmailStep}
                   disabled={loading}
+                  className="w-full sm:w-auto"
                 >
                   Back
                 </Button>
@@ -174,9 +219,12 @@ export function SignIn({ callbackUrl = "/" }: SignInProps) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <Button onClick={() => void handleGithubSignIn()}>
+    <div className={containerClassName}>
+      <div className="flex w-full flex-col gap-2 sm:flex-row">
+        <Button
+          onClick={() => void handleGithubSignIn()}
+          className={choiceButtonClassName}
+        >
           <svg
             className="size-4"
             fill="currentColor"
@@ -198,6 +246,7 @@ export function SignIn({ callbackUrl = "/" }: SignInProps) {
             setGithubError(false);
           }}
           variant="outline"
+          className={choiceButtonClassName}
         >
           Email
         </Button>
