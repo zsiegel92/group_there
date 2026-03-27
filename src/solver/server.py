@@ -42,8 +42,8 @@ image = (
         [
             "cd /mojo_app && /root/.pixi/bin/pixi install",
             "cd /mojo_app && /root/.pixi/bin/pixi run pip install max",
-            "cd /mojo_app && /root/.pixi/bin/pixi run mojo build group_generator_mojo.mojo --emit shared-lib -o group_generator_mojo.so",
-            "file /mojo_app/group_generator_mojo.so",
+            "cd /mojo_app && /root/.pixi/bin/pixi run mojo build group_generator_mojo_python_interface.mojo --emit shared-lib -o group_generator_mojo_python_interface.so",
+            "file /mojo_app/group_generator_mojo_python_interface.so",
         ]
     )
     # Python solver source (most frequently changed — last for fast rebuilds)

@@ -1,6 +1,6 @@
-# `group_generator_mojo.mojo` Explained for Python Developers
+# `group_generator_mojo_python_interface.mojo` Explained for Python Developers
 
-This note explains the Mojo module [`group_generator_mojo.mojo`](/Users/zach/Dropbox/code/groupthere/src/solver/mojo_app/group_generator_mojo.mojo) assuming you already understand the Python implementation in [`group_generator.py`](/Users/zach/Dropbox/code/groupthere/src/solver/groupthere_solver/group_generator.py).
+This note explains the Mojo module [`group_generator_mojo_python_interface.mojo`](/Users/zach/Dropbox/code/groupthere/src/solver/mojo_app/group_generator_mojo_python_interface.mojo) assuming you already understand the Python implementation in [`group_generator.py`](/Users/zach/Dropbox/code/groupthere/src/solver/groupthere_solver/group_generator.py).
 
 The shortest summary is:
 
@@ -79,14 +79,14 @@ Python analogy: imagine deciding in advance that every result row is a fixed-siz
 
 ```mojo
 @export
-def PyInit_group_generator_mojo() -> PythonObject:
+def PyInit_group_generator_mojo_python_interface() -> PythonObject:
 ```
 
 This is the Python extension module entrypoint. It is conceptually similar to the initialization function that a CPython native extension exports.
 
 Inside it:
 
-- `PythonModuleBuilder("group_generator_mojo")` creates a Python module object
+- `PythonModuleBuilder("group_generator_mojo_python_interface")` creates a Python module object
 - `m.def_function[...]("generate_feasible_groups_mojo", ...)` exposes a Mojo function as a Python-callable function
 - `m.finalize()` returns the built Python module
 
@@ -289,8 +289,8 @@ That is a useful distinction:
 
 You can see that split directly in the code:
 
-- [`NativeGroupGeneratorInputs.car_fits`](/Users/zach/Dropbox/code/groupthere/src/solver/mojo_app/group_generator_mojo.mojo#L20) is stored on the struct as `UnsafePointer[Int, MutExternalOrigin]`
-- [`_generate_feasible_groups_native(...)`](/Users/zach/Dropbox/code/groupthere/src/solver/mojo_app/group_generator_mojo.mojo#L171) accepts `UnsafePointer[..., MutAnyOrigin]` parameters so callers can pass in compatible mutable pointers without matching one exact field-origin spelling
+- [`NativeGroupGeneratorInputs.car_fits`](/Users/zach/Dropbox/code/groupthere/src/solver/mojo_app/group_generator_mojo_python_interface.mojo#L20) is stored on the struct as `UnsafePointer[Int, MutExternalOrigin]`
+- [`_generate_feasible_groups_native(...)`](/Users/zach/Dropbox/code/groupthere/src/solver/mojo_app/group_generator_mojo_python_interface.mojo#L171) accepts `UnsafePointer[..., MutAnyOrigin]` parameters so callers can pass in compatible mutable pointers without matching one exact field-origin spelling
 
 That is why the same underlying allocation may appear as `MutExternalOrigin` in a struct field and then be passed to a helper that accepts `MutAnyOrigin`: the first is about how the struct stores owned pointer state, and the second is about a more permissive function interface.
 
@@ -650,7 +650,7 @@ That makes the refactored code easier to maintain because the buffer-freeing log
 
 A good reading order is:
 
-1. [`generate_feasible_groups_mojo`](/Users/zach/Dropbox/code/groupthere/src/solver/mojo_app/group_generator_mojo.mojo)
+1. [`generate_feasible_groups_mojo`](/Users/zach/Dropbox/code/groupthere/src/solver/mojo_app/group_generator_mojo_python_interface.mojo)
 2. `NativeGroupGeneratorInputs`
 3. `NativeGeneratedGroups`
 4. `_unpack_python_inputs`
