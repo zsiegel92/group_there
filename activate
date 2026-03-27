@@ -1,2 +1,1 @@
-export UV_PROJECT=src/solver
-source src/solver/.venv/bin/activate
+eval "$(pixi shell-hook --manifest-path src/solver/pyproject.toml --shell zsh)"

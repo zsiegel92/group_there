@@ -94,7 +94,9 @@ def generate_feasible_groups_mojo(
         return []
 
     if _MOJO_MODULE is None:
-        raise RuntimeError("Failed to import compiled Mojo module") from _MOJO_IMPORT_ERROR
+        raise RuntimeError(
+            "Failed to import compiled Mojo module"
+        ) from _MOJO_IMPORT_ERROR
 
     # Pack data into flat lists for the Mojo interface
     car_fits = [t.car_fits for t in trippers]

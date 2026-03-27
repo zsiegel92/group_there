@@ -12,10 +12,7 @@ type SignInProps = {
   variant?: "nav" | "page";
 };
 
-export function SignIn({
-  callbackUrl = "/",
-  variant = "nav",
-}: SignInProps) {
+export function SignIn({ callbackUrl = "/", variant = "nav" }: SignInProps) {
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -48,10 +45,7 @@ export function SignIn({
     "flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-start";
   const actionGroupClassName =
     "flex w-full flex-col gap-2 sm:w-auto sm:flex-row";
-  const choiceButtonClassName = cn(
-    "w-full sm:w-auto",
-    isPage && "sm:flex-1"
-  );
+  const choiceButtonClassName = cn("w-full sm:w-auto", isPage && "sm:flex-1");
 
   const handleGithubSignIn = async () => {
     setGithubError(false);
