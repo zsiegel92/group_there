@@ -64,3 +64,4 @@ next-env.d.ts
 *.dylib
 
 docs/html/
+test-results/
