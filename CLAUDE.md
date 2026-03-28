@@ -15,21 +15,21 @@ The core setup will be a Python service that does the optimization, we will use 
 
 # Python guidelines
 
-- Always activate the venv with `./activate` before running Python and uv commands
+- Always initialize the shared Pixi env with `pnpm run python-mojo:init` and activate it with `source activate` before running Python or Mojo commands
 - Always type-check and lint Python code with:
 
 ```sh
-uv run --directory src/solver ty check
-uv run --directory src/solver ruff check
-uv run --directory src/solver ruff format --check
+pnpm run python:type-check
+pnpm run python:lint
+pnpm run python:format
 # actually change files in-place
-uv run --directory src/solver ruff format
+pnpm run python:format-fix
 ```
 
 We also have tests that can be run with
 
 ```sh
-uv run --directory src/solver/tests pytest
+pnpm run python:test
 ```
 
 Everything in my IDE should be type-aware, but don't add extra type annotations where the type can be inferred. Sometimes return types are appropriate, sometimes inferring it is best - use taste!

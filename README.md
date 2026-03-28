@@ -10,8 +10,8 @@ Install the Node dependencies, then bootstrap the unified local solver environme
 
 ```sh
 pnpm install
-pnpm run mojo:install
+pnpm run python-mojo:init
 source activate
 ```
 
-After that, the solver-related `package.json` scripts run through Pixi against the shared solver manifest.
+There is no local `.venv` anymore. The solver-related `package.json` scripts run through Pixi against the shared solver manifest, and `source activate` drops you into that same Pixi env.

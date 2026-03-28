@@ -4,7 +4,7 @@ Test the cuOpt GPU solver on a large (80 tripper) problem on Modal.
 Solves with both CBC (CPU) and cuOpt (GPU) in parallel to compare timing.
 
 Usage:
-    uv run --directory src/solver modal run test_solve_fixture_cuopt_150.py
+    pixi run --manifest-path src/solver/pyproject.toml modal run test_solve_fixture_cuopt_150.py
 """
 
 import time

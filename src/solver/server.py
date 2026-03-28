@@ -23,7 +23,7 @@ image = (
     # Install pixi for Mojo toolchain
     .run_commands("curl -fsSL https://pixi.sh/install.sh | sh")
     .env({"PATH": "/root/.pixi/bin:$PATH"})
-    # Copy Mojo project and install toolchain (cached unless pixi.toml changes)
+    # Sync Python deps from the shared solver manifest.
     # Python deps + cuOpt
     .uv_pip_install(
         "cuopt-sh-client",
@@ -32,18 +32,20 @@ image = (
         extra_index_url="https://pypi.nvidia.com",
     )
     .uv_sync()
+    # Copy the shared solver manifest plus Mojo sources for the remote build.
+    .add_local_file("pyproject.toml", remote_path="/solver/pyproject.toml", copy=True)
     .add_local_dir(
         "mojo_app",
-        remote_path="/mojo_app",
+        remote_path="/solver/mojo_app",
         copy=True,
         ignore=["**/.pixi/*", "**/__mojocache__/*", "*.so", "*.dylib"],
     )
     .run_commands(
         [
-            "cd /mojo_app && /root/.pixi/bin/pixi install",
-            "cd /mojo_app && /root/.pixi/bin/pixi run pip install max",
-            "cd /mojo_app && /root/.pixi/bin/pixi run mojo build group_generator_mojo_python_interface.mojo --emit shared-lib -o group_generator_mojo_python_interface.so",
-            "file /mojo_app/group_generator_mojo_python_interface.so",
+            "/root/.pixi/bin/pixi install --manifest-path /solver/pyproject.toml",
+            "/root/.pixi/bin/pixi run --manifest-path /solver/pyproject.toml pip install max",
+            "/root/.pixi/bin/pixi run --manifest-path /solver/pyproject.toml mojo-build",
+            "file /solver/mojo_app/group_generator_mojo_python_interface.so",
         ]
     )
     # Python solver source (most frequently changed — last for fast rebuilds)

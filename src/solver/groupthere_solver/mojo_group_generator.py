@@ -17,10 +17,12 @@ from groupthere_solver.models import Tripper
 
 # Search paths for the compiled Mojo shared library:
 # - Local dev: mojo_app/ relative to this file's parent (src/solver/)
-# - Modal: /mojo_app/ (absolute path in container)
+# - Modal: /solver/mojo_app/ in the current shared-manifest image layout
+# - Legacy Modal images may still use /mojo_app/
 _MOJO_MODULE_NAME = "group_generator_mojo_python_interface"
 _MOJO_SEARCH_DIRS = [
     Path(__file__).resolve().parent.parent / "mojo_app",
+    Path("/solver/mojo_app"),
     Path("/mojo_app"),
 ]
 

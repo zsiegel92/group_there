@@ -2,7 +2,7 @@
 Test the cuOpt GPU solver on Modal.
 
 Usage:
-    uv run --directory src/solver modal run test_solve_fixture_cuopt.py
+    pnpm run python:test-fixture-cuopt
 """
 
 import json
