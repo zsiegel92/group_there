@@ -15,7 +15,7 @@ The core setup will be a Python service that does the optimization, we will use 
 
 # Python guidelines
 
-- Always initialize the shared Pixi env with `pnpm run python-mojo:init` and activate it with `source activate` before running Python or Mojo commands
+- Always initialize the shared Pixi env with `pnpm run python-mojo:sync` and activate it with `source activate` before running Python or Mojo commands
 - Always type-check and lint Python code with:
 
 ```sh

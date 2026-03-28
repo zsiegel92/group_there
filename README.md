@@ -10,7 +10,7 @@ Install the Node dependencies, then bootstrap the unified local solver environme
 
 ```sh
 pnpm install
-pnpm run python-mojo:init
+pnpm run python-mojo:sync
 source activate
 ```
 
