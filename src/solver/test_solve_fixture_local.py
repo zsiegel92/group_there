@@ -1,5 +1,5 @@
 """
-pnpm run python:test-fixture-local
+pnpm run pr python-test-fixture-local
 Load a problem fixture from disk, solve it locally, and assert it matches the expected solution.
 
 Pass --no-mojo to use the pure-Python group generator instead of the Mojo implementation.

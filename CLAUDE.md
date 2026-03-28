@@ -16,20 +16,21 @@ The core setup will be a Python service that does the optimization, we will use 
 # Python guidelines
 
 - Always initialize the shared Pixi env with `pnpm run python-mojo:sync` and activate it with `source activate` before running Python or Mojo commands
+- Solver tasks are defined in `src/solver/pyproject.toml`; use `pixi task list --manifest-path src/solver/pyproject.toml` to discover them
 - Always type-check and lint Python code with:
 
 ```sh
-pnpm run python:type-check
-pnpm run python:lint
-pnpm run python:format
+pnpm run pr python-type-check
+pnpm run pr python-lint
+pnpm run pr python-format
 # actually change files in-place
-pnpm run python:format-fix
+pnpm run pr python-format-fix
 ```
 
 We also have tests that can be run with
 
 ```sh
-pnpm run python:test
+pnpm run pr python-test
 ```
 
 Everything in my IDE should be type-aware, but don't add extra type annotations where the type can be inferred. Sometimes return types are appropriate, sometimes inferring it is best - use taste!

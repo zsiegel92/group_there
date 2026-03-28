@@ -1,5 +1,5 @@
 """
-pnpm run python:test-fixture-remote
+pnpm run pr python-test-fixture-remote
 Load a problem fixture from disk, solve it on Modal, and assert it matches the expected solution.
 """
 

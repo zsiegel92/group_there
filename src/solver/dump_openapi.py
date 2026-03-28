@@ -1,4 +1,4 @@
-# pixi run --manifest-path src/solver/pyproject.toml python-dump-openapi
+# pnpm run pr python-dump-openapi
 import json
 from pathlib import Path
 

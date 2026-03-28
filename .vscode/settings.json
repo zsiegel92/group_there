@@ -1,4 +1,3 @@
 {
-"python.defaultInterpreterPath": "${workspaceFolder}/src/solver/.pixi/envs/default/bin/python",
-"python-envs.defaultEnvManager": "ms-python.python:system"
+	"python.defaultInterpreterPath": "${workspaceFolder}/src/solver/.pixi/envs/default/bin/python",
 }

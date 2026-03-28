@@ -14,4 +14,4 @@ pnpm run python-mojo:sync
 source activate
 ```
 
-There is no local `.venv` anymore. The solver-related `package.json` scripts run through Pixi against the shared solver manifest, and `source activate` drops you into that same Pixi env.
+There is no local `.venv` anymore. Solver tasks live in [`src/solver/pyproject.toml`](/Users/zach/Dropbox/code/groupthere/src/solver/pyproject.toml): use `pixi task list --manifest-path src/solver/pyproject.toml` to discover them, then run one with `pnpm run pr <task>`. `source activate` drops you into that same Pixi env.
