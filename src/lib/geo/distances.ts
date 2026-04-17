@@ -22,7 +22,7 @@ async function getEventLocationIds(eventId: string) {
     with: {
       location: true,
       eventsToUsers: {
-        with: { originLocation: true },
+        with: { originLocation: true, destinationLocation: true },
       },
     },
   });
@@ -49,6 +49,15 @@ async function getEventLocationIds(eventId: string) {
         id: loc.id,
         latitude: loc.latitude,
         longitude: loc.longitude,
+      });
+    }
+
+    const destinationLoc = att.destinationLocation;
+    if (destinationLoc?.latitude != null && destinationLoc?.longitude != null) {
+      locationMap.set(destinationLoc.id, {
+        id: destinationLoc.id,
+        latitude: destinationLoc.latitude,
+        longitude: destinationLoc.longitude,
       });
     }
   }

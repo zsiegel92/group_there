@@ -6,7 +6,11 @@ import { z } from "zod";
 import {
   blastTypeValues,
   drivingStatusEnumValues,
+  eventKindValues,
+  eventParticipationModeValues,
+  externalRideshareModeValues,
   groupTypeValues,
+  solutionVehicleKindValues,
   // type DrivingStatus,
 } from "@/db/schema";
 import { LocationSchema } from "@/lib/geo/schema";
@@ -30,10 +34,18 @@ const locationSummarySchema = z
 
 const eventDetailsSchema = z.object({
   id: z.string(),
+  eventSeriesId: z.string().nullable(),
+  kind: z.enum(eventKindValues),
   name: z.string(),
   locationId: z.string().nullable(),
   location: locationSummarySchema,
   time: z.string(),
+  timeZone: z.string(),
+  participationMode: z.enum(eventParticipationModeValues),
+  externalRideshareMode: z.enum(externalRideshareModeValues),
+  externalRideshareSeats: z.number(),
+  externalRideshareCostMultiplier: z.number(),
+  externalRideshareFixedCostSeconds: z.number(),
   message: z.string().nullable(),
   scheduled: z.boolean(),
   locked: z.boolean(),
@@ -58,6 +70,9 @@ const userAttendanceResponseSchema = z.object({
   earliestLeaveTime: z.string().nullable(),
   originLocationId: z.string().nullable(),
   originLocation: LocationSchema.nullable(),
+  destinationLocationId: z.string().nullable(),
+  destinationLocation: LocationSchema.nullable(),
+  requiredArrivalTime: z.string().nullable(),
   joinedAt: z.string(),
   directTravelSeconds: z.number().nullable(),
 });
@@ -68,6 +83,8 @@ const userAttendanceInputSchema = z.object({
   carFits: z.number().nullable(),
   earliestLeaveTime: z.string().nullable(),
   originLocationId: z.string(),
+  destinationLocationId: z.string().nullable().optional(),
+  requiredArrivalTime: z.string().nullable().optional(),
   joinedAt: z.string(),
 });
 
@@ -96,6 +113,10 @@ const solutionPartySchema = z.object({
   id: z.string(),
   partyIndex: z.number(),
   driverUserId: z.string().nullable(),
+  vehicleKind: z.enum(solutionVehicleKindValues),
+  externalRideshareOriginLocationId: z.string().nullable(),
+  externalRideshareLabel: z.string().nullable(),
+  costMultiplier: z.number(),
   driverName: z.string().nullable(),
   estimatedEventArrival: z.string().nullable().optional(),
   members: z.array(solutionPartyMemberSchema),
@@ -103,9 +124,13 @@ const solutionPartySchema = z.object({
 
 const solutionSchema = z.object({
   id: z.string(),
+  problemKind: z.enum(eventKindValues),
   feasible: z.boolean(),
   optimal: z.boolean(),
   totalDriveSeconds: z.number(),
+  externalRideshareMode: z.enum(externalRideshareModeValues),
+  externalRideshareVehicleCount: z.number(),
+  totalExternalRideshareCostSeconds: z.number(),
   parties: z.array(solutionPartySchema),
 });
 
@@ -132,10 +157,18 @@ const eventDetailSchema = z.object({
   id: z.string(),
   groupId: z.string(),
   groupName: z.string(),
+  eventSeriesId: z.string().nullable(),
+  kind: z.enum(eventKindValues),
   name: z.string(),
   locationId: z.string().nullable(),
   location: LocationSchema.nullable(),
   time: z.string(),
+  timeZone: z.string(),
+  participationMode: z.enum(eventParticipationModeValues),
+  externalRideshareMode: z.enum(externalRideshareModeValues),
+  externalRideshareSeats: z.number(),
+  externalRideshareCostMultiplier: z.number(),
+  externalRideshareFixedCostSeconds: z.number(),
   message: z.string().nullable(),
   scheduled: z.boolean(),
   locked: z.boolean(),
@@ -162,9 +195,17 @@ const eventDetailResponseSchema = z.object({
 const createEventSchema = z.object({
   id: z.string(),
   groupId: z.string(),
+  eventSeriesId: z.string().nullable(),
+  kind: z.enum(eventKindValues),
   name: z.string(),
   locationId: z.string().nullable(),
   time: z.string(),
+  timeZone: z.string(),
+  participationMode: z.enum(eventParticipationModeValues),
+  externalRideshareMode: z.enum(externalRideshareModeValues),
+  externalRideshareSeats: z.number(),
+  externalRideshareCostMultiplier: z.number(),
+  externalRideshareFixedCostSeconds: z.number(),
   message: z.string().nullable(),
   scheduled: z.boolean(),
   createdAt: z.string(),
@@ -178,9 +219,17 @@ const updateEventResponseSchema = z.object({
   event: z.object({
     id: z.string(),
     groupId: z.string(),
+    eventSeriesId: z.string().nullable(),
+    kind: z.enum(eventKindValues),
     name: z.string(),
     locationId: z.string().nullable(),
     time: z.string(),
+    timeZone: z.string(),
+    participationMode: z.enum(eventParticipationModeValues),
+    externalRideshareMode: z.enum(externalRideshareModeValues),
+    externalRideshareSeats: z.number(),
+    externalRideshareCostMultiplier: z.number(),
+    externalRideshareFixedCostSeconds: z.number(),
     message: z.string().nullable(),
     scheduled: z.boolean(),
     updatedAt: z.string(),
@@ -200,6 +249,8 @@ const attendanceResponseSchema = z.object({
     carFits: z.number().nullable(),
     earliestLeaveTime: z.string().nullable(),
     originLocationId: z.string(),
+    destinationLocationId: z.string().nullable(),
+    requiredArrivalTime: z.string().nullable(),
   }),
 });
 
@@ -225,9 +276,17 @@ export async function fetchEvents(groupId?: string) {
 
 export async function createEvent(input: {
   groupId: string;
+  eventSeriesId?: string | null;
+  kind?: (typeof eventKindValues)[number];
   name: string;
-  locationId: string;
+  locationId: string | null;
   time: string;
+  timeZone?: string;
+  participationMode?: (typeof eventParticipationModeValues)[number];
+  externalRideshareMode?: (typeof externalRideshareModeValues)[number];
+  externalRideshareSeats?: number;
+  externalRideshareCostMultiplier?: number;
+  externalRideshareFixedCostSeconds?: number;
   message?: string;
 }) {
   const response = await fetch("/api/events", {
@@ -254,9 +313,17 @@ export async function fetchEventDetails(eventId: string) {
 export async function updateEvent(
   eventId: string,
   input: {
+    eventSeriesId?: string | null;
+    kind?: (typeof eventKindValues)[number];
     name?: string;
-    locationId?: string;
+    locationId?: string | null;
     time?: string;
+    timeZone?: string;
+    participationMode?: (typeof eventParticipationModeValues)[number];
+    externalRideshareMode?: (typeof externalRideshareModeValues)[number];
+    externalRideshareSeats?: number;
+    externalRideshareCostMultiplier?: number;
+    externalRideshareFixedCostSeconds?: number;
     message?: string;
   }
 ) {
@@ -349,15 +416,28 @@ export async function unscheduleEvent(eventId: string) {
   return scheduleResponseSchema.parse(data);
 }
 
+export type ConfirmItineraryInput = {
+  parties: {
+    driverUserId: string | null;
+    passengerUserIds: string[];
+    vehicleKind?: (typeof solutionVehicleKindValues)[number];
+    externalRideshareOriginLocationId?: string | null;
+    externalRideshareLabel?: string | null;
+    costMultiplier?: number;
+  }[];
+  problemKind?: (typeof eventKindValues)[number];
+  externalRideshareMode?: (typeof externalRideshareModeValues)[number];
+  externalRideshareVehicleCount?: number;
+  totalExternalRideshareCostSeconds?: number;
+  totalDriveSeconds: number;
+  feasible: boolean;
+  optimal: boolean;
+};
+
 // Confirm itinerary (lock event with solution)
 export async function confirmItinerary(
   eventId: string,
-  input: {
-    parties: { driverUserId: string; passengerUserIds: string[] }[];
-    totalDriveSeconds: number;
-    feasible: boolean;
-    optimal: boolean;
-  }
+  input: ConfirmItineraryInput
 ) {
   const response = await fetch(`/api/events/${eventId}/confirm-itinerary`, {
     method: "POST",
@@ -594,12 +674,7 @@ export function useConfirmItinerary() {
       input,
     }: {
       eventId: string;
-      input: {
-        parties: { driverUserId: string; passengerUserIds: string[] }[];
-        totalDriveSeconds: number;
-        feasible: boolean;
-        optimal: boolean;
-      };
+      input: ConfirmItineraryInput;
     }) => confirmItinerary(eventId, input),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["events"] });

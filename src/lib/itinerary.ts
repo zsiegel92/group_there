@@ -10,7 +10,7 @@ import { locationDistances } from "@/db/schema";
  *
  * Returns { estimatedPickups: Map<userId, Date>, estimatedEventArrival: Date | null }
  */
-export async function computePartyEstimates(
+export async function computeSharedDestinationPartyEstimates(
   members: {
     userId: string;
     originLocationId: string | null;
@@ -122,3 +122,5 @@ export async function computePartyEstimates(
 
   return { estimatedPickups, estimatedEventArrival };
 }
+
+export const computePartyEstimates = computeSharedDestinationPartyEstimates;

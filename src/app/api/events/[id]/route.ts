@@ -5,7 +5,10 @@ import { z } from "zod";
 import { db } from "@/db/db";
 import {
   blasts,
+  eventKindValues,
+  eventParticipationModeValues,
   events,
+  externalRideshareModeValues,
   groupsToUsers,
   locationDistances,
   locations,
@@ -21,9 +24,17 @@ type Params = {
 };
 
 const updateEventSchema = z.object({
+  eventSeriesId: z.string().min(1).nullable().optional(),
+  kind: z.enum(eventKindValues).optional(),
   name: z.string().min(1).max(200).optional(),
-  locationId: z.string().min(1).optional(),
+  locationId: z.string().min(1).nullable().optional(),
   time: z.string().optional(),
+  timeZone: z.string().min(1).optional(),
+  participationMode: z.enum(eventParticipationModeValues).optional(),
+  externalRideshareMode: z.enum(externalRideshareModeValues).optional(),
+  externalRideshareSeats: z.number().int().min(1).max(5).optional(),
+  externalRideshareCostMultiplier: z.number().min(1).optional(),
+  externalRideshareFixedCostSeconds: z.number().min(0).optional(),
   message: z.string().max(2000).optional(),
 });
 
@@ -48,6 +59,7 @@ export async function GET(request: NextRequest, props: Params) {
         with: {
           user: true,
           originLocation: true,
+          destinationLocation: true,
         },
       },
     },
@@ -81,15 +93,17 @@ export async function GET(request: NextRequest, props: Params) {
 
   // Query direct travel time from user's origin to event location
   let directTravelSeconds: number | null = null;
+  const directDestinationLocationId =
+    userAttendance?.destinationLocationId ?? event.locationId;
   if (
     userAttendance?.originLocationId &&
-    event.locationId &&
-    userAttendance.originLocationId !== event.locationId
+    directDestinationLocationId &&
+    userAttendance.originLocationId !== directDestinationLocationId
   ) {
     const dist = await db.query.locationDistances.findFirst({
       where: and(
         eq(locationDistances.originLocationId, userAttendance.originLocationId),
-        eq(locationDistances.destinationLocationId, event.locationId)
+        eq(locationDistances.destinationLocationId, directDestinationLocationId)
       ),
     });
     if (dist) {
@@ -145,6 +159,11 @@ export async function GET(request: NextRequest, props: Params) {
           {
             originLocation: formatLocationObj(att.originLocation),
             originLocationId: att.originLocationId,
+            destinationLocation: formatLocationObj(att.destinationLocation),
+            destinationLocationId: att.destinationLocationId,
+            requiredArrivalTime: att.requiredArrivalTime
+              ? att.requiredArrivalTime.toISOString()
+              : null,
             earliestLeaveTime: att.earliestLeaveTime
               ? att.earliestLeaveTime.toISOString()
               : null,
@@ -183,15 +202,25 @@ export async function GET(request: NextRequest, props: Params) {
 
         solutionData = {
           id: sol.id,
+          problemKind: sol.problemKind,
           feasible: sol.feasible,
           optimal: sol.optimal,
           totalDriveSeconds: sol.totalDriveSeconds,
+          externalRideshareMode: sol.externalRideshareMode,
+          externalRideshareVehicleCount: sol.externalRideshareVehicleCount,
+          totalExternalRideshareCostSeconds:
+            sol.totalExternalRideshareCostSeconds,
           parties: sortedParties.map((party, pi) => {
             const estimates = partyEstimatesResults[pi];
             return {
               id: party.id,
               partyIndex: party.partyIndex,
               driverUserId: party.driverUserId,
+              vehicleKind: party.vehicleKind,
+              externalRideshareOriginLocationId:
+                party.externalRideshareOriginLocationId,
+              externalRideshareLabel: party.externalRideshareLabel,
+              costMultiplier: party.costMultiplier,
               driverName: party.driver?.name ?? null,
               estimatedEventArrival: estimates?.estimatedEventArrival
                 ? estimates.estimatedEventArrival.toISOString()
@@ -289,6 +318,11 @@ export async function GET(request: NextRequest, props: Params) {
             : null,
           originLocationId: att.originLocationId,
           originLocation: formatLocationObj(att.originLocation),
+          destinationLocationId: att.destinationLocationId,
+          destinationLocation: formatLocationObj(att.destinationLocation),
+          requiredArrivalTime: att.requiredArrivalTime
+            ? att.requiredArrivalTime.toISOString()
+            : null,
           joinedAt: att.createdAt.toISOString(),
           directTravelSeconds: null,
         },
@@ -308,10 +342,19 @@ export async function GET(request: NextRequest, props: Params) {
       id: event.id,
       groupId: event.groupId,
       groupName: event.group.name,
+      eventSeriesId: event.eventSeriesId,
+      kind: event.kind,
       name: event.name,
       locationId: event.locationId,
       location: formatLocationObj(event.location),
       time: event.time.toISOString(),
+      timeZone: event.timeZone,
+      participationMode: event.participationMode,
+      externalRideshareMode: event.externalRideshareMode,
+      externalRideshareSeats: event.externalRideshareSeats,
+      externalRideshareCostMultiplier: event.externalRideshareCostMultiplier,
+      externalRideshareFixedCostSeconds:
+        event.externalRideshareFixedCostSeconds,
       message: event.message,
       scheduled: event.scheduled,
       locked: event.locked,
@@ -327,6 +370,13 @@ export async function GET(request: NextRequest, props: Params) {
               : null,
             originLocationId: userAttendance.originLocationId,
             originLocation: formatLocationObj(userAttendance.originLocation),
+            destinationLocationId: userAttendance.destinationLocationId,
+            destinationLocation: formatLocationObj(
+              userAttendance.destinationLocation
+            ),
+            requiredArrivalTime: userAttendance.requiredArrivalTime
+              ? userAttendance.requiredArrivalTime.toISOString()
+              : null,
             joinedAt: userAttendance.createdAt.toISOString(),
             directTravelSeconds,
           }
@@ -397,7 +447,7 @@ export async function PATCH(request: NextRequest, props: Params) {
   }
 
   // If updating locationId, verify the location exists and is an event location
-  if (result.data.locationId !== undefined) {
+  if (result.data.locationId) {
     const expectedOwnerType: LocationOwnerType = "event";
     const location = await db.query.locations.findFirst({
       where: and(
@@ -415,11 +465,28 @@ export async function PATCH(request: NextRequest, props: Params) {
 
   // Update the event
   const updateData: Record<string, unknown> = {};
+  if (result.data.eventSeriesId !== undefined)
+    updateData.eventSeriesId = result.data.eventSeriesId;
+  if (result.data.kind !== undefined) updateData.kind = result.data.kind;
   if (result.data.name !== undefined) updateData.name = result.data.name;
   if (result.data.locationId !== undefined)
     updateData.locationId = result.data.locationId;
   if (result.data.time !== undefined)
     updateData.time = new Date(result.data.time);
+  if (result.data.timeZone !== undefined)
+    updateData.timeZone = result.data.timeZone;
+  if (result.data.participationMode !== undefined)
+    updateData.participationMode = result.data.participationMode;
+  if (result.data.externalRideshareMode !== undefined)
+    updateData.externalRideshareMode = result.data.externalRideshareMode;
+  if (result.data.externalRideshareSeats !== undefined)
+    updateData.externalRideshareSeats = result.data.externalRideshareSeats;
+  if (result.data.externalRideshareCostMultiplier !== undefined)
+    updateData.externalRideshareCostMultiplier =
+      result.data.externalRideshareCostMultiplier;
+  if (result.data.externalRideshareFixedCostSeconds !== undefined)
+    updateData.externalRideshareFixedCostSeconds =
+      result.data.externalRideshareFixedCostSeconds;
   if (result.data.message !== undefined)
     updateData.message = result.data.message;
 
@@ -439,9 +506,19 @@ export async function PATCH(request: NextRequest, props: Params) {
     event: {
       id: updatedEvent.id,
       groupId: updatedEvent.groupId,
+      eventSeriesId: updatedEvent.eventSeriesId,
+      kind: updatedEvent.kind,
       name: updatedEvent.name,
       locationId: updatedEvent.locationId,
       time: updatedEvent.time.toISOString(),
+      timeZone: updatedEvent.timeZone,
+      participationMode: updatedEvent.participationMode,
+      externalRideshareMode: updatedEvent.externalRideshareMode,
+      externalRideshareSeats: updatedEvent.externalRideshareSeats,
+      externalRideshareCostMultiplier:
+        updatedEvent.externalRideshareCostMultiplier,
+      externalRideshareFixedCostSeconds:
+        updatedEvent.externalRideshareFixedCostSeconds,
       message: updatedEvent.message,
       scheduled: updatedEvent.scheduled,
       updatedAt: updatedEvent.updatedAt.toISOString(),

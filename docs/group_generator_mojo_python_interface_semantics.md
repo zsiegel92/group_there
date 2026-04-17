@@ -675,17 +675,17 @@ instead of one long block of unfamiliar syntax.
 
 ## Direct Python-to-Mojo translation table
 
-| Python concept | This Mojo file |
-|---|---|
-| `list[int]` | `alloc[Int](n)` plus manual `free()` |
-| `dict[(i, j)] -> float` | flat `Float64` matrix with `i * n + j` indexing |
-| generator/iterator over subsets | integer `work_idx` plus `_unrank_combination(...)` |
-| dataclass/object holding native resources | struct with pointer fields and `__del__` |
-| build result objects incrementally | write into pre-allocated fixed slots |
-| `itertools.permutations` | Heap's algorithm over mutable arrays |
-| Python object return values | explicit `Python.list()` / `Python.tuple(...)` construction |
-| implicit exceptions | `raises` declared in signature |
-| one-threaded loop | `parallelize[...]` worker execution |
+| Python concept                            | This Mojo file                                              |
+| ----------------------------------------- | ----------------------------------------------------------- |
+| `list[int]`                               | `alloc[Int](n)` plus manual `free()`                        |
+| `dict[(i, j)] -> float`                   | flat `Float64` matrix with `i * n + j` indexing             |
+| generator/iterator over subsets           | integer `work_idx` plus `_unrank_combination(...)`          |
+| dataclass/object holding native resources | struct with pointer fields and `__del__`                    |
+| build result objects incrementally        | write into pre-allocated fixed slots                        |
+| `itertools.permutations`                  | Heap's algorithm over mutable arrays                        |
+| Python object return values               | explicit `Python.list()` / `Python.tuple(...)` construction |
+| implicit exceptions                       | `raises` declared in signature                              |
+| one-threaded loop                         | `parallelize[...]` worker execution                         |
 
 ## What is Mojo-specific here vs just low-level programming?
 

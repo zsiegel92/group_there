@@ -4,12 +4,15 @@ import { z } from "zod";
 
 import { db } from "@/db/db";
 import {
+  eventKindValues,
   events,
   eventsToUsers,
+  externalRideshareModeValues,
   groupsToUsers,
   solutionParties,
   solutionPartyMembers,
   solutions,
+  solutionVehicleKindValues,
 } from "@/db/schema";
 import { getUser } from "@/lib/auth";
 
@@ -18,12 +21,26 @@ type Params = {
 };
 
 const partySchema = z.object({
-  driverUserId: z.string(),
+  driverUserId: z.string().nullable(),
   passengerUserIds: z.array(z.string()),
+  vehicleKind: z
+    .enum(solutionVehicleKindValues)
+    .optional()
+    .default("participant_vehicle"),
+  externalRideshareOriginLocationId: z.string().nullable().optional(),
+  externalRideshareLabel: z.string().nullable().optional(),
+  costMultiplier: z.number().min(1).optional().default(1),
 });
 
 const confirmItinerarySchema = z.object({
   parties: z.array(partySchema),
+  problemKind: z.enum(eventKindValues).optional().default("shared_destination"),
+  externalRideshareMode: z
+    .enum(externalRideshareModeValues)
+    .optional()
+    .default("disabled"),
+  externalRideshareVehicleCount: z.number().int().min(0).optional().default(0),
+  totalExternalRideshareCostSeconds: z.number().min(0).optional().default(0),
   totalDriveSeconds: z.number(),
   feasible: z.boolean(),
   optimal: z.boolean(),
@@ -93,7 +110,13 @@ export async function POST(request: NextRequest, props: Params) {
   const attendeeUserIds = new Set(attendees.map((a) => a.userId));
 
   for (const party of result.data.parties) {
-    if (!attendeeUserIds.has(party.driverUserId)) {
+    if (party.vehicleKind === "participant_vehicle" && !party.driverUserId) {
+      return NextResponse.json(
+        { error: "Participant vehicles require a driver" },
+        { status: 400 }
+      );
+    }
+    if (party.driverUserId && !attendeeUserIds.has(party.driverUserId)) {
       return NextResponse.json(
         { error: `Driver ${party.driverUserId} is not an attendee` },
         { status: 400 }
@@ -117,9 +140,14 @@ export async function POST(request: NextRequest, props: Params) {
   await db.insert(solutions).values({
     id: solutionId,
     eventId,
+    problemKind: result.data.problemKind,
     feasible: result.data.feasible,
     optimal: result.data.optimal,
     totalDriveSeconds: result.data.totalDriveSeconds,
+    externalRideshareMode: result.data.externalRideshareMode,
+    externalRideshareVehicleCount: result.data.externalRideshareVehicleCount,
+    totalExternalRideshareCostSeconds:
+      result.data.totalExternalRideshareCostSeconds,
   });
 
   // Insert parties and members
@@ -131,23 +159,32 @@ export async function POST(request: NextRequest, props: Params) {
       id: partyId,
       solutionId,
       driverUserId: party.driverUserId,
+      vehicleKind: party.vehicleKind,
+      externalRideshareOriginLocationId:
+        party.externalRideshareOriginLocationId ?? null,
+      externalRideshareLabel: party.externalRideshareLabel ?? null,
+      costMultiplier: party.costMultiplier,
       partyIndex: i,
     });
 
     // Driver at pickupOrder 0, passengers at pickupOrder 1+
     // Filter out the driver from passengers to avoid PK violation
-    const passengerIds = party.passengerUserIds.filter(
-      (id) => id !== party.driverUserId
-    );
+    const passengerIds = party.driverUserId
+      ? party.passengerUserIds.filter((id) => id !== party.driverUserId)
+      : party.passengerUserIds;
     const memberRows = [
-      { partyId, userId: party.driverUserId, pickupOrder: 0 },
+      ...(party.driverUserId
+        ? [{ partyId, userId: party.driverUserId, pickupOrder: 0 }]
+        : []),
       ...passengerIds.map((passId, j) => ({
         partyId,
         userId: passId,
-        pickupOrder: j + 1,
+        pickupOrder: party.driverUserId ? j + 1 : j,
       })),
     ];
-    await db.insert(solutionPartyMembers).values(memberRows);
+    if (memberRows.length > 0) {
+      await db.insert(solutionPartyMembers).values(memberRows);
+    }
   }
 
   // Lock the event

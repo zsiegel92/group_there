@@ -3,14 +3,35 @@
 import { z } from 'zod';
 
 /**
+ * ExternalRideshareVehicle
+ */
+export const zExternalRideshareVehicle = z.object({
+    id: z.string(),
+    origin_id: z.string(),
+    car_fits: z.optional(z.int().gte(1).lte(5)).default(3),
+    cost_multiplier: z.optional(z.number().gte(1)).default(3),
+    fixed_cost_seconds: z.optional(z.number().gte(0)).default(0)
+});
+
+/**
  * Party
  */
 export const zParty = z.object({
     id: z.string(),
+    vehicle_kind: z.optional(z.enum(['participant_vehicle', 'external_rideshare'])),
+    vehicle_id: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
     driver_tripper_id: z.optional(z.union([
         z.string(),
         z.null()
     ])),
+    external_rideshare_origin_id: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    cost_multiplier: z.optional(z.number().gte(1)).default(1),
     passenger_tripper_ids: z.array(z.string())
 });
 
@@ -27,11 +48,18 @@ export const zProblemReceivedResponse = z.object({
  */
 export const zSolution = z.object({
     id: z.string(),
+    kind: z.optional(z.enum(['shared_destination', 'commute'])),
     successfully_completed: z.boolean(),
     feasible: z.boolean(),
     optimal: z.boolean(),
     parties: z.array(zParty),
-    total_drive_seconds: z.number()
+    total_drive_seconds: z.number(),
+    external_rideshare_vehicle_count: z.optional(z.int().gte(0)).default(0),
+    total_external_rideshare_cost_seconds: z.optional(z.number().gte(0)).default(0),
+    status_message: z.optional(z.union([
+        z.string(),
+        z.null()
+    ]))
 });
 
 /**
@@ -41,9 +69,21 @@ export const zTripper = z.object({
     user_id: z.string(),
     origin_id: z.string(),
     event_id: z.string(),
+    destination_id: z.optional(z.union([
+        z.string(),
+        z.null()
+    ])),
+    required_arrival_time: z.optional(z.union([
+        z.iso.datetime(),
+        z.null()
+    ])),
     car_fits: z.int().gte(0).lte(5),
     must_drive: z.boolean(),
     seconds_before_event_start_can_leave: z.int().gte(0),
+    seconds_before_required_arrival_can_leave: z.optional(z.union([
+        z.int().gte(0),
+        z.null()
+    ])),
     distance_to_destination_seconds: z.number().gte(0)
 });
 
@@ -62,6 +102,16 @@ export const zTripperDistance = z.object({
 export const zProblem = z.object({
     id: z.string(),
     event_id: z.string(),
+    kind: z.optional(z.enum(['shared_destination', 'commute'])),
+    external_rideshare_mode: z.optional(z.enum([
+        'disabled',
+        'fallback',
+        'always_available'
+    ])),
+    external_rideshare_seats: z.optional(z.int().gte(1).lte(5)).default(3),
+    external_rideshare_cost_multiplier: z.optional(z.number().gte(1)).default(3),
+    external_rideshare_fixed_cost_seconds: z.optional(z.number().gte(0)).default(0),
+    external_rideshare_vehicles: z.optional(z.array(zExternalRideshareVehicle)),
     trippers: z.array(zTripper),
     tripper_distances: z.array(zTripperDistance)
 });

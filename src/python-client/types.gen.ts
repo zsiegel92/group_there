@@ -5,6 +5,32 @@ export type ClientOptions = {
 };
 
 /**
+ * ExternalRideshareVehicle
+ */
+export type ExternalRideshareVehicle = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Origin Id
+     */
+    origin_id: string;
+    /**
+     * Car Fits
+     */
+    car_fits?: number;
+    /**
+     * Cost Multiplier
+     */
+    cost_multiplier?: number;
+    /**
+     * Fixed Cost Seconds
+     */
+    fixed_cost_seconds?: number;
+};
+
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -23,9 +49,25 @@ export type Party = {
      */
     id: string;
     /**
+     * Vehicle Kind
+     */
+    vehicle_kind?: 'participant_vehicle' | 'external_rideshare';
+    /**
+     * Vehicle Id
+     */
+    vehicle_id?: string | null;
+    /**
      * Driver Tripper Id
      */
     driver_tripper_id?: string | null;
+    /**
+     * External Rideshare Origin Id
+     */
+    external_rideshare_origin_id?: string | null;
+    /**
+     * Cost Multiplier
+     */
+    cost_multiplier?: number;
     /**
      * Passenger Tripper Ids
      */
@@ -44,6 +86,30 @@ export type Problem = {
      * Event Id
      */
     event_id: string;
+    /**
+     * Kind
+     */
+    kind?: 'shared_destination' | 'commute';
+    /**
+     * External Rideshare Mode
+     */
+    external_rideshare_mode?: 'disabled' | 'fallback' | 'always_available';
+    /**
+     * External Rideshare Seats
+     */
+    external_rideshare_seats?: number;
+    /**
+     * External Rideshare Cost Multiplier
+     */
+    external_rideshare_cost_multiplier?: number;
+    /**
+     * External Rideshare Fixed Cost Seconds
+     */
+    external_rideshare_fixed_cost_seconds?: number;
+    /**
+     * External Rideshare Vehicles
+     */
+    external_rideshare_vehicles?: Array<ExternalRideshareVehicle>;
     /**
      * Trippers
      */
@@ -79,6 +145,10 @@ export type Solution = {
      */
     id: string;
     /**
+     * Kind
+     */
+    kind?: 'shared_destination' | 'commute';
+    /**
      * Successfully Completed
      */
     successfully_completed: boolean;
@@ -98,6 +168,18 @@ export type Solution = {
      * Total Drive Seconds
      */
     total_drive_seconds: number;
+    /**
+     * External Rideshare Vehicle Count
+     */
+    external_rideshare_vehicle_count?: number;
+    /**
+     * Total External Rideshare Cost Seconds
+     */
+    total_external_rideshare_cost_seconds?: number;
+    /**
+     * Status Message
+     */
+    status_message?: string | null;
 };
 
 /**
@@ -117,6 +199,14 @@ export type Tripper = {
      */
     event_id: string;
     /**
+     * Destination Id
+     */
+    destination_id?: string | null;
+    /**
+     * Required Arrival Time
+     */
+    required_arrival_time?: string | null;
+    /**
      * Car Fits
      */
     car_fits: number;
@@ -128,6 +218,10 @@ export type Tripper = {
      * Seconds Before Event Start Can Leave
      */
     seconds_before_event_start_can_leave: number;
+    /**
+     * Seconds Before Required Arrival Can Leave
+     */
+    seconds_before_required_arrival_can_leave?: number | null;
     /**
      * Distance To Destination Seconds
      */

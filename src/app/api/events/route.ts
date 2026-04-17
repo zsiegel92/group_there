@@ -4,7 +4,10 @@ import { z } from "zod";
 
 import { db } from "@/db/db";
 import {
+  eventKindValues,
+  eventParticipationModeValues,
   events,
+  externalRideshareModeValues,
   groups,
   groupsToUsers,
   locations,
@@ -12,13 +15,38 @@ import {
 } from "@/db/schema";
 import { getUser } from "@/lib/auth";
 
-const createEventSchema = z.object({
-  groupId: z.string(),
-  name: z.string().min(1).max(200),
-  locationId: z.string().min(1),
-  time: z.string(),
-  message: z.string().max(2000).optional(),
-});
+const createEventSchema = z
+  .object({
+    groupId: z.string(),
+    eventSeriesId: z.string().min(1).nullable().optional(),
+    kind: z.enum(eventKindValues).optional().default("shared_destination"),
+    name: z.string().min(1).max(200),
+    locationId: z.string().min(1).nullable().optional(),
+    time: z.string(),
+    timeZone: z.string().min(1).optional().default("America/New_York"),
+    participationMode: z
+      .enum(eventParticipationModeValues)
+      .optional()
+      .default("opt_in"),
+    externalRideshareMode: z
+      .enum(externalRideshareModeValues)
+      .optional()
+      .default("disabled"),
+    externalRideshareSeats: z
+      .number()
+      .int()
+      .min(1)
+      .max(5)
+      .optional()
+      .default(3),
+    externalRideshareCostMultiplier: z.number().min(1).optional().default(3),
+    externalRideshareFixedCostSeconds: z.number().min(0).optional().default(0),
+    message: z.string().max(2000).optional(),
+  })
+  .refine((data) => data.kind === "commute" || data.locationId, {
+    message: "locationId is required for shared-destination events",
+    path: ["locationId"],
+  });
 
 // GET /api/events - Get all events for groups the current user is in
 export async function GET(request: NextRequest) {
@@ -67,6 +95,8 @@ export async function GET(request: NextRequest) {
         },
         eventDetails: {
           id: event.id,
+          eventSeriesId: event.eventSeriesId,
+          kind: event.kind,
           name: event.name,
           locationId: event.locationId,
           location: event.location
@@ -79,6 +109,14 @@ export async function GET(request: NextRequest) {
               }
             : null,
           time: event.time.toISOString(),
+          timeZone: event.timeZone,
+          participationMode: event.participationMode,
+          externalRideshareMode: event.externalRideshareMode,
+          externalRideshareSeats: event.externalRideshareSeats,
+          externalRideshareCostMultiplier:
+            event.externalRideshareCostMultiplier,
+          externalRideshareFixedCostSeconds:
+            event.externalRideshareFixedCostSeconds,
           message: event.message,
           scheduled: event.scheduled,
           locked: event.locked,
@@ -112,7 +150,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { groupId, name, locationId, time, message } = result.data;
+  const {
+    groupId,
+    eventSeriesId,
+    kind,
+    name,
+    locationId,
+    time,
+    timeZone,
+    participationMode,
+    externalRideshareMode,
+    externalRideshareSeats,
+    externalRideshareCostMultiplier,
+    externalRideshareFixedCostSeconds,
+    message,
+  } = result.data;
 
   // Check if user is admin of the group
   const membership = await db.query.groupsToUsers.findFirst({
@@ -131,17 +183,22 @@ export async function POST(request: NextRequest) {
     where: eq(groups.id, groupId),
   });
 
-  // Verify the location exists and is an event location
-  const expectedOwnerType: LocationOwnerType = "event";
-  const location = await db.query.locations.findFirst({
-    where: and(
-      eq(locations.id, locationId),
-      eq(locations.ownerType, expectedOwnerType)
-    ),
-  });
+  if (locationId) {
+    // Verify the location exists and is an event location
+    const expectedOwnerType: LocationOwnerType = "event";
+    const location = await db.query.locations.findFirst({
+      where: and(
+        eq(locations.id, locationId),
+        eq(locations.ownerType, expectedOwnerType)
+      ),
+    });
 
-  if (!location) {
-    return NextResponse.json({ error: "Location not found" }, { status: 400 });
+    if (!location) {
+      return NextResponse.json(
+        { error: "Location not found" },
+        { status: 400 }
+      );
+    }
   }
 
   // Create the event with a unique ID
@@ -152,9 +209,17 @@ export async function POST(request: NextRequest) {
     .values({
       id: eventId,
       groupId,
+      eventSeriesId: eventSeriesId ?? null,
+      kind,
       name,
-      locationId,
+      locationId: locationId ?? null,
       time: new Date(time),
+      timeZone,
+      participationMode,
+      externalRideshareMode,
+      externalRideshareSeats,
+      externalRideshareCostMultiplier,
+      externalRideshareFixedCostSeconds,
       message: message || null,
       scheduled: group?.type === "testing" ? true : false,
       haveSentInvitationEmails: false,
@@ -165,9 +230,19 @@ export async function POST(request: NextRequest) {
     event: {
       id: createdEvent.id,
       groupId: createdEvent.groupId,
+      eventSeriesId: createdEvent.eventSeriesId,
+      kind: createdEvent.kind,
       name: createdEvent.name,
       locationId: createdEvent.locationId,
       time: createdEvent.time.toISOString(),
+      timeZone: createdEvent.timeZone,
+      participationMode: createdEvent.participationMode,
+      externalRideshareMode: createdEvent.externalRideshareMode,
+      externalRideshareSeats: createdEvent.externalRideshareSeats,
+      externalRideshareCostMultiplier:
+        createdEvent.externalRideshareCostMultiplier,
+      externalRideshareFixedCostSeconds:
+        createdEvent.externalRideshareFixedCostSeconds,
       message: createdEvent.message,
       scheduled: createdEvent.scheduled,
       createdAt: createdEvent.createdAt.toISOString(),

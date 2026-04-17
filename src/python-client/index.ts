@@ -7,6 +7,7 @@ export {
 } from "./sdk.gen";
 export type {
   ClientOptions,
+  ExternalRideshareVehicle,
   HttpValidationError,
   Party,
   Problem,

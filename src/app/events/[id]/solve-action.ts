@@ -6,7 +6,7 @@ import { db } from "@/db/db";
 import { events, eventsToUsers, solutions } from "@/db/schema";
 import { computePartyEstimates } from "@/lib/itinerary";
 import { solveSolvePost } from "@/lib/python-client";
-import { constructProblem } from "@/lib/solver/construct-problem";
+import { constructTripProblem } from "@/lib/trip-solver/construct-problem";
 import type { Problem, Solution } from "@/python-client";
 
 export type PartyEstimate = {
@@ -16,7 +16,7 @@ export type PartyEstimate = {
 };
 
 export async function solveProblem(eventId: string) {
-  const problem = await constructProblem(eventId);
+  const problem = await constructTripProblem(eventId);
   const response = await solveSolvePost({
     body: problem,
   });
@@ -105,19 +105,26 @@ export async function loadSolveResult(
 
   if (!sol) return null;
 
-  const problem = await constructProblem(eventId);
+  const problem = await constructTripProblem(eventId);
 
   const solution: Solution = {
     id: sol.id,
+    kind: sol.problemKind,
     successfully_completed: true,
     feasible: sol.feasible,
     optimal: sol.optimal,
     total_drive_seconds: sol.totalDriveSeconds,
+    external_rideshare_vehicle_count: sol.externalRideshareVehicleCount,
+    total_external_rideshare_cost_seconds:
+      sol.totalExternalRideshareCostSeconds,
     parties: sol.parties
       .sort((a, b) => a.partyIndex - b.partyIndex)
       .map((party) => ({
         id: party.id,
+        vehicle_kind: party.vehicleKind,
         driver_tripper_id: party.driverUserId,
+        external_rideshare_origin_id: party.externalRideshareOriginLocationId,
+        cost_multiplier: party.costMultiplier,
         passenger_tripper_ids: party.members
           .filter((m) => m.pickupOrder > 0)
           .sort((a, b) => a.pickupOrder - b.pickupOrder)

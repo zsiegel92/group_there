@@ -49,15 +49,22 @@ function normalizeSolution(
 
   const solution: Solution = {
     id: sol.id,
+    kind: sol.problemKind,
     successfully_completed: true,
     feasible: sol.feasible,
     optimal: sol.optimal,
     total_drive_seconds: sol.totalDriveSeconds,
+    external_rideshare_vehicle_count: sol.externalRideshareVehicleCount,
+    total_external_rideshare_cost_seconds:
+      sol.totalExternalRideshareCostSeconds,
     parties: sol.parties
       .toSorted((a, b) => a.partyIndex - b.partyIndex)
       .map((party) => ({
         id: party.id,
+        vehicle_kind: party.vehicleKind,
         driver_tripper_id: party.driverUserId,
+        external_rideshare_origin_id: party.externalRideshareOriginLocationId,
+        cost_multiplier: party.costMultiplier,
         passenger_tripper_ids: party.members
           .filter((m) => m.pickupOrder > 0)
           .toSorted((a, b) => a.pickupOrder - b.pickupOrder)
@@ -296,14 +303,23 @@ export function EventMapPanel({
     if (!confirmed) return;
 
     const parties = solution.parties.map((party) => ({
-      driverUserId: party.driver_tripper_id ?? "",
+      driverUserId: party.driver_tripper_id ?? null,
       passengerUserIds: party.passenger_tripper_ids,
+      vehicleKind: party.vehicle_kind ?? "participant_vehicle",
+      externalRideshareOriginLocationId:
+        party.external_rideshare_origin_id ?? null,
+      costMultiplier: party.cost_multiplier ?? 1,
     }));
 
     confirmItinerary.mutate({
       eventId,
       input: {
         parties,
+        problemKind: solution.kind ?? "shared_destination",
+        externalRideshareVehicleCount:
+          solution.external_rideshare_vehicle_count ?? 0,
+        totalExternalRideshareCostSeconds:
+          solution.total_external_rideshare_cost_seconds ?? 0,
         totalDriveSeconds: solution.total_drive_seconds,
         feasible: solution.feasible,
         optimal: solution.optimal,

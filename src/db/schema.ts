@@ -186,6 +186,109 @@ export const drivingStatusEnum = pgEnum(
   drivingStatusEnumValues
 );
 
+export const eventKindValues = ["shared_destination", "commute"] as const;
+
+export type EventKind = (typeof eventKindValues)[number];
+
+export const eventParticipationModeValues = ["opt_in", "opt_out"] as const;
+
+export type EventParticipationMode =
+  (typeof eventParticipationModeValues)[number];
+
+export const eventSeriesParticipationStatusValues = [
+  "joined",
+  "paused",
+  "declined",
+] as const;
+
+export type EventSeriesParticipationStatus =
+  (typeof eventSeriesParticipationStatusValues)[number];
+
+export const externalRideshareModeValues = [
+  "disabled",
+  "fallback",
+  "always_available",
+] as const;
+
+export type ExternalRideshareMode =
+  (typeof externalRideshareModeValues)[number];
+
+export const solutionVehicleKindValues = [
+  "participant_vehicle",
+  "external_rideshare",
+] as const;
+
+export type SolutionVehicleKind = (typeof solutionVehicleKindValues)[number];
+
+export const eventSeries = pgTable(
+  "event_series",
+  {
+    id: text("id").primaryKey(),
+    groupId: text("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    kind: text("kind")
+      .$type<EventKind>()
+      .default("shared_destination")
+      .notNull(),
+    name: text("name").notNull(),
+    recurrenceRule: text("recurrence_rule"),
+    timeZone: text("time_zone").default("America/New_York").notNull(),
+    participationMode: text("participation_mode")
+      .$type<EventParticipationMode>()
+      .default("opt_in")
+      .notNull(),
+    createdByUserId: text("created_by_user_id").references(() => users.id),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("eventSeries_groupId_idx").on(table.groupId),
+    index("eventSeries_kind_idx").on(table.kind),
+  ]
+);
+
+export const eventSeriesToUsers = pgTable(
+  "event_series_to_users",
+  {
+    eventSeriesId: text("event_series_id")
+      .notNull()
+      .references(() => eventSeries.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    participationStatus: text("participation_status")
+      .$type<EventSeriesParticipationStatus>()
+      .default("joined")
+      .notNull(),
+    defaultDrivingStatus: drivingStatusEnum("default_driving_status"),
+    defaultCarFits: integer("default_car_fits"),
+    defaultEarliestLeaveOffsetMinutes: integer(
+      "default_earliest_leave_offset_minutes"
+    ),
+    defaultOriginLocationId: text("default_origin_location_id").references(
+      () => locations.id
+    ),
+    defaultDestinationLocationId: text(
+      "default_destination_location_id"
+    ).references(() => locations.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.eventSeriesId, table.userId] }),
+    index("eventSeriesToUsers_eventSeriesId_idx").on(table.eventSeriesId),
+    index("eventSeriesToUsers_userId_idx").on(table.userId),
+  ]
+);
+
 export const events = pgTable(
   "events",
   {
@@ -193,9 +296,36 @@ export const events = pgTable(
     groupId: text("group_id")
       .notNull()
       .references(() => groups.id, { onDelete: "cascade" }),
+    eventSeriesId: text("event_series_id").references(() => eventSeries.id, {
+      onDelete: "set null",
+    }),
+    kind: text("kind")
+      .$type<EventKind>()
+      .default("shared_destination")
+      .notNull(),
     name: text("name").notNull(),
     locationId: text("location_id").references(() => locations.id),
     time: timestamp("time").notNull(),
+    timeZone: text("time_zone").default("America/New_York").notNull(),
+    participationMode: text("participation_mode")
+      .$type<EventParticipationMode>()
+      .default("opt_in")
+      .notNull(),
+    externalRideshareMode: text("external_rideshare_mode")
+      .$type<ExternalRideshareMode>()
+      .default("disabled")
+      .notNull(),
+    externalRideshareSeats: integer("external_rideshare_seats")
+      .default(3)
+      .notNull(),
+    externalRideshareCostMultiplier: real("external_rideshare_cost_multiplier")
+      .default(3)
+      .notNull(),
+    externalRideshareFixedCostSeconds: real(
+      "external_rideshare_fixed_cost_seconds"
+    )
+      .default(0)
+      .notNull(),
     message: text("message"),
     scheduled: boolean("scheduled").default(false).notNull(),
     locked: boolean("locked").default(false).notNull(),
@@ -210,6 +340,8 @@ export const events = pgTable(
   },
   (table) => [
     index("events_groupId_idx").on(table.groupId),
+    index("events_eventSeriesId_idx").on(table.eventSeriesId),
+    index("events_kind_idx").on(table.kind),
     index("events_time_idx").on(table.time),
   ]
 );
@@ -249,12 +381,19 @@ export const eventsToUsers = pgTable(
     carFits: integer("car_fits").notNull(), // includes driver!
     earliestLeaveTime: timestamp("earliest_leave_time"), // null if cannot drive
     originLocationId: text("origin_location_id").references(() => locations.id),
+    destinationLocationId: text("destination_location_id").references(
+      () => locations.id
+    ),
+    requiredArrivalTime: timestamp("required_arrival_time"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.eventId, table.userId] }),
     index("eventsToUsers_eventId_idx").on(table.eventId),
     index("eventsToUsers_userId_idx").on(table.userId),
+    index("eventsToUsers_destinationLocationId_idx").on(
+      table.destinationLocationId
+    ),
   ]
 );
 
@@ -264,9 +403,25 @@ export const solutions = pgTable("solutions", {
     .notNull()
     .unique()
     .references(() => events.id, { onDelete: "cascade" }),
+  problemKind: text("problem_kind")
+    .$type<EventKind>()
+    .default("shared_destination")
+    .notNull(),
   feasible: boolean("feasible").notNull(),
   optimal: boolean("optimal").notNull(),
   totalDriveSeconds: real("total_drive_seconds").notNull(),
+  externalRideshareMode: text("external_rideshare_mode")
+    .$type<ExternalRideshareMode>()
+    .default("disabled")
+    .notNull(),
+  externalRideshareVehicleCount: integer("external_rideshare_vehicle_count")
+    .default(0)
+    .notNull(),
+  totalExternalRideshareCostSeconds: real(
+    "total_external_rideshare_cost_seconds"
+  )
+    .default(0)
+    .notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -280,6 +435,15 @@ export const solutionParties = pgTable(
     driverUserId: text("driver_user_id").references(() => users.id, {
       onDelete: "cascade",
     }),
+    vehicleKind: text("vehicle_kind")
+      .$type<SolutionVehicleKind>()
+      .default("participant_vehicle")
+      .notNull(),
+    externalRideshareOriginLocationId: text(
+      "external_rideshare_origin_location_id"
+    ).references(() => locations.id),
+    externalRideshareLabel: text("external_rideshare_label"),
+    costMultiplier: real("cost_multiplier").default(1).notNull(),
     partyIndex: integer("party_index").notNull(),
   },
   (table) => [index("solutionParties_solutionId_idx").on(table.solutionId)]
@@ -327,6 +491,7 @@ export const userRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   accounts: many(accounts),
   groupsToUsers: many(groupsToUsers),
+  eventSeriesToUsers: many(eventSeriesToUsers),
   eventsToUsers: many(eventsToUsers),
 }));
 
@@ -346,6 +511,7 @@ export const accountRelations = relations(accounts, ({ one }) => ({
 
 export const groupRelations = relations(groups, ({ many }) => ({
   groupsToUsers: many(groupsToUsers),
+  eventSeries: many(eventSeries),
   events: many(events),
 }));
 
@@ -367,10 +533,49 @@ export const locationRelations = relations(locations, ({ one }) => ({
   }),
 }));
 
+export const eventSeriesRelations = relations(eventSeries, ({ one, many }) => ({
+  group: one(groups, {
+    fields: [eventSeries.groupId],
+    references: [groups.id],
+  }),
+  createdByUser: one(users, {
+    fields: [eventSeries.createdByUserId],
+    references: [users.id],
+  }),
+  eventSeriesToUsers: many(eventSeriesToUsers),
+  events: many(events),
+}));
+
+export const eventSeriesToUsersRelations = relations(
+  eventSeriesToUsers,
+  ({ one }) => ({
+    eventSeries: one(eventSeries, {
+      fields: [eventSeriesToUsers.eventSeriesId],
+      references: [eventSeries.id],
+    }),
+    user: one(users, {
+      fields: [eventSeriesToUsers.userId],
+      references: [users.id],
+    }),
+    defaultOriginLocation: one(locations, {
+      fields: [eventSeriesToUsers.defaultOriginLocationId],
+      references: [locations.id],
+    }),
+    defaultDestinationLocation: one(locations, {
+      fields: [eventSeriesToUsers.defaultDestinationLocationId],
+      references: [locations.id],
+    }),
+  })
+);
+
 export const eventRelations = relations(events, ({ one, many }) => ({
   group: one(groups, {
     fields: [events.groupId],
     references: [groups.id],
+  }),
+  eventSeries: one(eventSeries, {
+    fields: [events.eventSeriesId],
+    references: [eventSeries.id],
   }),
   location: one(locations, {
     fields: [events.locationId],
@@ -397,6 +602,10 @@ export const eventsToUsersRelations = relations(eventsToUsers, ({ one }) => ({
     fields: [eventsToUsers.originLocationId],
     references: [locations.id],
   }),
+  destinationLocation: one(locations, {
+    fields: [eventsToUsers.destinationLocationId],
+    references: [locations.id],
+  }),
 }));
 
 export const solutionRelations = relations(solutions, ({ one, many }) => ({
@@ -417,6 +626,10 @@ export const solutionPartyRelations = relations(
     driver: one(users, {
       fields: [solutionParties.driverUserId],
       references: [users.id],
+    }),
+    externalRideshareOriginLocation: one(locations, {
+      fields: [solutionParties.externalRideshareOriginLocationId],
+      references: [locations.id],
     }),
     members: many(solutionPartyMembers),
   })

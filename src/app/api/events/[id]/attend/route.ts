@@ -23,6 +23,8 @@ const attendanceSchema = z
     carFits: z.number().int().min(0).nullable(),
     earliestLeaveTime: z.string().nullable(),
     originLocationId: z.string().min(1),
+    destinationLocationId: z.string().min(1).nullable().optional(),
+    requiredArrivalTime: z.string().nullable().optional(),
     joinedAt: z.string().optional(),
   })
   .refine(
@@ -134,8 +136,14 @@ export async function POST(request: NextRequest, props: Params) {
     );
   }
 
-  const { drivingStatus, carFits, earliestLeaveTime, originLocationId } =
-    result.data;
+  const {
+    drivingStatus,
+    carFits,
+    earliestLeaveTime,
+    originLocationId,
+    destinationLocationId,
+    requiredArrivalTime,
+  } = result.data;
 
   // Verify the location exists and is a user location
   const expectedOwnerType: LocationOwnerType = "user";
@@ -153,13 +161,29 @@ export async function POST(request: NextRequest, props: Params) {
     );
   }
 
+  if (destinationLocationId) {
+    const destination = await db.query.locations.findFirst({
+      where: eq(locations.id, destinationLocationId),
+    });
+
+    if (!destination) {
+      return NextResponse.json(
+        { error: "Destination location not found" },
+        { status: 400 }
+      );
+    }
+  }
+
   // Validate earliestLeaveTime is not after event time
   if (earliestLeaveTime) {
     const leaveTime = new Date(earliestLeaveTime);
-    if (leaveTime >= event.time) {
+    const arrivalTime = requiredArrivalTime
+      ? new Date(requiredArrivalTime)
+      : event.time;
+    if (leaveTime >= arrivalTime) {
       return NextResponse.json(
         {
-          error: "Earliest leave time must be before the event start time",
+          error: "Earliest leave time must be before the required arrival time",
         },
         { status: 400 }
       );
@@ -177,6 +201,10 @@ export async function POST(request: NextRequest, props: Params) {
     carFits: carFitsValue,
     earliestLeaveTime: earliestLeaveTime ? new Date(earliestLeaveTime) : null,
     originLocationId,
+    destinationLocationId: destinationLocationId ?? null,
+    requiredArrivalTime: requiredArrivalTime
+      ? new Date(requiredArrivalTime)
+      : null,
   });
 
   after(async () => {
@@ -192,6 +220,8 @@ export async function POST(request: NextRequest, props: Params) {
       carFits,
       earliestLeaveTime: earliestLeaveTime ?? null,
       originLocationId,
+      destinationLocationId: destinationLocationId ?? null,
+      requiredArrivalTime: requiredArrivalTime ?? null,
     },
   });
 }
@@ -248,8 +278,14 @@ export async function PATCH(request: NextRequest, props: Params) {
     );
   }
 
-  const { drivingStatus, carFits, earliestLeaveTime, originLocationId } =
-    result.data;
+  const {
+    drivingStatus,
+    carFits,
+    earliestLeaveTime,
+    originLocationId,
+    destinationLocationId,
+    requiredArrivalTime,
+  } = result.data;
 
   // Verify the location exists and is a user location
   const expectedOwnerType: LocationOwnerType = "user";
@@ -267,13 +303,29 @@ export async function PATCH(request: NextRequest, props: Params) {
     );
   }
 
+  if (destinationLocationId) {
+    const destination = await db.query.locations.findFirst({
+      where: eq(locations.id, destinationLocationId),
+    });
+
+    if (!destination) {
+      return NextResponse.json(
+        { error: "Destination location not found" },
+        { status: 400 }
+      );
+    }
+  }
+
   // Validate earliestLeaveTime is not after event time
   if (earliestLeaveTime) {
     const leaveTime = new Date(earliestLeaveTime);
-    if (leaveTime >= event.time) {
+    const arrivalTime = requiredArrivalTime
+      ? new Date(requiredArrivalTime)
+      : event.time;
+    if (leaveTime >= arrivalTime) {
       return NextResponse.json(
         {
-          error: "Earliest leave time must be before the event start time",
+          error: "Earliest leave time must be before the required arrival time",
         },
         { status: 400 }
       );
@@ -291,6 +343,10 @@ export async function PATCH(request: NextRequest, props: Params) {
       carFits: carFitsValue,
       earliestLeaveTime: earliestLeaveTime ? new Date(earliestLeaveTime) : null,
       originLocationId,
+      destinationLocationId: destinationLocationId ?? null,
+      requiredArrivalTime: requiredArrivalTime
+        ? new Date(requiredArrivalTime)
+        : null,
     })
     .where(
       and(eq(eventsToUsers.eventId, eventId), eq(eventsToUsers.userId, user.id))
@@ -309,6 +365,8 @@ export async function PATCH(request: NextRequest, props: Params) {
       carFits,
       earliestLeaveTime: earliestLeaveTime || null,
       originLocationId,
+      destinationLocationId: destinationLocationId ?? null,
+      requiredArrivalTime: requiredArrivalTime ?? null,
     },
   });
 }
