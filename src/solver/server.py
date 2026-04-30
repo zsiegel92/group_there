@@ -43,7 +43,7 @@ image = (
     .run_commands(
         [
             "/root/.pixi/bin/pixi install --manifest-path /solver/pyproject.toml",
-            "/root/.pixi/bin/pixi run --manifest-path /solver/pyproject.toml pip install max",
+            "/root/.pixi/bin/pixi run --manifest-path /solver/pyproject.toml mojo --version",
             "/root/.pixi/bin/pixi run --manifest-path /solver/pyproject.toml mojo-build",
             "file /solver/mojo_app/group_generator_mojo_python_interface.so",
         ]

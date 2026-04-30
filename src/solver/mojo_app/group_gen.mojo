@@ -5,7 +5,7 @@ This module contains no Python interop and only uses Mojo-native inputs/outputs.
 """
 
 from std.iter import StopIteration
-from std.runtime.asyncrt import TaskGroup, parallelism_level
+from std.algorithm import parallelize
 
 
 comptime MAX_K = 6
@@ -207,54 +207,35 @@ def generate_feasible_groups_native(
         result_slots[i * INTS_PER_SLOT] = 0
         drive_times[i] = 0.0
 
-    async def process_chunk(start: Int, end: Int) capturing:
-        for work_idx in range(start, end):
-            var k = 0
-            var subset_idx = 0
-            for si in range(num_sizes):
-                if work_idx < size_offsets[si + 1]:
-                    k = size_k_values[si]
-                    subset_idx = work_idx - size_offsets[si]
-                    break
+    @parameter
+    def process_work_item(work_idx: Int) capturing:
+        var k = 0
+        var subset_idx = 0
+        for si in range(num_sizes):
+            if work_idx < size_offsets[si + 1]:
+                k = size_k_values[si]
+                subset_idx = work_idx - size_offsets[si]
+                break
 
-            var group = alloc[Int](k)
-            _unrank_combination(n, k, subset_idx, group, binomial_lookup)
+        var group = alloc[Int](k)
+        _unrank_combination(n, k, subset_idx, group, binomial_lookup)
 
-            var slot = result_slots + work_idx * INTS_PER_SLOT
-            _check_group_into_slot(
-                group,
-                k,
-                n,
-                car_fits,
-                must_drive_flags,
-                distance_to_dest,
-                dist_matrix,
-                slot,
-                drive_times + work_idx,
-            )
+        var slot = result_slots + work_idx * INTS_PER_SLOT
+        _check_group_into_slot(
+            group,
+            k,
+            n,
+            car_fits,
+            must_drive_flags,
+            distance_to_dest,
+            dist_matrix,
+            slot,
+            drive_times + work_idx,
+        )
 
-            group.free()
-    if total_work > 0:
-        var workers = min(parallelism_level(), total_work)
-        var chunk = (total_work + workers - 1) // workers
-        var tg = TaskGroup()
+        group.free()
 
-        for worker in range(workers):
-            var start = worker * chunk
-            var end = min(start + chunk, total_work)
-            if start < end:
-                tg.create_task(process_chunk(start, end))
-
-        tg.wait[
-            origin_of(
-                binomial_lookup,
-                size_offsets,
-                size_k_values,
-                result_slots,
-                drive_times,
-            )
-            ._mlir_origin
-        ]()
+    parallelize[process_work_item](total_work)
 
     size_offsets.free()
     size_k_values.free()
