@@ -21,7 +21,7 @@
     "python:check-all": "pnpm run pr python-type-check && pnpm run pr python-lint && pnpm run pr python-format && pnpm run pr python-test && pnpm run pr python-test-server",
     "python:dev": "pnpm run pr python-dev",
     "next:fastapi-only": "GROUPTHERE_SOLVER_API_URL=http://localhost:8000 next dev",
-    "dev:fastapi-only": "concurrently \"pnpm run pr python-dev-fastapi\" \"pnpm run next:fastapi-only\"",
+    "dev:fastapi": "concurrently \"pnpm run pr python-dev-fastapi\" \"pnpm run next:fastapi-only\"",
     "python:deploy": "pnpm run pr python-deploy",
     "python:test-fixture-remote": "pnpm run pr python-test-fixture-remote",
     "python:test-fixture-cuopt": "pnpm run pr python-test-fixture-cuopt",
