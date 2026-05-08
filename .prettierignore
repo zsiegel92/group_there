@@ -25,6 +25,7 @@ yarn.lock
 
 # Generated files
 src/lib/openapi/generated
+src/python-client
 *.gen.ts
 
 # IDE

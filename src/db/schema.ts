@@ -196,11 +196,11 @@ export const eventKindValues = ["shared_destination", "commute"] as const;
 
 export type EventKind = (typeof eventKindValues)[number];
 
-const eventKindEnum = pgEnum("event_kind", eventKindValues);
+export const eventKindEnum = pgEnum("event_kind", eventKindValues);
 
 export const eventParticipationModeValues = ["opt_in", "opt_out"] as const;
 
-const eventParticipationModeEnum = pgEnum(
+export const eventParticipationModeEnum = pgEnum(
   "event_participation_mode",
   eventParticipationModeValues
 );
@@ -211,7 +211,7 @@ export const externalRideshareModeValues = [
   "always_available",
 ] as const;
 
-const externalRideshareModeEnum = pgEnum(
+export const externalRideshareModeEnum = pgEnum(
   "external_rideshare_mode",
   externalRideshareModeValues
 );
@@ -221,7 +221,7 @@ export const solutionVehicleKindValues = [
   "external_rideshare",
 ] as const;
 
-const solutionVehicleKindEnum = pgEnum(
+export const solutionVehicleKindEnum = pgEnum(
   "solution_vehicle_kind",
   solutionVehicleKindValues
 );
@@ -408,7 +408,7 @@ export const solutionParties = pgTable(
 
 export const blastTypeValues = ["event_scheduled", "event_confirmed"] as const;
 
-const blastTypeEnum = pgEnum("blast_type", blastTypeValues);
+export const blastTypeEnum = pgEnum("blast_type", blastTypeValues);
 
 export const blasts = pgTable(
   "blasts",
