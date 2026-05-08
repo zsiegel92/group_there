@@ -153,7 +153,14 @@ function EventList({ events }: { events: EventListItem[] }) {
         const seriesId = event.eventSeriesId;
         const isExpanded = seriesId ? expandedSeriesIds.has(seriesId) : false;
         const hasChildren = children.length > 0;
-        const seriesCount = children.length + 1;
+        const seriesEvents = [event, ...children];
+        const seriesCounts = {
+          total: seriesEvents.length,
+          scheduled: seriesEvents.filter((seriesEvent) => seriesEvent.scheduled)
+            .length,
+          joined: seriesEvents.filter((seriesEvent) => seriesEvent.hasJoined)
+            .length,
+        };
 
         return (
           <div key={event.id} className="space-y-3">
@@ -163,22 +170,41 @@ function EventList({ events }: { events: EventListItem[] }) {
                   type="button"
                   aria-label={
                     isExpanded
-                      ? "Hide recurring events"
-                      : "Show recurring events"
+                      ? `Hide recurring events. ${seriesCounts.total} total, ${seriesCounts.scheduled} scheduled, ${seriesCounts.joined} joined.`
+                      : `Show recurring events. ${seriesCounts.total} total, ${seriesCounts.scheduled} scheduled, ${seriesCounts.joined} joined.`
                   }
                   aria-expanded={isExpanded}
                   onClick={() => {
                     if (seriesId) toggleSeries(seriesId);
                   }}
-                  className="w-12 shrink-0 rounded-md border bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900 flex flex-col items-center justify-center gap-0.5"
+                  className="w-20 shrink-0 rounded-md border bg-white px-2 py-3 text-gray-600 hover:bg-gray-50 hover:text-gray-900 flex flex-col items-stretch gap-2"
                 >
-                  {isExpanded ? (
-                    <ChevronDown className="size-4" />
-                  ) : (
-                    <ChevronRight className="size-4" />
-                  )}
-                  <span className="text-xs font-medium leading-none">
-                    {seriesCount}
+                  <span className="grid gap-1.5 text-[10px] leading-none">
+                    <span className="grid">
+                      <span className="text-left text-gray-400">Total</span>
+                      <span className="text-right text-sm font-medium text-gray-800">
+                        {seriesCounts.total}
+                      </span>
+                    </span>
+                    <span className="grid">
+                      <span className="text-left text-gray-400">Scheduled</span>
+                      <span className="text-right text-sm font-medium text-gray-800">
+                        {seriesCounts.scheduled}
+                      </span>
+                    </span>
+                    <span className="grid">
+                      <span className="text-left text-gray-400">Joined</span>
+                      <span className="text-right text-sm font-medium text-gray-800">
+                        {seriesCounts.joined}
+                      </span>
+                    </span>
+                  </span>
+                  <span className="flex justify-center">
+                    {isExpanded ? (
+                      <ChevronDown className="size-4" />
+                    ) : (
+                      <ChevronRight className="size-4" />
+                    )}
                   </span>
                 </button>
                 <div className="min-w-0 flex-1">
