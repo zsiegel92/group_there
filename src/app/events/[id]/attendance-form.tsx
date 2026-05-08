@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { differenceInMinutes, format, subMinutes } from "date-fns";
+import { useCallback, useMemo, useState } from "react";
+import { addMinutes, differenceInMinutes, format, subMinutes } from "date-fns";
 
 import { AddressSelectorAndCard } from "@/components/address-selector-and-card";
 import { useDialog } from "@/components/dialog-provider";
@@ -34,6 +34,18 @@ type Event = {
     destinationLocation: Location | null;
     requiredArrivalTime: string | null;
   } | null;
+  seriesAttendances?: {
+    drivingStatus: DrivingStatus;
+    carFits: number | null;
+    earliestLeaveTime: string | null;
+    originLocationId: string | null;
+    originLocation: Location | null;
+    destinationLocationId: string | null;
+    destinationLocation: Location | null;
+    requiredArrivalTime: string | null;
+    eventId: string;
+    eventTime: string;
+  }[];
 };
 
 function formatDatetimeLocal(date: Date) {
@@ -44,6 +56,19 @@ function parseDrivingStatus(value: string): DrivingStatus {
   if (value === "must_drive") return "must_drive";
   if (value === "can_drive_or_not") return "can_drive_or_not";
   return "cannot_drive";
+}
+
+function drivingStatusLabel(status: DrivingStatus) {
+  if (status === "must_drive") return "Must drive";
+  if (status === "can_drive_or_not") return "Can drive";
+  return "Cannot drive";
+}
+
+function offsetLabel(minutes: number | null) {
+  if (minutes == null) return "No time offset";
+  if (minutes < 60) return `${minutes} min before`;
+  if (minutes % 60 === 0) return `${minutes / 60} hr before`;
+  return `${Math.floor(minutes / 60)} hr ${minutes % 60} min before`;
 }
 
 type AttendanceFormProps = {
@@ -204,6 +229,100 @@ export function AttendanceForm({
       ? requiredArrivalTime
       : event.time;
 
+  const seriesSuggestions = useMemo(() => {
+    const currentTime = new Date(event.time).getTime();
+    const bestByKey = new Map<
+      string,
+      NonNullable<Event["seriesAttendances"]>[number]
+    >();
+
+    const isBetter = (
+      candidate: NonNullable<Event["seriesAttendances"]>[number],
+      incumbent: NonNullable<Event["seriesAttendances"]>[number]
+    ) => {
+      const candidateTime = new Date(candidate.eventTime).getTime();
+      const incumbentTime = new Date(incumbent.eventTime).getTime();
+      const candidateFuture = candidateTime >= currentTime;
+      const incumbentFuture = incumbentTime >= currentTime;
+      if (candidateFuture !== incumbentFuture) return candidateFuture;
+      return candidateFuture
+        ? candidateTime < incumbentTime
+        : candidateTime > incumbentTime;
+    };
+
+    for (const attendance of event.seriesAttendances ?? []) {
+      if (!attendance.originLocationId || !attendance.originLocation) continue;
+      if (
+        event.kind === "commute" &&
+        (!attendance.destinationLocationId || !attendance.destinationLocation)
+      ) {
+        continue;
+      }
+      const key =
+        event.kind === "commute"
+          ? `${attendance.originLocationId}:${attendance.destinationLocationId}`
+          : attendance.originLocationId;
+      const incumbent = bestByKey.get(key);
+      if (!incumbent || isBetter(attendance, incumbent)) {
+        bestByKey.set(key, attendance);
+      }
+    }
+
+    return [...bestByKey.values()];
+  }, [event.kind, event.seriesAttendances, event.time]);
+
+  const applyOriginAttendance = useCallback(
+    (attendance: NonNullable<Event["seriesAttendances"]>[number]) => {
+      setSelectedLocation(attendance.originLocation);
+      setDrivingStatus(attendance.drivingStatus);
+      setPassengersCount(
+        attendance.carFits != null && attendance.carFits > 0
+          ? attendance.carFits
+          : 1
+      );
+
+      if (
+        attendance.drivingStatus !== "cannot_drive" &&
+        attendance.earliestLeaveTime
+      ) {
+        const sourceArrival =
+          event.kind === "commute" && attendance.requiredArrivalTime
+            ? attendance.requiredArrivalTime
+            : attendance.eventTime;
+        const targetArrival =
+          event.kind === "commute" && requiredArrivalTime
+            ? requiredArrivalTime
+            : event.time;
+        const minutes = differenceInMinutes(
+          new Date(sourceArrival),
+          new Date(attendance.earliestLeaveTime)
+        );
+        setEarliestLeaveTime(
+          formatDatetimeLocal(subMinutes(new Date(targetArrival), minutes))
+        );
+      } else {
+        setEarliestLeaveTime("");
+      }
+    },
+    [event.kind, event.time, requiredArrivalTime]
+  );
+
+  const applyDestinationAttendance = useCallback(
+    (attendance: NonNullable<Event["seriesAttendances"]>[number]) => {
+      setSelectedDestination(attendance.destinationLocation);
+      if (attendance.requiredArrivalTime) {
+        const minutes = differenceInMinutes(
+          new Date(attendance.requiredArrivalTime),
+          new Date(attendance.eventTime)
+        );
+        setRequiredArrivalTime(
+          formatDatetimeLocal(addMinutes(new Date(event.time), minutes))
+        );
+      }
+    },
+    [event.time]
+  );
+
   const formContent = (
     <>
       <form onSubmit={handleAttendanceSubmit} className="space-y-4">
@@ -324,6 +443,105 @@ export function AttendanceForm({
               />
             </div>
           </>
+        )}
+
+        {seriesSuggestions.length > 0 && (
+          <div>
+            <h3 className="text-sm font-medium mb-2">Use Previous Details</h3>
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {seriesSuggestions.map((attendance) => {
+                const leaveOffset =
+                  attendance.earliestLeaveTime &&
+                  attendance.drivingStatus !== "cannot_drive"
+                    ? differenceInMinutes(
+                        new Date(
+                          event.kind === "commute" &&
+                            attendance.requiredArrivalTime
+                            ? attendance.requiredArrivalTime
+                            : attendance.eventTime
+                        ),
+                        new Date(attendance.earliestLeaveTime)
+                      )
+                    : null;
+                const arrivalOffset = attendance.requiredArrivalTime
+                  ? differenceInMinutes(
+                      new Date(attendance.requiredArrivalTime),
+                      new Date(attendance.eventTime)
+                    )
+                  : 0;
+
+                if (event.kind === "commute") {
+                  return (
+                    <div
+                      key={`${attendance.originLocationId}:${attendance.destinationLocationId}`}
+                      className="min-w-72 overflow-hidden rounded-lg border bg-white text-sm"
+                    >
+                      <button
+                        type="button"
+                        className="block w-full p-3 text-left hover:bg-gray-50"
+                        onClick={() => applyOriginAttendance(attendance)}
+                      >
+                        <div className="text-xs font-medium uppercase text-gray-400">
+                          Origin
+                        </div>
+                        <div className="font-medium truncate">
+                          {attendance.originLocation?.name}
+                        </div>
+                        <div className="text-gray-500">
+                          {drivingStatusLabel(attendance.drivingStatus)}
+                          {attendance.carFits
+                            ? `, ${attendance.carFits} seats`
+                            : ""}
+                        </div>
+                        <div className="text-gray-500">
+                          {offsetLabel(leaveOffset)}
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        className="block w-full border-t p-3 text-left hover:bg-gray-50"
+                        onClick={() => applyDestinationAttendance(attendance)}
+                      >
+                        <div className="text-xs font-medium uppercase text-gray-400">
+                          Destination
+                        </div>
+                        <div className="font-medium truncate">
+                          {attendance.destinationLocation?.name}
+                        </div>
+                        <div className="text-gray-500">
+                          {arrivalOffset === 0
+                            ? "Event time"
+                            : `${arrivalOffset > 0 ? "+" : ""}${arrivalOffset} min`}
+                        </div>
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <button
+                    key={attendance.originLocationId}
+                    type="button"
+                    className="min-w-64 rounded-lg border bg-white p-3 text-left text-sm hover:bg-gray-50"
+                    onClick={() => applyOriginAttendance(attendance)}
+                  >
+                    <div className="font-medium truncate">
+                      {attendance.originLocation?.name}
+                    </div>
+                    <div className="text-gray-500">
+                      {drivingStatusLabel(attendance.drivingStatus)}
+                      {attendance.carFits
+                        ? `, ${attendance.carFits} seats`
+                        : ""}
+                    </div>
+                    <div className="text-gray-500">
+                      {offsetLabel(leaveOffset)}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
 
         <div className="space-y-3">

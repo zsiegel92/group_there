@@ -15,14 +15,12 @@ import {
   type LocationOwnerType,
 } from "@/db/schema";
 import { getUser } from "@/lib/auth";
-
-const recurrenceFrequencyValues = [
-  "none",
-  "daily",
-  "weekly",
-  "biweekly",
-  "monthly",
-] as const;
+import {
+  addRecurrenceInterval,
+  recurrenceFrequencyValues,
+  recurrenceRule,
+  type RecurrenceFrequency,
+} from "@/lib/events/recurrence";
 
 const createEventSchema = z
   .object({
@@ -62,35 +60,6 @@ const createEventSchema = z
     message: "locationId is required for shared-destination events",
     path: ["locationId"],
   });
-
-function recurrenceRule(recurrence: {
-  frequency: (typeof recurrenceFrequencyValues)[number];
-  count: number;
-}) {
-  if (recurrence.frequency === "none" || recurrence.count <= 1) return null;
-  if (recurrence.frequency === "biweekly") {
-    return `FREQ=WEEKLY;INTERVAL=2;COUNT=${recurrence.count}`;
-  }
-  return `FREQ=${recurrence.frequency.toUpperCase()};INTERVAL=1;COUNT=${recurrence.count}`;
-}
-
-function addRecurrenceInterval(
-  date: Date,
-  frequency: (typeof recurrenceFrequencyValues)[number],
-  occurrenceIndex: number
-) {
-  const next = new Date(date);
-  if (frequency === "daily") {
-    next.setDate(next.getDate() + occurrenceIndex);
-  } else if (frequency === "weekly") {
-    next.setDate(next.getDate() + 7 * occurrenceIndex);
-  } else if (frequency === "biweekly") {
-    next.setDate(next.getDate() + 14 * occurrenceIndex);
-  } else if (frequency === "monthly") {
-    next.setMonth(next.getMonth() + occurrenceIndex);
-  }
-  return next;
-}
 
 // GET /api/events - Get all events for groups the current user is in
 export async function GET(request: NextRequest) {
@@ -247,7 +216,7 @@ export async function POST(request: NextRequest) {
   }
 
   const recurrenceInput: {
-    frequency: (typeof recurrenceFrequencyValues)[number];
+    frequency: RecurrenceFrequency;
     count: number;
   } = recurrence ?? { frequency: "none", count: 1 };
   const rule = recurrenceRule(recurrenceInput);

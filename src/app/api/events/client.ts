@@ -14,6 +14,7 @@ import {
   type EventKind,
   // type DrivingStatus,
 } from "@/db/schema";
+import type { RecurrenceFrequency } from "@/lib/events/recurrence";
 import { LocationSchema } from "@/lib/geo/schema";
 
 // Response schemas
@@ -77,6 +78,16 @@ const userAttendanceResponseSchema = z.object({
   joinedAt: z.string(),
   directTravelSeconds: z.number().nullable(),
 });
+
+const seriesAttendanceSchema = userAttendanceResponseSchema
+  .omit({
+    joinedAt: true,
+    directTravelSeconds: true,
+  })
+  .extend({
+    eventId: z.string(),
+    eventTime: z.string(),
+  });
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const userAttendanceInputSchema = z.object({
@@ -182,6 +193,7 @@ const eventDetailSchema = z.object({
   userAttendance: userAttendanceResponseSchema.nullable(),
   attendees: z.array(attendeeSchema).optional().default([]),
   attendeeCount: z.number(),
+  seriesAttendances: z.array(seriesAttendanceSchema).optional().default([]),
   solution: solutionSchema.nullable().optional(),
   myParty: myPartySchema.nullable().optional(),
   blasts: z.array(blastSchema).optional().default([]),
@@ -244,6 +256,20 @@ const successResponseSchema = z.object({
   success: z.boolean(),
 });
 
+const extendSeriesResponseSchema = z.object({
+  success: z.boolean(),
+  recurrenceRule: z.string().nullable(),
+  events: z.array(
+    z.object({
+      id: z.string(),
+      eventSeriesId: z.string().nullable(),
+      name: z.string(),
+      time: z.string(),
+      scheduled: z.boolean(),
+    })
+  ),
+});
+
 const attendanceResponseSchema = z.object({
   success: z.boolean(),
   attendance: z.object({
@@ -292,7 +318,7 @@ export async function createEvent(input: {
   externalRideshareCostMultiplier?: number;
   externalRideshareFixedCostSeconds?: number;
   recurrence?: {
-    frequency: "none" | "daily" | "weekly" | "biweekly" | "monthly";
+    frequency: RecurrenceFrequency;
     count: number;
   };
   message?: string;
@@ -408,10 +434,28 @@ export async function scheduleEvent(eventId: string) {
     method: "POST",
   });
   if (!response.ok) {
-    throw new Error("Failed to schedule event");
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.error || "Failed to schedule event");
   }
   const data = await response.json();
   return scheduleResponseSchema.parse(data);
+}
+
+export async function extendEventSeries(
+  eventId: string,
+  input: { frequency: RecurrenceFrequency; count: number }
+) {
+  const response = await fetch(`/api/events/${eventId}/extend-series`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.error || "Failed to extend series");
+  }
+  const data = await response.json();
+  return extendSeriesResponseSchema.parse(data);
 }
 
 export async function unscheduleEvent(eventId: string) {
@@ -668,6 +712,25 @@ export function useScheduleEvent() {
     onSuccess: (_, eventId) => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({ queryKey: ["events", eventId] });
+    },
+  });
+}
+
+export function useExtendEventSeries() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      eventId,
+      input,
+    }: {
+      eventId: string;
+      input: { frequency: RecurrenceFrequency; count: number };
+    }) => extendEventSeries(eventId, input),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({
+        queryKey: ["events", variables.eventId],
+      });
     },
   });
 }

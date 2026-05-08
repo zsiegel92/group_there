@@ -10,22 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import type { EventKind } from "@/db/schema";
+import {
+  parseRecurrenceFrequency,
+  type RecurrenceFrequency,
+} from "@/lib/events/recurrence";
 import type { Location } from "@/lib/geo/schema";
 
 import { useCreateEvent } from "../../api/events/client";
 
-type RecurrenceFrequency = "none" | "daily" | "weekly" | "biweekly" | "monthly";
-
 function parseEventKind(value: string): EventKind {
   return value === "commute" ? "commute" : "shared_destination";
-}
-
-function parseRecurrenceFrequency(value: string): RecurrenceFrequency {
-  if (value === "daily") return "daily";
-  if (value === "weekly") return "weekly";
-  if (value === "biweekly") return "biweekly";
-  if (value === "monthly") return "monthly";
-  return "none";
 }
 
 export default function CreateEventPage() {

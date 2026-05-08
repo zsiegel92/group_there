@@ -3,18 +3,29 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 
+import { useDialog } from "@/components/dialog-provider";
 import {
   AdminBadge,
   JoinedBadge,
   NotJoinedBadge,
 } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import type { EventKind } from "@/db/schema";
+import {
+  parseRecurrenceFrequency,
+  type RecurrenceFrequency,
+} from "@/lib/events/recurrence";
 
-import { useEvents } from "../api/events/client";
+import {
+  useEvents,
+  useExtendEventSeries,
+  useScheduleEvent,
+} from "../api/events/client";
 import { useGroups } from "../api/groups/client";
 import { EventStatus } from "./[id]/event-status";
 
@@ -53,13 +64,16 @@ type EventListItem = {
 
 function EventCard({ event }: { event: EventListItem }) {
   const eventDate = new Date(event.time);
-  const linkText = event.hasJoined ? "View/Edit Attendance" : "Join Event";
+  const linkText = !event.scheduled
+    ? "View Event"
+    : event.hasJoined
+      ? "View/Edit Attendance"
+      : "Join Event";
+  const scheduleEvent = useScheduleEvent();
+  const dialog = useDialog();
 
-  return (
-    <Link
-      href={`/events/${event.id}`}
-      className="block p-4 bg-white border rounded-lg hover:border-gray-400 transition-colors"
-    >
+  const cardContent = (
+    <>
       <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
         <h3 className="text-lg font-medium">{event.name}</h3>
         <div className="flex gap-2">
@@ -91,7 +105,7 @@ function EventCard({ event }: { event: EventListItem }) {
           <span className="font-medium">Participants:</span>{" "}
           {event.attendeeCount}
         </div>
-        {event.message && (
+        {event.message && event.scheduled && (
           <div className="mt-2 text-gray-700">{event.message}</div>
         )}
       </div>
@@ -107,7 +121,144 @@ function EventCard({ event }: { event: EventListItem }) {
           {linkText} →
         </span>
       </div>
+    </>
+  );
+
+  if (!event.scheduled && event.isGroupAdmin) {
+    return (
+      <div className="overflow-hidden rounded-lg border bg-white">
+        <Link
+          href={`/events/${event.id}`}
+          className="block p-3 hover:bg-gray-50 transition-colors"
+        >
+          {cardContent}
+        </Link>
+        <Button
+          type="button"
+          className="w-full rounded-none border-t"
+          disabled={scheduleEvent.isPending}
+          onClick={async () => {
+            try {
+              await scheduleEvent.mutateAsync(event.id);
+            } catch (error) {
+              if (error instanceof Error) dialog.alert(error.message);
+            }
+          }}
+        >
+          {scheduleEvent.isPending ? "Scheduling..." : "Schedule Event"}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={`/events/${event.id}`}
+      className="block p-4 bg-white border rounded-lg hover:border-gray-400 transition-colors"
+    >
+      {cardContent}
     </Link>
+  );
+}
+
+function chooseSeriesHeader(events: EventListItem[]) {
+  const now = Date.now();
+  const sorted = events.toSorted(
+    (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+  );
+  return (
+    sorted.find((event) => new Date(event.time).getTime() >= now) ??
+    sorted[sorted.length - 1]
+  );
+}
+
+function ExtendSeriesButton({ event }: { event: EventListItem }) {
+  const [open, setOpen] = useState(false);
+  const [frequency, setFrequency] = useState<RecurrenceFrequency>("weekly");
+  const [count, setCount] = useState(4);
+  const extendSeries = useExtendEventSeries();
+  const dialog = useDialog();
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="Extend recurring series"
+        onClick={() => setOpen(true)}
+        className="w-12 shrink-0 rounded-md border bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900 flex items-center justify-center"
+      >
+        <Plus className="size-4" />
+      </button>
+      <Dialog
+        open={open}
+        onClose={() => {
+          if (!extendSeries.isPending) setOpen(false);
+        }}
+      >
+        <h2 className="text-xl font-bold mb-4">Extend Series</h2>
+        <form
+          className="space-y-4"
+          onSubmit={async (submitEvent) => {
+            submitEvent.preventDefault();
+            try {
+              await extendSeries.mutateAsync({
+                eventId: event.id,
+                input: { frequency, count },
+              });
+              setOpen(false);
+            } catch (error) {
+              if (error instanceof Error) dialog.alert(error.message);
+            }
+          }}
+        >
+          <div>
+            <label className="block text-sm font-medium mb-2">Repeat</label>
+            <select
+              value={frequency}
+              onChange={(changeEvent) =>
+                setFrequency(parseRecurrenceFrequency(changeEvent.target.value))
+              }
+              className="w-full p-2 border rounded"
+              disabled={extendSeries.isPending}
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Every 2 weeks</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Occurrences
+            </label>
+            <Input
+              type="number"
+              min="1"
+              max="52"
+              value={count}
+              onChange={(changeEvent) =>
+                setCount(Number.parseInt(changeEvent.target.value, 10) || 1)
+              }
+              disabled={extendSeries.isPending}
+              required
+            />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setOpen(false)}
+              disabled={extendSeries.isPending}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={extendSeries.isPending}>
+              {extendSeries.isPending ? "Extending..." : "Extend Series"}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+    </>
   );
 }
 
@@ -134,8 +285,13 @@ function EventList({ events }: { events: EventListItem[] }) {
 
       firstBySeriesId.add(seriesId);
       const seriesEvents = eventsBySeriesId.get(seriesId) ?? [event];
-      const [firstEvent, ...children] = seriesEvents;
-      return [{ event: firstEvent ?? event, children }];
+      const headerEvent = chooseSeriesHeader(seriesEvents) ?? event;
+      const children = seriesEvents
+        .filter((seriesEvent) => seriesEvent.id !== headerEvent.id)
+        .toSorted(
+          (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+        );
+      return [{ event: headerEvent, children }];
     });
   }, [events]);
 
@@ -214,6 +370,7 @@ function EventList({ events }: { events: EventListItem[] }) {
                 <div className="min-w-0 flex-1">
                   <EventCard event={event} />
                 </div>
+                {event.isGroupAdmin && <ExtendSeriesButton event={event} />}
               </div>
             ) : (
               <EventCard event={event} />
@@ -272,6 +429,12 @@ export function EventsPage({ groupId }: { groupId?: string }) {
       },
       new Map()
     );
+
+    for (const groupData of groupMap.values()) {
+      groupData.eventsForGroup.sort(
+        (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+      );
+    }
 
     // Sort testing groups to bottom
     return Array.from(groupMap.values()).sort((a, b) => {

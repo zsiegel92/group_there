@@ -131,6 +131,45 @@ export async function GET(request: NextRequest, props: Params) {
         }
       : null;
 
+  const seriesAttendances = event.eventSeriesId
+    ? (
+        await db.query.events.findMany({
+          where: eq(events.eventSeriesId, event.eventSeriesId),
+          with: {
+            eventsToUsers: {
+              with: {
+                originLocation: true,
+                destinationLocation: true,
+              },
+            },
+          },
+        })
+      )
+        .flatMap((seriesEvent) =>
+          seriesEvent.eventsToUsers
+            .filter((attendance) => attendance.userId === user.id)
+            .map((attendance) => ({
+              eventId: seriesEvent.id,
+              eventTime: seriesEvent.time.toISOString(),
+              drivingStatus: attendance.drivingStatus,
+              carFits: attendance.carFits,
+              earliestLeaveTime: attendance.earliestLeaveTime
+                ? attendance.earliestLeaveTime.toISOString()
+                : null,
+              originLocationId: attendance.originLocationId,
+              originLocation: formatLocationObj(attendance.originLocation),
+              destinationLocationId: attendance.destinationLocationId,
+              destinationLocation: formatLocationObj(
+                attendance.destinationLocation
+              ),
+              requiredArrivalTime: attendance.requiredArrivalTime
+                ? attendance.requiredArrivalTime.toISOString()
+                : null,
+            }))
+        )
+        .filter((attendance) => attendance.eventId !== event.id)
+    : [];
+
   // Load solution if event is locked
   let solutionData = null;
   let myParty = null;
@@ -398,6 +437,7 @@ export async function GET(request: NextRequest, props: Params) {
         : null,
       attendees,
       attendeeCount: event.eventsToUsers.length,
+      seriesAttendances,
       solution: solutionData,
       myParty,
       blasts: membership.isAdmin
