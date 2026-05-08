@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { type DrivingStatus, type EventKind } from "@/db/schema";
 import { useSession } from "@/lib/auth-client";
 import type { Location } from "@/lib/geo/schema";
+import { cn } from "@/lib/utils";
 
 import {
   useAttendEvent,
@@ -47,6 +48,8 @@ type Event = {
     eventTime: string;
   }[];
 };
+
+type SeriesAttendance = NonNullable<Event["seriesAttendances"]>[number];
 
 function formatDatetimeLocal(date: Date) {
   return format(date, "yyyy-MM-dd'T'HH:mm");
@@ -280,16 +283,8 @@ export function AttendanceForm({
     return [...bestByKey.values()];
   }, [event.kind, event.seriesAttendances, event.time]);
 
-  const applyOriginAttendance = useCallback(
-    (attendance: NonNullable<Event["seriesAttendances"]>[number]) => {
-      setSelectedLocation(attendance.originLocation);
-      setDrivingStatus(attendance.drivingStatus);
-      setPassengersCount(
-        attendance.carFits != null && attendance.carFits > 0
-          ? attendance.carFits
-          : 1
-      );
-
+  const getOriginDetails = useCallback(
+    (attendance: SeriesAttendance) => {
       if (
         attendance.drivingStatus !== "cannot_drive" &&
         attendance.earliestLeaveTime
@@ -306,34 +301,227 @@ export function AttendanceForm({
           new Date(sourceArrival),
           new Date(attendance.earliestLeaveTime)
         );
-        setEarliestLeaveTime(
-          formatDatetimeLocal(subMinutes(new Date(targetArrival), minutes))
-        );
-      } else {
-        setEarliestLeaveTime("");
+
+        return {
+          drivingStatus: attendance.drivingStatus,
+          effectiveCarFits:
+            attendance.carFits != null && attendance.carFits > 0
+              ? attendance.carFits
+              : 1,
+          earliestLeaveTime: formatDatetimeLocal(
+            subMinutes(new Date(targetArrival), minutes)
+          ),
+          originLocationId: attendance.originLocationId,
+        };
       }
+
+      return {
+        drivingStatus: attendance.drivingStatus,
+        effectiveCarFits: 0,
+        earliestLeaveTime: "",
+        originLocationId: attendance.originLocationId,
+      };
     },
     [event.kind, event.time, requiredArrivalTime]
   );
 
-  const applyDestinationAttendance = useCallback(
-    (attendance: NonNullable<Event["seriesAttendances"]>[number]) => {
-      setSelectedDestination(attendance.destinationLocation);
+  const applyOriginAttendance = useCallback(
+    (attendance: SeriesAttendance) => {
+      const originDetails = getOriginDetails(attendance);
+      setSelectedLocation(attendance.originLocation);
+      setDrivingStatus(originDetails.drivingStatus);
+      setPassengersCount(
+        originDetails.effectiveCarFits > 0 ? originDetails.effectiveCarFits : 1
+      );
+      setEarliestLeaveTime(originDetails.earliestLeaveTime);
+    },
+    [getOriginDetails]
+  );
+
+  const getDestinationDetails = useCallback(
+    (attendance: SeriesAttendance) => {
       if (attendance.requiredArrivalTime) {
         const minutes = differenceInMinutes(
           new Date(attendance.requiredArrivalTime),
           new Date(attendance.eventTime)
         );
-        setRequiredArrivalTime(
-          formatDatetimeLocal(addMinutes(new Date(event.time), minutes))
-        );
+
+        return {
+          destinationLocationId: attendance.destinationLocationId,
+          requiredArrivalTime: formatDatetimeLocal(
+            addMinutes(new Date(event.time), minutes)
+          ),
+        };
       }
+
+      return {
+        destinationLocationId: attendance.destinationLocationId,
+        requiredArrivalTime: "",
+      };
     },
     [event.time]
   );
 
+  const applyDestinationAttendance = useCallback(
+    (attendance: SeriesAttendance) => {
+      const destinationDetails = getDestinationDetails(attendance);
+      setSelectedDestination(attendance.destinationLocation);
+      if (destinationDetails.requiredArrivalTime) {
+        setRequiredArrivalTime(destinationDetails.requiredArrivalTime);
+      }
+    },
+    [getDestinationDetails]
+  );
+
+  const isOriginSelectionActive = useCallback(
+    (attendance: SeriesAttendance) => {
+      const originDetails = getOriginDetails(attendance);
+      return (
+        selectedLocation?.id === originDetails.originLocationId &&
+        drivingStatus === originDetails.drivingStatus &&
+        (drivingStatus === "cannot_drive" ? 0 : passengersCount) ===
+          originDetails.effectiveCarFits &&
+        (drivingStatus === "cannot_drive" ? "" : earliestLeaveTime) ===
+          originDetails.earliestLeaveTime
+      );
+    },
+    [
+      drivingStatus,
+      earliestLeaveTime,
+      getOriginDetails,
+      passengersCount,
+      selectedLocation,
+    ]
+  );
+
+  const isDestinationSelectionActive = useCallback(
+    (attendance: SeriesAttendance) => {
+      const destinationDetails = getDestinationDetails(attendance);
+      return (
+        selectedDestination?.id === destinationDetails.destinationLocationId &&
+        (!destinationDetails.requiredArrivalTime ||
+          requiredArrivalTime === destinationDetails.requiredArrivalTime)
+      );
+    },
+    [getDestinationDetails, requiredArrivalTime, selectedDestination]
+  );
+
+  const previousDetailsContent = seriesSuggestions.length > 0 && (
+    <div className="mb-4">
+      <h3 className="text-sm font-medium mb-2">Use Previous Details</h3>
+      <div className="flex gap-3 overflow-x-auto pb-1">
+        {seriesSuggestions.map((attendance) => {
+          const leaveOffset =
+            attendance.earliestLeaveTime &&
+            attendance.drivingStatus !== "cannot_drive"
+              ? differenceInMinutes(
+                  new Date(
+                    event.kind === "commute" && attendance.requiredArrivalTime
+                      ? attendance.requiredArrivalTime
+                      : attendance.eventTime
+                  ),
+                  new Date(attendance.earliestLeaveTime)
+                )
+              : null;
+          const arrivalOffset = attendance.requiredArrivalTime
+            ? differenceInMinutes(
+                new Date(attendance.requiredArrivalTime),
+                new Date(attendance.eventTime)
+              )
+            : 0;
+          const originSelected = isOriginSelectionActive(attendance);
+          const destinationSelected = isDestinationSelectionActive(attendance);
+
+          if (event.kind === "commute") {
+            return (
+              <div
+                key={`${attendance.originLocationId}:${attendance.destinationLocationId}`}
+                className={cn(
+                  "min-w-72 overflow-hidden rounded-lg border bg-white text-sm",
+                  originSelected && destinationSelected && "border-blue-500"
+                )}
+              >
+                <button
+                  type="button"
+                  className={cn(
+                    "block w-full cursor-pointer p-3 text-left transition-colors hover:bg-gray-50",
+                    originSelected &&
+                      "bg-blue-50 text-blue-950 ring-1 ring-inset ring-blue-500 hover:bg-blue-50"
+                  )}
+                  aria-pressed={originSelected}
+                  onClick={() => applyOriginAttendance(attendance)}
+                >
+                  <div className="text-xs font-medium uppercase text-gray-400">
+                    Origin
+                  </div>
+                  <div className="font-medium truncate">
+                    {attendance.originLocation?.name}
+                  </div>
+                  <div className="text-gray-500">
+                    {drivingStatusLabel(attendance.drivingStatus)}
+                    {attendance.carFits ? `, ${attendance.carFits} seats` : ""}
+                  </div>
+                  <div className="text-gray-500">
+                    {offsetLabel(leaveOffset)}
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    "block w-full cursor-pointer border-t p-3 text-left transition-colors hover:bg-gray-50",
+                    destinationSelected &&
+                      "bg-blue-50 text-blue-950 ring-1 ring-inset ring-blue-500 hover:bg-blue-50"
+                  )}
+                  aria-pressed={destinationSelected}
+                  onClick={() => applyDestinationAttendance(attendance)}
+                >
+                  <div className="text-xs font-medium uppercase text-gray-400">
+                    Destination
+                  </div>
+                  <div className="font-medium truncate">
+                    {attendance.destinationLocation?.name}
+                  </div>
+                  <div className="text-gray-500">
+                    {arrivalOffset === 0
+                      ? "Event time"
+                      : `${arrivalOffset > 0 ? "+" : ""}${arrivalOffset} min`}
+                  </div>
+                </button>
+              </div>
+            );
+          }
+
+          return (
+            <button
+              key={attendance.originLocationId}
+              type="button"
+              className={cn(
+                "min-w-64 cursor-pointer rounded-lg border bg-white p-3 text-left text-sm transition-colors hover:bg-gray-50",
+                originSelected &&
+                  "border-blue-500 bg-blue-50 text-blue-950 ring-1 ring-blue-500 hover:bg-blue-50"
+              )}
+              aria-pressed={originSelected}
+              onClick={() => applyOriginAttendance(attendance)}
+            >
+              <div className="font-medium truncate">
+                {attendance.originLocation?.name}
+              </div>
+              <div className="text-gray-500">
+                {drivingStatusLabel(attendance.drivingStatus)}
+                {attendance.carFits ? `, ${attendance.carFits} seats` : ""}
+              </div>
+              <div className="text-gray-500">{offsetLabel(leaveOffset)}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   const formContent = (
     <>
+      {previousDetailsContent}
+
       <form onSubmit={handleAttendanceSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-2">
@@ -452,105 +640,6 @@ export function AttendanceForm({
               />
             </div>
           </>
-        )}
-
-        {seriesSuggestions.length > 0 && (
-          <div>
-            <h3 className="text-sm font-medium mb-2">Use Previous Details</h3>
-            <div className="flex gap-3 overflow-x-auto pb-1">
-              {seriesSuggestions.map((attendance) => {
-                const leaveOffset =
-                  attendance.earliestLeaveTime &&
-                  attendance.drivingStatus !== "cannot_drive"
-                    ? differenceInMinutes(
-                        new Date(
-                          event.kind === "commute" &&
-                            attendance.requiredArrivalTime
-                            ? attendance.requiredArrivalTime
-                            : attendance.eventTime
-                        ),
-                        new Date(attendance.earliestLeaveTime)
-                      )
-                    : null;
-                const arrivalOffset = attendance.requiredArrivalTime
-                  ? differenceInMinutes(
-                      new Date(attendance.requiredArrivalTime),
-                      new Date(attendance.eventTime)
-                    )
-                  : 0;
-
-                if (event.kind === "commute") {
-                  return (
-                    <div
-                      key={`${attendance.originLocationId}:${attendance.destinationLocationId}`}
-                      className="min-w-72 overflow-hidden rounded-lg border bg-white text-sm"
-                    >
-                      <button
-                        type="button"
-                        className="block w-full p-3 text-left hover:bg-gray-50"
-                        onClick={() => applyOriginAttendance(attendance)}
-                      >
-                        <div className="text-xs font-medium uppercase text-gray-400">
-                          Origin
-                        </div>
-                        <div className="font-medium truncate">
-                          {attendance.originLocation?.name}
-                        </div>
-                        <div className="text-gray-500">
-                          {drivingStatusLabel(attendance.drivingStatus)}
-                          {attendance.carFits
-                            ? `, ${attendance.carFits} seats`
-                            : ""}
-                        </div>
-                        <div className="text-gray-500">
-                          {offsetLabel(leaveOffset)}
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        className="block w-full border-t p-3 text-left hover:bg-gray-50"
-                        onClick={() => applyDestinationAttendance(attendance)}
-                      >
-                        <div className="text-xs font-medium uppercase text-gray-400">
-                          Destination
-                        </div>
-                        <div className="font-medium truncate">
-                          {attendance.destinationLocation?.name}
-                        </div>
-                        <div className="text-gray-500">
-                          {arrivalOffset === 0
-                            ? "Event time"
-                            : `${arrivalOffset > 0 ? "+" : ""}${arrivalOffset} min`}
-                        </div>
-                      </button>
-                    </div>
-                  );
-                }
-
-                return (
-                  <button
-                    key={attendance.originLocationId}
-                    type="button"
-                    className="min-w-64 rounded-lg border bg-white p-3 text-left text-sm hover:bg-gray-50"
-                    onClick={() => applyOriginAttendance(attendance)}
-                  >
-                    <div className="font-medium truncate">
-                      {attendance.originLocation?.name}
-                    </div>
-                    <div className="text-gray-500">
-                      {drivingStatusLabel(attendance.drivingStatus)}
-                      {attendance.carFits
-                        ? `, ${attendance.carFits} seats`
-                        : ""}
-                    </div>
-                    <div className="text-gray-500">
-                      {offsetLabel(leaveOffset)}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         )}
 
         <div className="space-y-3">
