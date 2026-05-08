@@ -170,6 +170,9 @@ function RiderRow({
 
       <div className="text-gray-500 text-xs truncate">
         {rider.originLocation?.name ?? "No origin"}
+        {rider.destinationLocation
+          ? ` -> ${rider.destinationLocation.name}`
+          : ""}
       </div>
 
       {/* Driving status chips */}

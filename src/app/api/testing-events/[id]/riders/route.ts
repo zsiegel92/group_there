@@ -54,30 +54,44 @@ export async function GET(request: NextRequest, props: Params) {
     with: {
       user: true,
       originLocation: true,
+      destinationLocation: true,
     },
   });
 
-  // Look up direct travel times from each rider's origin to the event location
-  const originIds = attendees
-    .map((a) => a.originLocationId)
-    .filter((id): id is string => id != null);
+  // Look up direct travel times from each rider's origin to their effective destination.
+  const locationIds = [
+    ...new Set(
+      attendees.flatMap((a) => {
+        const ids: string[] = [];
+        if (a.originLocationId) ids.push(a.originLocationId);
+        const destinationLocationId =
+          a.destinationLocationId ?? verified.event.locationId;
+        if (destinationLocationId) ids.push(destinationLocationId);
+        return ids;
+      })
+    ),
+  ];
 
   const distanceMap = new Map<string, number>();
-  if (verified.event.locationId && originIds.length > 0) {
+  if (locationIds.length > 1) {
     const distances = await db
       .select({
         originLocationId: locationDistances.originLocationId,
+        destinationLocationId: locationDistances.destinationLocationId,
         durationSeconds: locationDistances.durationSeconds,
       })
       .from(locationDistances)
       .where(
         and(
-          inArray(locationDistances.originLocationId, originIds),
-          eq(locationDistances.destinationLocationId, verified.event.locationId)
+          inArray(locationDistances.originLocationId, locationIds),
+          inArray(locationDistances.destinationLocationId, locationIds)
         )
       );
     for (const d of distances) {
-      distanceMap.set(d.originLocationId, d.durationSeconds);
+      distanceMap.set(
+        `${d.originLocationId}:${d.destinationLocationId}`,
+        d.durationSeconds
+      );
     }
   }
 
@@ -100,9 +114,24 @@ export async function GET(request: NextRequest, props: Params) {
             longitude: a.originLocation.longitude,
           }
         : null,
-      directTravelSeconds: a.originLocationId
-        ? (distanceMap.get(a.originLocationId) ?? null)
+      destinationLocationId: a.destinationLocationId,
+      destinationLocation: a.destinationLocation
+        ? {
+            id: a.destinationLocation.id,
+            name: a.destinationLocation.name,
+            addressString: a.destinationLocation.addressString,
+            latitude: a.destinationLocation.latitude,
+            longitude: a.destinationLocation.longitude,
+          }
         : null,
+      requiredArrivalTime: a.requiredArrivalTime?.toISOString() ?? null,
+      directTravelSeconds:
+        a.originLocationId &&
+        (a.destinationLocationId ?? verified.event.locationId)
+          ? (distanceMap.get(
+              `${a.originLocationId}:${a.destinationLocationId ?? verified.event.locationId}`
+            ) ?? null)
+          : null,
     })),
   });
 }

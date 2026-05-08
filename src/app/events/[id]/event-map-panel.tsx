@@ -9,6 +9,7 @@ import { ROUTE_COLORS, type Route } from "@/components/map/map-container";
 import { YouBadge } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import type { EventKind } from "@/db/schema";
 import { decodePolyline } from "@/lib/geo/polyline";
 import type { Location } from "@/lib/geo/schema";
 import type { Problem, Solution } from "@/python-client";
@@ -22,7 +23,7 @@ import {
 import { solveProblem, type PartyEstimate } from "./solve-action";
 
 type EventForPanel = {
-  kind: "shared_destination" | "commute";
+  kind: EventKind;
   location: Location | null;
   locationId: string | null;
   locked: boolean;

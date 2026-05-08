@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 
+import type { EventKind } from "@/db/schema";
 import type { Location } from "@/lib/geo/schema";
 
 export function EventDetailsCard({
@@ -9,7 +10,7 @@ export function EventDetailsCard({
   location,
   message,
 }: {
-  kind: "shared_destination" | "commute";
+  kind: EventKind;
   eventSeriesId: string | null;
   time: string;
   location: Location | null;

@@ -11,6 +11,7 @@ import {
   externalRideshareModeValues,
   groupTypeValues,
   solutionVehicleKindValues,
+  type EventKind,
   // type DrivingStatus,
 } from "@/db/schema";
 import { LocationSchema } from "@/lib/geo/schema";
@@ -280,7 +281,7 @@ export async function fetchEvents(groupId?: string) {
 export async function createEvent(input: {
   groupId: string;
   eventSeriesId?: string | null;
-  kind?: (typeof eventKindValues)[number];
+  kind?: EventKind;
   name: string;
   locationId: string | null;
   time: string;
@@ -321,7 +322,7 @@ export async function updateEvent(
   eventId: string,
   input: {
     eventSeriesId?: string | null;
-    kind?: (typeof eventKindValues)[number];
+    kind?: EventKind;
     name?: string;
     locationId?: string | null;
     time?: string;
@@ -352,7 +353,8 @@ export async function deleteEvent(eventId: string) {
     method: "DELETE",
   });
   if (!response.ok) {
-    throw new Error("Failed to delete event");
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.error || "Failed to delete event");
   }
   const data = await response.json();
   return successResponseSchema.parse(data);
@@ -432,7 +434,7 @@ export type ConfirmItineraryInput = {
     externalRideshareLabel?: string | null;
     costMultiplier?: number;
   }[];
-  problemKind?: (typeof eventKindValues)[number];
+  problemKind?: EventKind;
   externalRideshareMode?: (typeof externalRideshareModeValues)[number];
   externalRideshareVehicleCount?: number;
   totalExternalRideshareCostSeconds?: number;
@@ -578,7 +580,7 @@ export function useUpdateEvent() {
       eventId: string;
       input: {
         eventSeriesId?: string | null;
-        kind?: (typeof eventKindValues)[number];
+        kind?: EventKind;
         name?: string;
         locationId?: string | null;
         time?: string;

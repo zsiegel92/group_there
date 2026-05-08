@@ -7,6 +7,7 @@ import { EventLocationsMap } from "@/components/map/event-locations-map";
 import { ROUTE_COLORS, type Route } from "@/components/map/map-container";
 import { YouBadge } from "@/components/ui/badges";
 import { Spinner } from "@/components/ui/spinner";
+import type { EventKind } from "@/db/schema";
 import { decodePolyline } from "@/lib/geo/polyline";
 import type { Location } from "@/lib/geo/schema";
 
@@ -21,7 +22,7 @@ export function YourTrip({
   currentUserId,
 }: {
   myParty: MyParty;
-  eventKind: "shared_destination" | "commute";
+  eventKind: EventKind;
   eventId: string;
   eventLocation: Location | null;
   eventLocationId: string | null;

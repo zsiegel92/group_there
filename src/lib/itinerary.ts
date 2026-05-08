@@ -2,7 +2,7 @@ import { addSeconds } from "date-fns";
 import { and, inArray } from "drizzle-orm";
 
 import { db } from "@/db/db";
-import { locationDistances } from "@/db/schema";
+import { locationDistances, type EventKind } from "@/db/schema";
 
 type EstimateMember = {
   userId: string;
@@ -218,7 +218,7 @@ export async function computePartyEstimates(
   members: EstimateMember[],
   eventLocationId: string | null,
   eventTime: Date,
-  kind: "shared_destination" | "commute" = "shared_destination"
+  kind: EventKind = "shared_destination"
 ) {
   if (kind === "commute") {
     return computeCommutePartyEstimates(members, eventTime);

@@ -4,9 +4,11 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
+import { AddressSelectorAndCard } from "@/components/address-selector-and-card";
 import { useDialog } from "@/components/dialog-provider";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import type { EventKind } from "@/db/schema";
 import type { Location } from "@/lib/geo/schema";
 import type { Problem, Solution } from "@/python-client";
 
@@ -34,31 +36,31 @@ function useSolveResult(eventId: string, enabled: boolean) {
   });
 }
 
-function buildLocation(r: {
-  originLocation: {
+function buildRiderLocation(
+  location: {
     id: string;
     name: string;
     addressString: string;
     latitude: number | null;
     longitude: number | null;
-  } | null;
-  userId: string;
-}): Location | null {
-  if (!r.originLocation) return null;
+  } | null,
+  userId: string
+): Location | null {
+  if (!location) return null;
   return {
-    id: r.originLocation.id,
+    id: location.id,
     googlePlaceId: null,
-    name: r.originLocation.name,
-    addressString: r.originLocation.addressString,
+    name: location.name,
+    addressString: location.addressString,
     street1: null,
     street2: null,
     city: null,
     state: null,
     zip: null,
-    latitude: r.originLocation.latitude,
-    longitude: r.originLocation.longitude,
+    latitude: location.latitude,
+    longitude: location.longitude,
     ownerType: "user",
-    ownerId: r.userId,
+    ownerId: userId,
   } satisfies Location;
 }
 
@@ -156,6 +158,7 @@ export function TestingEventDetailPage({ eventId }: { eventId: string }) {
         />
 
         <GenerateRidersPanel
+          eventKind={event.kind}
           eventId={eventId}
           riderCount={riders?.length ?? 0}
           locked={event.locked}
@@ -182,7 +185,12 @@ export function TestingEventDetailPage({ eventId }: { eventId: string }) {
               userEmail: r.userEmail,
               userAttendance: {
                 originLocationId: r.originLocationId,
-                originLocation: buildLocation(r),
+                originLocation: buildRiderLocation(r.originLocation, r.userId),
+                destinationLocationId: r.destinationLocationId,
+                destinationLocation: buildRiderLocation(
+                  r.destinationLocation,
+                  r.userId
+                ),
               },
             })),
             isAdmin: true,
@@ -201,19 +209,24 @@ export function TestingEventDetailPage({ eventId }: { eventId: string }) {
 }
 
 function GenerateRidersPanel({
+  eventKind,
   eventId,
   riderCount,
   locked,
 }: {
+  eventKind: EventKind;
   eventId: string;
   riderCount: number;
   locked: boolean;
 }) {
   const [count, setCount] = useState(5);
   const [radiusMiles, setRadiusMiles] = useState(15);
+  const [selectedCenterLocation, setSelectedCenterLocation] =
+    useState<Location | null>(null);
   const generateRiders = useGenerateRiders();
   const deleteAllRiders = useDeleteAllRiders();
   const dialog = useDialog();
+  const commuteNeedsCenter = eventKind === "commute" && !selectedCenterLocation;
 
   return (
     <div className="bg-gray-50 p-6 rounded-lg border border-dashed border-gray-300">
@@ -221,6 +234,20 @@ function GenerateRidersPanel({
         Generate Riders ({riderCount} total)
       </h2>
       <div className="flex flex-wrap items-end gap-4">
+        {eventKind === "commute" && (
+          <div className="min-w-72 flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Generation Center
+            </label>
+            <AddressSelectorAndCard
+              onNewValidatedLocation={setSelectedCenterLocation}
+              ownerType="event"
+              ownerId={eventId}
+              selectedLocation={selectedCenterLocation}
+              disabled={locked || generateRiders.isPending}
+            />
+          </div>
+        )}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Count
@@ -252,10 +279,14 @@ function GenerateRidersPanel({
           onClick={() =>
             generateRiders.mutate({
               eventId,
-              input: { count, radiusMiles },
+              input: {
+                count,
+                radiusMiles,
+                centerLocationId: selectedCenterLocation?.id,
+              },
             })
           }
-          disabled={locked || generateRiders.isPending}
+          disabled={locked || generateRiders.isPending || commuteNeedsCenter}
         >
           {generateRiders.isPending ? "Generating..." : "Generate"}
         </Button>

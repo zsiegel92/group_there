@@ -9,6 +9,7 @@ import {
   eventParticipationModeValues,
   events,
   externalRideshareModeValues,
+  groups,
   groupsToUsers,
   locationDistances,
   locations,
@@ -435,6 +436,7 @@ export async function PATCH(request: NextRequest, props: Params) {
   // Get event
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
+    with: { group: true },
   });
 
   if (!event) {
@@ -584,8 +586,13 @@ export async function DELETE(request: NextRequest, props: Params) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
-  // Can only delete unscheduled events
-  if (event.scheduled) {
+  const group = await db.query.groups.findFirst({
+    where: eq(groups.id, event.groupId),
+  });
+
+  // Can only delete scheduled events in the testing playground, where events
+  // are auto-scheduled to make the solver workflow available immediately.
+  if (event.scheduled && group?.type !== "testing") {
     return NextResponse.json(
       { error: "Cannot delete scheduled event. Unschedule it first." },
       { status: 400 }

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/badges";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import type { EventKind } from "@/db/schema";
 
 import { useEvents } from "../api/events/client";
 import { useGroups } from "../api/groups/client";
@@ -31,7 +32,7 @@ type GroupedEvents = {
   };
   eventsForGroup: Array<{
     id: string;
-    kind: "shared_destination" | "commute";
+    kind: EventKind;
     eventSeriesId: string | null;
     name: string;
     location: LocationSummary;

@@ -23,6 +23,7 @@ type Params = {
 const generateRidersSchema = z.object({
   count: z.number().int().min(1).max(50),
   radiusMiles: z.number().min(0.5).max(100),
+  centerLocationId: z.string().min(1).optional(),
 });
 
 const FIRST_NAMES = [
@@ -115,13 +116,6 @@ export async function POST(request: NextRequest, props: Params) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
-  if (!event.location?.latitude || !event.location?.longitude) {
-    return NextResponse.json(
-      { error: "Event must have a location with coordinates" },
-      { status: 400 }
-    );
-  }
-
   const body = await request.json();
   const result = generateRidersSchema.safeParse(body);
   if (!result.success) {
@@ -131,18 +125,55 @@ export async function POST(request: NextRequest, props: Params) {
     );
   }
 
-  const { count, radiusMiles } = result.data;
-  const centerLat = event.location.latitude;
-  const centerLng = event.location.longitude;
+  const { count, radiusMiles, centerLocationId } = result.data;
+  const centerLocation =
+    event.kind === "commute" && centerLocationId
+      ? await db.query.locations.findFirst({
+          where: eq(locations.id, centerLocationId),
+        })
+      : event.location;
+
+  if (
+    !centerLocation ||
+    centerLocation.latitude == null ||
+    centerLocation.longitude == null
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          event.kind === "commute"
+            ? "Choose a generation center with coordinates for commute riders"
+            : "Event must have a location with coordinates",
+      },
+      { status: 400 }
+    );
+  }
+
+  const centerLat = centerLocation.latitude;
+  const centerLng = centerLocation.longitude;
 
   const generatedRiders: { userId: string; name: string }[] = [];
 
   for (let i = 0; i < count; i++) {
-    const point = randomPointInRadius(centerLat, centerLng, radiusMiles);
+    const originPoint = randomPointInRadius(centerLat, centerLng, radiusMiles);
+    const destinationPoint =
+      event.kind === "commute"
+        ? randomPointInRadius(centerLat, centerLng, radiusMiles)
+        : null;
 
-    let details;
+    let originDetails;
+    let destinationDetails;
     try {
-      details = await googleReverseGeocode(point.latitude, point.longitude);
+      originDetails = await googleReverseGeocode(
+        originPoint.latitude,
+        originPoint.longitude
+      );
+      if (destinationPoint) {
+        destinationDetails = await googleReverseGeocode(
+          destinationPoint.latitude,
+          destinationPoint.longitude
+        );
+      }
     } catch (err) {
       console.error(`Reverse geocode failed for point ${i}:`, err);
       continue;
@@ -164,19 +195,39 @@ export async function POST(request: NextRequest, props: Params) {
     const locationId = `loc_${crypto.randomUUID()}`;
     await db.insert(locations).values({
       id: locationId,
-      googlePlaceId: details.placeId,
-      name: details.name,
-      addressString: details.formattedAddress,
-      street1: details.street1,
-      street2: details.street2,
-      city: details.city,
-      state: details.state,
-      zip: details.zip,
-      latitude: details.latitude,
-      longitude: details.longitude,
+      googlePlaceId: originDetails.placeId,
+      name: originDetails.name,
+      addressString: originDetails.formattedAddress,
+      street1: originDetails.street1,
+      street2: originDetails.street2,
+      city: originDetails.city,
+      state: originDetails.state,
+      zip: originDetails.zip,
+      latitude: originDetails.latitude,
+      longitude: originDetails.longitude,
       ownerType: "user",
       ownerId: testUserId,
     });
+
+    let destinationLocationId: string | null = null;
+    if (destinationDetails) {
+      destinationLocationId = `loc_${crypto.randomUUID()}`;
+      await db.insert(locations).values({
+        id: destinationLocationId,
+        googlePlaceId: destinationDetails.placeId,
+        name: destinationDetails.name,
+        addressString: destinationDetails.formattedAddress,
+        street1: destinationDetails.street1,
+        street2: destinationDetails.street2,
+        city: destinationDetails.city,
+        state: destinationDetails.state,
+        zip: destinationDetails.zip,
+        latitude: destinationDetails.latitude,
+        longitude: destinationDetails.longitude,
+        ownerType: "user",
+        ownerId: testUserId,
+      });
+    }
 
     // Create eventsToUsers with random attendance
     const drivingStatus = randomDrivingStatus();
@@ -193,6 +244,8 @@ export async function POST(request: NextRequest, props: Params) {
       carFits,
       earliestLeaveTime,
       originLocationId: locationId,
+      destinationLocationId,
+      requiredArrivalTime: event.kind === "commute" ? event.time : null,
     });
 
     // Add to group

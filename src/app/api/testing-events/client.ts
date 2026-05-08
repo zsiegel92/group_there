@@ -26,6 +26,9 @@ const riderSchema = z.object({
   earliestLeaveTime: z.string().nullable(),
   originLocationId: z.string().nullable(),
   originLocation: riderLocationSchema,
+  destinationLocationId: z.string().nullable(),
+  destinationLocation: riderLocationSchema,
+  requiredArrivalTime: z.string().nullable(),
   directTravelSeconds: z.number().nullable(),
 });
 
@@ -62,7 +65,7 @@ async function fetchRiders(eventId: string) {
 // Generate riders
 async function generateRiders(
   eventId: string,
-  input: { count: number; radiusMiles: number }
+  input: { count: number; radiusMiles: number; centerLocationId?: string }
 ) {
   const response = await fetch(
     `/api/testing-events/${eventId}/generate-riders`,
@@ -133,7 +136,7 @@ export function useGenerateRiders() {
       input,
     }: {
       eventId: string;
-      input: { count: number; radiusMiles: number };
+      input: { count: number; radiusMiles: number; centerLocationId?: string };
     }) => generateRiders(eventId, input),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
