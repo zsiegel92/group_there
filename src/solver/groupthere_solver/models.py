@@ -46,6 +46,7 @@ class ExternalRideshareVehicle(BaseModel):
         default=3,
         ge=1,
         le=5,
+        description="Non-driver seats available; excludes the driver.",
     )
     cost_multiplier: float = Field(default=3.0, ge=1.0)
     fixed_cost_seconds: float = Field(default=0.0, ge=0.0)
@@ -61,6 +62,7 @@ class Tripper(BaseModel):
         ...,
         ge=0,
         le=5,
+        description="Non-driver seats available; excludes the driver.",
     )
     must_drive: bool
     seconds_before_event_start_can_leave: int = Field(
@@ -94,7 +96,12 @@ class Problem(BaseModel):
     event_id: str
     kind: TripProblemKind = "shared_destination"
     external_rideshare_mode: ExternalRideshareMode = "disabled"
-    external_rideshare_seats: int = Field(default=3, ge=1, le=5)
+    external_rideshare_seats: int = Field(
+        default=3,
+        ge=1,
+        le=5,
+        description="Non-driver seats available in an external rideshare vehicle.",
+    )
     external_rideshare_cost_multiplier: float = Field(default=3.0, ge=1.0)
     external_rideshare_fixed_cost_seconds: float = Field(default=0.0, ge=0.0)
     external_rideshare_vehicles: list[ExternalRideshareVehicle] = Field(

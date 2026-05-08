@@ -378,7 +378,7 @@ export const eventsToUsers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     drivingStatus: drivingStatusEnum("driving_status").notNull(),
-    carFits: integer("car_fits").notNull(), // includes driver!
+    carFits: integer("car_fits").notNull(), // non-driver seats available; excludes driver
     earliestLeaveTime: timestamp("earliest_leave_time"), // null if cannot drive
     originLocationId: text("origin_location_id").references(() => locations.id),
     destinationLocationId: text("destination_location_id").references(

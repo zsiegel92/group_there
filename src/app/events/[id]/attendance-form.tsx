@@ -93,10 +93,9 @@ export function AttendanceForm({
         return;
       }
 
-      // Convert passengersCount (form field, excludes driver) to carFits (API field, includes driver)
       const attendanceData = {
         drivingStatus,
-        carFits: drivingStatus !== "cannot_drive" ? passengersCount + 1 : 0,
+        carFits: drivingStatus !== "cannot_drive" ? passengersCount : 0,
         earliestLeaveTime:
           drivingStatus !== "cannot_drive" && earliestLeaveTime
             ? earliestLeaveTime
@@ -166,9 +165,8 @@ export function AttendanceForm({
   const openAttendanceForm = useCallback(() => {
     if (!event.userAttendance) return;
     setDrivingStatus(event.userAttendance.drivingStatus);
-    // Convert carFits (from API, includes driver) to passengersCount (form field, excludes driver)
     const carFits = event.userAttendance.carFits;
-    setPassengersCount(carFits != null && carFits > 0 ? carFits - 1 : 1);
+    setPassengersCount(carFits != null && carFits > 0 ? carFits : 1);
     if (event.userAttendance.earliestLeaveTime) {
       setEarliestLeaveTime(
         formatDatetimeLocal(new Date(event.userAttendance.earliestLeaveTime))
@@ -231,7 +229,7 @@ export function AttendanceForm({
           <>
             <div>
               <label className="block text-sm font-medium mb-2">
-                Number of Passengers You Can Bring (not including yourself) *
+                Non-driver Seats Available *
               </label>
               <Input
                 type="number"

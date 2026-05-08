@@ -72,7 +72,7 @@ function randomDrivingStatus(): DrivingStatus {
 
 function randomCarFits(status: DrivingStatus) {
   if (status === "cannot_drive") return 0;
-  return Math.floor(Math.random() * 4) + 2; // 2-5 seats
+  return Math.floor(Math.random() * 4) + 2; // 2-5 non-driver seats
 }
 
 const DEPARTURE_OFFSETS_MINUTES = [15, 30, 45, 60, 75, 90, 120];

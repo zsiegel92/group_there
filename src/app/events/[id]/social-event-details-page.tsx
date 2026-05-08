@@ -185,8 +185,8 @@ export function SocialEventDetailPage({ eventId }: { eventId: string }) {
                       {currentUserAttendee.userAttendance.carFits &&
                       currentUserAttendee.userAttendance.carFits > 0 ? (
                         <div>
-                          <span className="font-medium">Passengers:</span>{" "}
-                          {currentUserAttendee.userAttendance.carFits - 1}
+                          <span className="font-medium">Non-driver seats:</span>{" "}
+                          {currentUserAttendee.userAttendance.carFits}
                         </div>
                       ) : null}
                       {currentUserAttendee.userAttendance.earliestLeaveTime && (
@@ -394,8 +394,8 @@ function AdminAttendeeList({
               {attendee.userAttendance.carFits &&
               attendee.userAttendance.carFits > 0 ? (
                 <div>
-                  <span className="font-medium">Passengers:</span>{" "}
-                  {attendee.userAttendance.carFits - 1}
+                  <span className="font-medium">Non-driver seats:</span>{" "}
+                  {attendee.userAttendance.carFits}
                 </div>
               ) : null}
               {attendee.userAttendance.earliestLeaveTime && (

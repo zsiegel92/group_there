@@ -203,10 +203,10 @@ function RiderRow({
         ))}
       </div>
 
-      {/* Car seats */}
+      {/* Non-driver seats */}
       {rider.drivingStatus !== "cannot_drive" && (
         <div className="flex items-center gap-2">
-          <span className="text-gray-500 text-xs">Seats:</span>
+          <span className="text-gray-500 text-xs">Non-driver seats:</span>
           {!locked && (
             <button
               onClick={() =>
@@ -219,7 +219,7 @@ function RiderRow({
               -
             </button>
           )}
-          <span className="text-xs w-4 text-center">{rider.carFits}</span>
+          <span className="text-xs w-5 text-center">{rider.carFits}</span>
           {!locked && (
             <button
               onClick={() =>
