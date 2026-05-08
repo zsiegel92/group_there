@@ -9,7 +9,8 @@ import time
 
 from groupthere_solver.group_generator import generate_feasible_groups
 from groupthere_solver.milp import MilpSolver, solve_assignment
-from groupthere_solver.models import Party, Problem, Solution
+from groupthere_solver.models import Problem, Solution
+from groupthere_solver.solution_builder import build_participant_vehicle_parties
 
 
 def solve_shared_destination_problem(
@@ -112,21 +113,10 @@ def solve_shared_destination_problem(
             total_drive_seconds=0,
         )
 
-    parties = []
-    for idx, group in enumerate(assignment.selected_groups):
-        driver_user_id = problem.trippers[group.driver_index].user_id
-        passenger_user_ids = [
-            problem.trippers[i].user_id for i in group.passenger_indices
-        ]
-
-        parties.append(
-            Party(
-                id=f"party-{idx + 1}",
-                vehicle_kind="participant_vehicle",
-                driver_tripper_id=driver_user_id,
-                passenger_tripper_ids=passenger_user_ids,
-            )
-        )
+    parties = build_participant_vehicle_parties(
+        problem.trippers,
+        assignment.selected_groups,
+    )
 
     print(
         f"Constructed solution with {len(parties)} parties, took {time.time() - finished_milp:.2f} seconds"

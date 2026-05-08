@@ -165,7 +165,7 @@ export async function PATCH(request: NextRequest, props: Params) {
   }
 
   for (const update of result.data.updates) {
-    const setValues: Record<string, unknown> = {};
+    const setValues: Partial<typeof eventsToUsers.$inferInsert> = {};
     if (update.drivingStatus !== undefined)
       setValues.drivingStatus = update.drivingStatus;
     if (update.carFits !== undefined) setValues.carFits = update.carFits;

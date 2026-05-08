@@ -196,10 +196,17 @@ export const eventKindValues = ["shared_destination", "commute"] as const;
 
 export type EventKind = (typeof eventKindValues)[number];
 
+export const eventKindEnum = pgEnum("event_kind", eventKindValues);
+
 export const eventParticipationModeValues = ["opt_in", "opt_out"] as const;
 
 export type EventParticipationMode =
   (typeof eventParticipationModeValues)[number];
+
+export const eventParticipationModeEnum = pgEnum(
+  "event_participation_mode",
+  eventParticipationModeValues
+);
 
 export const eventSeriesParticipationStatusValues = [
   "joined",
@@ -210,6 +217,11 @@ export const eventSeriesParticipationStatusValues = [
 export type EventSeriesParticipationStatus =
   (typeof eventSeriesParticipationStatusValues)[number];
 
+export const eventSeriesParticipationStatusEnum = pgEnum(
+  "event_series_participation_status",
+  eventSeriesParticipationStatusValues
+);
+
 export const externalRideshareModeValues = [
   "disabled",
   "fallback",
@@ -219,12 +231,22 @@ export const externalRideshareModeValues = [
 export type ExternalRideshareMode =
   (typeof externalRideshareModeValues)[number];
 
+export const externalRideshareModeEnum = pgEnum(
+  "external_rideshare_mode",
+  externalRideshareModeValues
+);
+
 export const solutionVehicleKindValues = [
   "participant_vehicle",
   "external_rideshare",
 ] as const;
 
 export type SolutionVehicleKind = (typeof solutionVehicleKindValues)[number];
+
+export const solutionVehicleKindEnum = pgEnum(
+  "solution_vehicle_kind",
+  solutionVehicleKindValues
+);
 
 export const eventSeries = pgTable(
   "event_series",
@@ -233,15 +255,11 @@ export const eventSeries = pgTable(
     groupId: text("group_id")
       .notNull()
       .references(() => groups.id, { onDelete: "cascade" }),
-    kind: text("kind")
-      .$type<EventKind>()
-      .default("shared_destination")
-      .notNull(),
+    kind: eventKindEnum("kind").default("shared_destination").notNull(),
     name: text("name").notNull(),
     recurrenceRule: text("recurrence_rule"),
     timeZone: text("time_zone").default("America/New_York").notNull(),
-    participationMode: text("participation_mode")
-      .$type<EventParticipationMode>()
+    participationMode: eventParticipationModeEnum("participation_mode")
       .default("opt_in")
       .notNull(),
     createdByUserId: text("created_by_user_id").references(() => users.id),
@@ -267,8 +285,9 @@ export const eventSeriesToUsers = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    participationStatus: text("participation_status")
-      .$type<EventSeriesParticipationStatus>()
+    participationStatus: eventSeriesParticipationStatusEnum(
+      "participation_status"
+    )
       .default("joined")
       .notNull(),
     defaultDrivingStatus: drivingStatusEnum("default_driving_status"),
@@ -305,20 +324,15 @@ export const events = pgTable(
     eventSeriesId: text("event_series_id").references(() => eventSeries.id, {
       onDelete: "set null",
     }),
-    kind: text("kind")
-      .$type<EventKind>()
-      .default("shared_destination")
-      .notNull(),
+    kind: eventKindEnum("kind").default("shared_destination").notNull(),
     name: text("name").notNull(),
     locationId: text("location_id").references(() => locations.id),
     time: timestamp("time").notNull(),
     timeZone: text("time_zone").default("America/New_York").notNull(),
-    participationMode: text("participation_mode")
-      .$type<EventParticipationMode>()
+    participationMode: eventParticipationModeEnum("participation_mode")
       .default("opt_in")
       .notNull(),
-    externalRideshareMode: text("external_rideshare_mode")
-      .$type<ExternalRideshareMode>()
+    externalRideshareMode: externalRideshareModeEnum("external_rideshare_mode")
       .default("disabled")
       .notNull(),
     externalRideshareSeats: integer("external_rideshare_seats")
@@ -409,15 +423,13 @@ export const solutions = pgTable("solutions", {
     .notNull()
     .unique()
     .references(() => events.id, { onDelete: "cascade" }),
-  problemKind: text("problem_kind")
-    .$type<EventKind>()
+  problemKind: eventKindEnum("problem_kind")
     .default("shared_destination")
     .notNull(),
   feasible: boolean("feasible").notNull(),
   optimal: boolean("optimal").notNull(),
   totalDriveSeconds: real("total_drive_seconds").notNull(),
-  externalRideshareMode: text("external_rideshare_mode")
-    .$type<ExternalRideshareMode>()
+  externalRideshareMode: externalRideshareModeEnum("external_rideshare_mode")
     .default("disabled")
     .notNull(),
   externalRideshareVehicleCount: integer("external_rideshare_vehicle_count")
@@ -441,8 +453,7 @@ export const solutionParties = pgTable(
     driverUserId: text("driver_user_id").references(() => users.id, {
       onDelete: "cascade",
     }),
-    vehicleKind: text("vehicle_kind")
-      .$type<SolutionVehicleKind>()
+    vehicleKind: solutionVehicleKindEnum("vehicle_kind")
       .default("participant_vehicle")
       .notNull(),
     externalRideshareOriginLocationId: text(
@@ -459,6 +470,8 @@ export const blastTypeValues = ["event_scheduled", "event_confirmed"] as const;
 
 export type BlastType = (typeof blastTypeValues)[number];
 
+export const blastTypeEnum = pgEnum("blast_type", blastTypeValues);
+
 export const blasts = pgTable(
   "blasts",
   {
@@ -466,7 +479,7 @@ export const blasts = pgTable(
     eventId: text("event_id")
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
-    type: text("type").notNull(), // 'event_scheduled' | 'event_confirmed'
+    type: blastTypeEnum("type").notNull(),
     sentByUserId: text("sent_by_user_id")
       .notNull()
       .references(() => users.id),

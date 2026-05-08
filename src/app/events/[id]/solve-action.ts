@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db/db";
 import { events, eventsToUsers, solutions } from "@/db/schema";
-import { computePartyEstimates } from "@/lib/itinerary";
+import { buildEstimateMembers, computePartyEstimates } from "@/lib/itinerary";
 import { solveSolvePost } from "@/lib/python-client";
 import { constructTripProblem } from "@/lib/trip-solver/construct-problem";
 import type { Problem, Solution } from "@/python-client";
@@ -41,40 +41,35 @@ export async function solveProblem(eventId: string) {
     return { problem, solution, partyEstimates: [] satisfies PartyEstimate[] };
   }
 
+  const attendeeLookup = new Map(
+    attendees.map((attendee) => [
+      attendee.userId,
+      {
+        originLocationId: attendee.originLocationId,
+        destinationLocationId: attendee.destinationLocationId,
+        earliestLeaveTime: attendee.earliestLeaveTime,
+        requiredArrivalTime: attendee.requiredArrivalTime,
+      },
+    ])
+  );
+
   const partyEstimates = await Promise.all(
     solution.parties.map(async (party) => {
-      const members: {
-        userId: string;
-        originLocationId: string | null;
-        destinationLocationId: string | null;
-        earliestLeaveTime: Date | null;
-        requiredArrivalTime: Date | null;
-        pickupOrder: number;
-      }[] = [];
-
-      if (party.driver_tripper_id) {
-        const att = attendees.find((a) => a.userId === party.driver_tripper_id);
-        members.push({
-          userId: party.driver_tripper_id,
-          originLocationId: att?.originLocationId ?? null,
-          destinationLocationId: att?.destinationLocationId ?? event.locationId,
-          earliestLeaveTime: att?.earliestLeaveTime ?? null,
-          requiredArrivalTime: att?.requiredArrivalTime ?? event.time,
-          pickupOrder: 0,
-        });
-      }
-
-      party.passenger_tripper_ids.forEach((pid, i) => {
-        const att = attendees.find((a) => a.userId === pid);
-        members.push({
-          userId: pid,
-          originLocationId: att?.originLocationId ?? null,
-          destinationLocationId: att?.destinationLocationId ?? event.locationId,
-          earliestLeaveTime: att?.earliestLeaveTime ?? null,
-          requiredArrivalTime: att?.requiredArrivalTime ?? event.time,
-          pickupOrder: i + 1,
-        });
-      });
+      const partyMembers = [
+        ...(party.driver_tripper_id
+          ? [{ userId: party.driver_tripper_id, pickupOrder: 0 }]
+          : []),
+        ...party.passenger_tripper_ids.map((userId, index) => ({
+          userId,
+          pickupOrder: party.driver_tripper_id ? index + 1 : index,
+        })),
+      ];
+      const members = buildEstimateMembers(
+        partyMembers,
+        attendeeLookup,
+        event.locationId,
+        event.time
+      );
 
       const { estimatedPickups, estimatedEventArrival } =
         await computePartyEstimates(

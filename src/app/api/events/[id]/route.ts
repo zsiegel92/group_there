@@ -2,6 +2,7 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
+import type { EventDetail, MyParty } from "@/app/api/events/client";
 import { db } from "@/db/db";
 import {
   blasts,
@@ -18,7 +19,7 @@ import {
 } from "@/db/schema";
 import { getUser } from "@/lib/auth";
 import { ensureDistancesForEvent } from "@/lib/geo/distances";
-import { computePartyEstimates } from "@/lib/itinerary";
+import { buildEstimateMembers, computePartyEstimates } from "@/lib/itinerary";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -171,8 +172,8 @@ export async function GET(request: NextRequest, props: Params) {
     : [];
 
   // Load solution if event is locked
-  let solutionData = null;
-  let myParty = null;
+  let solutionData: EventDetail["solution"] = null;
+  let myParty: MyParty | null = null;
 
   if (event.locked) {
     const sol = await db.query.solutions.findFirst({
@@ -210,31 +211,36 @@ export async function GET(request: NextRequest, props: Params) {
           },
         ])
       );
+      const estimateAttendanceLookup = new Map(
+        event.eventsToUsers.map((att) => [
+          att.userId,
+          {
+            originLocationId: att.originLocationId,
+            destinationLocationId: att.destinationLocationId,
+            earliestLeaveTime: att.earliestLeaveTime,
+            requiredArrivalTime: att.requiredArrivalTime,
+          },
+        ])
+      );
 
       // Admin gets full solution with itinerary estimates
       if (membership.isAdmin) {
-        const sortedParties = sol.parties.sort(
+        const sortedParties = sol.parties.toSorted(
           (a, b) => a.partyIndex - b.partyIndex
         );
 
         // Compute itinerary estimates for all parties
         const partyEstimatesResults = await Promise.all(
           sortedParties.map(async (party) => {
-            const sortedMembers = party.members.sort(
+            const sortedMembers = party.members.toSorted(
               (a, b) => a.pickupOrder - b.pickupOrder
             );
-            const membersForEstimate = sortedMembers.map((m) => {
-              const a = event.eventsToUsers.find((e) => e.userId === m.userId);
-              return {
-                userId: m.userId,
-                originLocationId: a?.originLocationId ?? null,
-                destinationLocationId:
-                  a?.destinationLocationId ?? event.locationId,
-                earliestLeaveTime: a?.earliestLeaveTime ?? null,
-                requiredArrivalTime: a?.requiredArrivalTime ?? event.time,
-                pickupOrder: m.pickupOrder,
-              };
-            });
+            const membersForEstimate = buildEstimateMembers(
+              sortedMembers,
+              estimateAttendanceLookup,
+              event.locationId,
+              event.time
+            );
             return computePartyEstimates(
               membersForEstimate,
               event.locationId,
@@ -270,7 +276,7 @@ export async function GET(request: NextRequest, props: Params) {
                 ? estimates.estimatedEventArrival.toISOString()
                 : null,
               members: party.members
-                .sort((a, b) => a.pickupOrder - b.pickupOrder)
+                .toSorted((a, b) => a.pickupOrder - b.pickupOrder)
                 .map((m) => {
                   const att = attendeeLookup.get(m.userId);
                   const pickup = estimates?.estimatedPickups.get(m.userId);
@@ -298,23 +304,17 @@ export async function GET(request: NextRequest, props: Params) {
         const isMember = party.members.some((m) => m.userId === user.id);
         if (isMember) {
           const currentMember = party.members.find((m) => m.userId === user.id);
-          const sortedMembers = party.members.sort(
+          const sortedMembers = party.members.toSorted(
             (a, b) => a.pickupOrder - b.pickupOrder
           );
 
           // Compute estimated times for this party
-          const attendeeForEstimates = sortedMembers.map((m) => {
-            const a = event.eventsToUsers.find((e) => e.userId === m.userId);
-            return {
-              userId: m.userId,
-              originLocationId: a?.originLocationId ?? null,
-              destinationLocationId:
-                a?.destinationLocationId ?? event.locationId,
-              earliestLeaveTime: a?.earliestLeaveTime ?? null,
-              requiredArrivalTime: a?.requiredArrivalTime ?? event.time,
-              pickupOrder: m.pickupOrder,
-            };
-          });
+          const attendeeForEstimates = buildEstimateMembers(
+            sortedMembers,
+            estimateAttendanceLookup,
+            event.locationId,
+            event.time
+          );
 
           const { estimatedPickups, estimatedEventArrival } =
             await computePartyEstimates(
@@ -325,10 +325,7 @@ export async function GET(request: NextRequest, props: Params) {
             );
 
           myParty = {
-            role:
-              currentMember?.pickupOrder === 0
-                ? ("driver" as const)
-                : ("passenger" as const),
+            role: currentMember?.pickupOrder === 0 ? "driver" : "passenger",
             partyIndex: party.partyIndex,
             estimatedEventArrival: estimatedEventArrival
               ? estimatedEventArrival.toISOString()
@@ -532,7 +529,7 @@ export async function PATCH(request: NextRequest, props: Params) {
   }
 
   // Update the event
-  const updateData: Record<string, unknown> = {};
+  const updateData: Partial<typeof events.$inferInsert> = {};
   if (result.data.eventSeriesId !== undefined)
     updateData.eventSeriesId = result.data.eventSeriesId;
   if (result.data.kind !== undefined) updateData.kind = result.data.kind;

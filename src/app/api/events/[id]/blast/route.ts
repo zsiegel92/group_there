@@ -13,7 +13,7 @@ import {
   type EventKind,
 } from "@/db/schema";
 import { getUser } from "@/lib/auth";
-import { computePartyEstimates } from "@/lib/itinerary";
+import { buildEstimateMembers, computePartyEstimates } from "@/lib/itinerary";
 import { sendEmail } from "@/lib/resend";
 
 type Params = {
@@ -262,21 +262,15 @@ export async function POST(request: NextRequest, props: Params) {
     // Pre-compute estimated times for all parties
     const partyEstimates = await Promise.all(
       sol.parties.map(async (party) => {
-        const sortedMembers = party.members.sort(
+        const sortedMembers = party.members.toSorted(
           (a, b) => a.pickupOrder - b.pickupOrder
         );
-        const membersForEstimate = sortedMembers.map((m) => {
-          const att = attendeeLookup.get(m.userId);
-          return {
-            userId: m.userId,
-            originLocationId: att?.originLocationId ?? null,
-            destinationLocationId:
-              att?.destinationLocationId ?? event.locationId,
-            earliestLeaveTime: att?.earliestLeaveTime ?? null,
-            requiredArrivalTime: att?.requiredArrivalTime ?? event.time,
-            pickupOrder: m.pickupOrder,
-          };
-        });
+        const membersForEstimate = buildEstimateMembers(
+          sortedMembers,
+          attendeeLookup,
+          event.locationId,
+          event.time
+        );
 
         const estimates = await computePartyEstimates(
           membersForEstimate,

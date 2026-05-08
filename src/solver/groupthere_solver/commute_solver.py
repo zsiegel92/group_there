@@ -14,8 +14,9 @@ of groups that covers every tripper exactly once.
 from itertools import permutations
 
 from groupthere_solver.group_generator import FeasibleGroup
-from groupthere_solver.milp import solve_assignment
-from groupthere_solver.models import Party, Problem, Solution, Tripper
+from groupthere_solver.milp import MilpSolver, solve_assignment
+from groupthere_solver.models import Problem, Solution, Tripper
+from groupthere_solver.solution_builder import build_participant_vehicle_parties
 from groupthere_solver.subsets import SubsetEnumerator
 
 
@@ -97,7 +98,11 @@ def _generate_commute_groups(
     feasible_groups: list[FeasibleGroup] = []
 
     driver_indices = [i for i, tripper in enumerate(trippers) if tripper.car_fits > 0]
-    must_drive_indices = [i for i, tripper in enumerate(trippers) if tripper.must_drive]
+    driver_index_set = set(driver_indices)
+    must_drive_index_set = {
+        i for i, tripper in enumerate(trippers) if tripper.must_drive
+    }
+    tripper_to_idx = {tripper.user_id: i for i, tripper in enumerate(trippers)}
 
     if not driver_indices:
         return []
@@ -106,11 +111,13 @@ def _generate_commute_groups(
 
     for group_size in range(1, min(n, max_group_size) + 1):
         for group_indices in enum.iter_subsets(n, group_size):
-            must_drive_in_group = [i for i in group_indices if i in must_drive_indices]
+            must_drive_in_group = [
+                i for i in group_indices if i in must_drive_index_set
+            ]
             if len(must_drive_in_group) > 1:
                 continue
 
-            group_drivers = [i for i in group_indices if i in driver_indices]
+            group_drivers = [i for i in group_indices if i in driver_index_set]
             if not group_drivers:
                 continue
 
@@ -140,9 +147,6 @@ def _generate_commute_groups(
                 if drive_time is None:
                     continue
 
-                tripper_to_idx = {
-                    tripper.user_id: i for i, tripper in enumerate(trippers)
-                }
                 ordered_passenger_indices = [
                     tripper_to_idx[tripper.user_id] for tripper in passenger_order
                 ]
@@ -171,7 +175,12 @@ def _build_distance_lookup(problem: Problem) -> dict[tuple[str, str], float]:
     }
 
 
-def solve_commute_problem(problem: Problem) -> Solution:
+def solve_commute_problem(
+    problem: Problem,
+    *,
+    milp_solver: MilpSolver = "cbc",
+    mip_gap: float | None = None,
+) -> Solution:
     if not problem.trippers:
         return Solution(
             id=f"solution-{problem.id}",
@@ -209,7 +218,19 @@ def solve_commute_problem(problem: Problem) -> Solution:
             total_drive_seconds=0,
         )
 
-    assignment = solve_assignment(len(problem.trippers), feasible_groups, solver="cbc")
+    if milp_solver == "cuopt":
+        from groupthere_solver.milp_cuopt import solve_assignment_cuopt
+
+        assignment = solve_assignment_cuopt(
+            len(problem.trippers), feasible_groups, mip_gap=mip_gap
+        )
+    else:
+        assignment = solve_assignment(
+            len(problem.trippers),
+            feasible_groups,
+            solver=milp_solver,
+            mip_gap=mip_gap,
+        )
     if not assignment.feasible:
         return Solution(
             id=f"solution-{problem.id}",
@@ -221,25 +242,15 @@ def solve_commute_problem(problem: Problem) -> Solution:
             total_drive_seconds=0,
         )
 
-    parties = []
-    for idx, group in enumerate(assignment.selected_groups):
-        parties.append(
-            Party(
-                id=f"party-{idx + 1}",
-                vehicle_kind="participant_vehicle",
-                driver_tripper_id=problem.trippers[group.driver_index].user_id,
-                passenger_tripper_ids=[
-                    problem.trippers[i].user_id for i in group.passenger_indices
-                ],
-            )
-        )
-
     return Solution(
         id=f"solution-{problem.id}",
         kind=problem.kind,
         successfully_completed=True,
         feasible=True,
         optimal=assignment.optimal,
-        parties=parties,
+        parties=build_participant_vehicle_parties(
+            problem.trippers,
+            assignment.selected_groups,
+        ),
         total_drive_seconds=assignment.total_drive_time,
     )

@@ -11,8 +11,8 @@ import {
   externalRideshareModeValues,
   groupTypeValues,
   solutionVehicleKindValues,
+  type DrivingStatus,
   type EventKind,
-  // type DrivingStatus,
 } from "@/db/schema";
 import type { RecurrenceFrequency } from "@/lib/events/recurrence";
 import { LocationSchema } from "@/lib/geo/schema";
@@ -89,18 +89,15 @@ const seriesAttendanceSchema = userAttendanceResponseSchema
     eventTime: z.string(),
   });
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const userAttendanceInputSchema = z.object({
-  drivingStatus: z.enum(drivingStatusEnumValues),
-  carFits: z.number().nullable(),
-  earliestLeaveTime: z.string().nullable(),
-  originLocationId: z.string(),
-  destinationLocationId: z.string().nullable().optional(),
-  requiredArrivalTime: z.string().nullable().optional(),
-  joinedAt: z.string(),
-});
-
-type UserAttendanceInput = z.infer<typeof userAttendanceInputSchema>;
+type UserAttendanceInput = {
+  drivingStatus: DrivingStatus;
+  carFits: number | null;
+  earliestLeaveTime: string | null;
+  originLocationId: string;
+  destinationLocationId?: string | null;
+  requiredArrivalTime?: string | null;
+  joinedAt: string;
+};
 
 const attendeeSchema = z.object({
   userId: z.string(),
@@ -256,6 +253,16 @@ const successResponseSchema = z.object({
   success: z.boolean(),
 });
 
+const errorResponseSchema = z.object({
+  error: z.string().optional(),
+});
+
+async function getErrorMessage(response: Response, fallback: string) {
+  const data: unknown = await response.json().catch(() => null);
+  const parsed = errorResponseSchema.safeParse(data);
+  return parsed.success ? (parsed.data.error ?? fallback) : fallback;
+}
+
 const extendSeriesResponseSchema = z.object({
   success: z.boolean(),
   recurrenceRule: z.string().nullable(),
@@ -367,8 +374,7 @@ export async function updateEvent(
     body: JSON.stringify(input),
   });
   if (!response.ok) {
-    const err = await response.json().catch(() => null);
-    throw new Error(err?.error ?? "Failed to update event");
+    throw new Error(await getErrorMessage(response, "Failed to update event"));
   }
   const data = await response.json();
   return updateEventResponseSchema.parse(data);
@@ -379,8 +385,7 @@ export async function deleteEvent(eventId: string) {
     method: "DELETE",
   });
   if (!response.ok) {
-    const error = await response.json().catch(() => null);
-    throw new Error(error?.error || "Failed to delete event");
+    throw new Error(await getErrorMessage(response, "Failed to delete event"));
   }
   const data = await response.json();
   return successResponseSchema.parse(data);
@@ -393,8 +398,7 @@ export async function attendEvent(eventId: string, input: UserAttendanceInput) {
     body: JSON.stringify(input),
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to join event");
+    throw new Error(await getErrorMessage(response, "Failed to join event"));
   }
   const data = await response.json();
   return attendanceResponseSchema.parse(data);
@@ -410,8 +414,9 @@ export async function updateAttendance(
     body: JSON.stringify(input),
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to update attendance");
+    throw new Error(
+      await getErrorMessage(response, "Failed to update attendance")
+    );
   }
   const data = await response.json();
   return attendanceResponseSchema.parse(data);
@@ -422,8 +427,7 @@ export async function leaveEvent(eventId: string) {
     method: "DELETE",
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to leave event");
+    throw new Error(await getErrorMessage(response, "Failed to leave event"));
   }
   const data = await response.json();
   return successResponseSchema.parse(data);
@@ -434,8 +438,9 @@ export async function scheduleEvent(eventId: string) {
     method: "POST",
   });
   if (!response.ok) {
-    const error = await response.json().catch(() => null);
-    throw new Error(error?.error || "Failed to schedule event");
+    throw new Error(
+      await getErrorMessage(response, "Failed to schedule event")
+    );
   }
   const data = await response.json();
   return scheduleResponseSchema.parse(data);
@@ -451,8 +456,7 @@ export async function extendEventSeries(
     body: JSON.stringify(input),
   });
   if (!response.ok) {
-    const error = await response.json().catch(() => null);
-    throw new Error(error?.error || "Failed to extend series");
+    throw new Error(await getErrorMessage(response, "Failed to extend series"));
   }
   const data = await response.json();
   return extendSeriesResponseSchema.parse(data);
@@ -498,8 +502,9 @@ export async function confirmItinerary(
     body: JSON.stringify(input),
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to confirm itinerary");
+    throw new Error(
+      await getErrorMessage(response, "Failed to confirm itinerary")
+    );
   }
   const data = await response.json();
   return successResponseSchema.parse(data);
@@ -511,8 +516,7 @@ export async function unlockEvent(eventId: string) {
     method: "POST",
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to unlock event");
+    throw new Error(await getErrorMessage(response, "Failed to unlock event"));
   }
   const data = await response.json();
   return successResponseSchema.parse(data);
@@ -536,8 +540,9 @@ export async function sendBlast(
     body: JSON.stringify({ type }),
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to send notification");
+    throw new Error(
+      await getErrorMessage(response, "Failed to send notification")
+    );
   }
   const data = await response.json();
   return blastResponseSchema.parse(data);

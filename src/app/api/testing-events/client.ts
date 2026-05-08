@@ -54,6 +54,16 @@ const successResponseSchema = z.object({
   success: z.boolean(),
 });
 
+const errorResponseSchema = z.object({
+  error: z.string().optional(),
+});
+
+async function getErrorMessage(response: Response, fallback: string) {
+  const data: unknown = await response.json().catch(() => null);
+  const parsed = errorResponseSchema.safeParse(data);
+  return parsed.success ? (parsed.data.error ?? fallback) : fallback;
+}
+
 // Fetch riders
 async function fetchRiders(eventId: string) {
   const response = await fetch(`/api/testing-events/${eventId}/riders`);
@@ -76,8 +86,9 @@ async function generateRiders(
     }
   );
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to generate riders");
+    throw new Error(
+      await getErrorMessage(response, "Failed to generate riders")
+    );
   }
   const data = await response.json();
   return generateRidersResponseSchema.parse(data);

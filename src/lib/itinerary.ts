@@ -4,7 +4,7 @@ import { and, inArray } from "drizzle-orm";
 import { db } from "@/db/db";
 import { locationDistances, type EventKind } from "@/db/schema";
 
-type EstimateMember = {
+export type EstimateMember = {
   userId: string;
   originLocationId: string | null;
   destinationLocationId?: string | null;
@@ -13,7 +13,73 @@ type EstimateMember = {
   pickupOrder: number;
 };
 
-async function loadDistanceMap(locationIds: string[]) {
+export type EstimatePartyMember = {
+  userId: string;
+  pickupOrder: number;
+};
+
+export type EstimateAttendance = {
+  originLocationId: string | null;
+  destinationLocationId?: string | null;
+  earliestLeaveTime: Date | null;
+  requiredArrivalTime?: Date | null;
+};
+
+type LocationPair = readonly [string, string];
+
+export function buildEstimateMembers(
+  members: readonly EstimatePartyMember[],
+  attendanceLookup: ReadonlyMap<string, EstimateAttendance>,
+  fallbackDestinationLocationId: string | null,
+  fallbackArrivalTime: Date
+) {
+  return members
+    .toSorted((a, b) => a.pickupOrder - b.pickupOrder)
+    .map((m) => {
+      const attendance = attendanceLookup.get(m.userId);
+      return {
+        userId: m.userId,
+        originLocationId: attendance?.originLocationId ?? null,
+        destinationLocationId:
+          attendance?.destinationLocationId ?? fallbackDestinationLocationId,
+        earliestLeaveTime: attendance?.earliestLeaveTime ?? null,
+        requiredArrivalTime:
+          attendance?.requiredArrivalTime ?? fallbackArrivalTime,
+        pickupOrder: m.pickupOrder,
+      } satisfies EstimateMember;
+    });
+}
+
+function toConsecutivePairs(locationIds: readonly string[]) {
+  const pairs: LocationPair[] = [];
+  for (let i = 0; i < locationIds.length - 1; i++) {
+    const origin = locationIds[i];
+    const dest = locationIds[i + 1];
+    if (origin && dest) pairs.push([origin, dest]);
+  }
+  return pairs;
+}
+
+function legDurationSeconds(
+  distanceMap: ReadonlyMap<string, number>,
+  [origin, dest]: LocationPair
+) {
+  if (origin === dest) return 0;
+  return distanceMap.get(`${origin}:${dest}`) ?? null;
+}
+
+function sumKnownLegDurations(
+  pairs: readonly LocationPair[],
+  distanceMap: ReadonlyMap<string, number>
+) {
+  let totalRouteDuration = 0;
+  for (const pair of pairs) {
+    totalRouteDuration += legDurationSeconds(distanceMap, pair) ?? 0;
+  }
+  return totalRouteDuration;
+}
+
+async function loadDistanceMap(locationIds: readonly string[]) {
   const allLocIds = [...new Set(locationIds)];
   if (allLocIds.length < 2) return new Map<string, number>();
 
@@ -66,24 +132,9 @@ export async function computeSharedDestinationPartyEstimates(
     };
   }
 
-  // Build consecutive pairs
-  const pairs: [string, string][] = [];
-  for (let i = 0; i < routeLocationIds.length - 1; i++) {
-    const origin = routeLocationIds[i]!;
-    const dest = routeLocationIds[i + 1]!;
-    pairs.push([origin, dest]);
-  }
-
+  const pairs = toConsecutivePairs(routeLocationIds);
   const distanceMap = await loadDistanceMap(routeLocationIds);
-
-  // Sum all leg durations to get total route duration
-  let totalRouteDuration = 0;
-  for (const [origin, dest] of pairs) {
-    const duration = distanceMap.get(`${origin}:${dest}`);
-    if (duration != null) {
-      totalRouteDuration += duration;
-    }
-  }
+  const totalRouteDuration = sumKnownLegDurations(pairs, distanceMap);
 
   // Backward-compute: depart so that the group arrives at event time
   const idealDeparture = addSeconds(eventTime, -totalRouteDuration);
@@ -110,7 +161,7 @@ export async function computeSharedDestinationPartyEstimates(
 
     const pair = pairs[routeIdx - 1];
     if (pair) {
-      const duration = distanceMap.get(`${pair[0]}:${pair[1]}`);
+      const duration = legDurationSeconds(distanceMap, pair);
       if (duration != null) {
         currentTime = addSeconds(currentTime, duration);
       }
@@ -123,7 +174,7 @@ export async function computeSharedDestinationPartyEstimates(
   let estimatedEventArrival: Date | null = null;
   const lastPair = pairs[pairs.length - 1];
   if (lastPair && eventLocationId) {
-    const duration = distanceMap.get(`${lastPair[0]}:${lastPair[1]}`);
+    const duration = legDurationSeconds(distanceMap, lastPair);
     if (duration != null) {
       estimatedEventArrival = addSeconds(currentTime, duration);
     }
@@ -163,19 +214,9 @@ export async function computeCommutePartyEstimates(
     };
   }
 
-  const pairs: [string, string][] = [];
-  for (let i = 0; i < routeLocationIds.length - 1; i++) {
-    const origin = routeLocationIds[i]!;
-    const dest = routeLocationIds[i + 1]!;
-    pairs.push([origin, dest]);
-  }
-
+  const pairs = toConsecutivePairs(routeLocationIds);
   const distanceMap = await loadDistanceMap(routeLocationIds);
-  let totalRouteDuration = 0;
-  for (const [origin, dest] of pairs) {
-    const duration = origin === dest ? 0 : distanceMap.get(`${origin}:${dest}`);
-    if (duration != null) totalRouteDuration += duration;
-  }
+  const totalRouteDuration = sumKnownLegDurations(pairs, distanceMap);
 
   const requiredArrival = driver.requiredArrivalTime ?? eventTime;
   const idealDeparture = addSeconds(requiredArrival, -totalRouteDuration);
@@ -191,8 +232,7 @@ export async function computeCommutePartyEstimates(
     if (i > 0) {
       const pair = pairs[i - 1];
       if (pair) {
-        const duration =
-          pair[0] === pair[1] ? 0 : distanceMap.get(`${pair[0]}:${pair[1]}`);
+        const duration = legDurationSeconds(distanceMap, pair);
         if (duration != null) currentTime = addSeconds(currentTime, duration);
       }
     }
@@ -203,8 +243,7 @@ export async function computeCommutePartyEstimates(
   for (let i = sorted.length - 1; i < pairs.length; i++) {
     const pair = pairs[i];
     if (pair) {
-      const duration =
-        pair[0] === pair[1] ? 0 : distanceMap.get(`${pair[0]}:${pair[1]}`);
+      const duration = legDurationSeconds(distanceMap, pair);
       if (duration != null) {
         estimatedEventArrival = addSeconds(estimatedEventArrival, duration);
       }

@@ -14,7 +14,11 @@ def solve_problem(
     mip_gap: float | None = None,
 ) -> Solution:
     if problem.kind == "commute":
-        return solve_commute_problem(problem)
+        return solve_commute_problem(
+            problem,
+            milp_solver=milp_solver,
+            mip_gap=mip_gap,
+        )
 
     return solve_shared_destination_problem(
         problem,
