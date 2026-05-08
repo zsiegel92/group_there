@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 import {
   AdminBadge,
@@ -30,29 +31,27 @@ type GroupedEvents = {
     id: string;
     name: string;
   };
-  eventsForGroup: Array<{
-    id: string;
-    kind: EventKind;
-    eventSeriesId: string | null;
-    name: string;
-    location: LocationSummary;
-    time: string;
-    message: string | null;
-    scheduled: boolean;
-    locked: boolean;
-    createdAt: string;
-    attendeeCount: number;
-    hasJoined: boolean;
-    isGroupAdmin: boolean;
-    isTestingGroup: boolean;
-  }>;
+  eventsForGroup: EventListItem[];
 };
 
-function EventCard({
-  event,
-}: {
-  event: GroupedEvents["eventsForGroup"][number];
-}) {
+type EventListItem = {
+  id: string;
+  kind: EventKind;
+  eventSeriesId: string | null;
+  name: string;
+  location: LocationSummary;
+  time: string;
+  message: string | null;
+  scheduled: boolean;
+  locked: boolean;
+  createdAt: string;
+  attendeeCount: number;
+  hasJoined: boolean;
+  isGroupAdmin: boolean;
+  isTestingGroup: boolean;
+};
+
+function EventCard({ event }: { event: EventListItem }) {
   const eventDate = new Date(event.time);
   const linkText = event.hasJoined ? "View/Edit Attendance" : "Join Event";
 
@@ -105,6 +104,98 @@ function EventCard({
         />
       </div>
     </Link>
+  );
+}
+
+function EventList({ events }: { events: EventListItem[] }) {
+  const [expandedSeriesIds, setExpandedSeriesIds] = useState<Set<string>>(
+    new Set()
+  );
+
+  const rows = useMemo(() => {
+    const firstBySeriesId = new Set<string>();
+    const eventsBySeriesId = new Map<string, EventListItem[]>();
+
+    for (const event of events) {
+      if (!event.eventSeriesId) continue;
+      const seriesEvents = eventsBySeriesId.get(event.eventSeriesId) ?? [];
+      seriesEvents.push(event);
+      eventsBySeriesId.set(event.eventSeriesId, seriesEvents);
+    }
+
+    return events.flatMap((event) => {
+      const seriesId = event.eventSeriesId;
+      if (!seriesId) return [{ event, children: [] }];
+      if (firstBySeriesId.has(seriesId)) return [];
+
+      firstBySeriesId.add(seriesId);
+      const seriesEvents = eventsBySeriesId.get(seriesId) ?? [event];
+      const [firstEvent, ...children] = seriesEvents;
+      return [{ event: firstEvent ?? event, children }];
+    });
+  }, [events]);
+
+  const toggleSeries = (seriesId: string) => {
+    setExpandedSeriesIds((current) => {
+      const next = new Set(current);
+      if (next.has(seriesId)) {
+        next.delete(seriesId);
+      } else {
+        next.add(seriesId);
+      }
+      return next;
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      {rows.map(({ event, children }) => {
+        const seriesId = event.eventSeriesId;
+        const isExpanded = seriesId ? expandedSeriesIds.has(seriesId) : false;
+        const hasChildren = children.length > 0;
+
+        return (
+          <div key={event.id} className="space-y-3">
+            {hasChildren ? (
+              <div className="flex items-stretch gap-2">
+                <button
+                  type="button"
+                  aria-label={
+                    isExpanded
+                      ? "Hide recurring events"
+                      : "Show recurring events"
+                  }
+                  aria-expanded={isExpanded}
+                  onClick={() => {
+                    if (seriesId) toggleSeries(seriesId);
+                  }}
+                  className="w-8 shrink-0 rounded-md border bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900 flex items-center justify-center"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="size-4" />
+                  ) : (
+                    <ChevronRight className="size-4" />
+                  )}
+                </button>
+                <div className="min-w-0 flex-1">
+                  <EventCard event={event} />
+                </div>
+              </div>
+            ) : (
+              <EventCard event={event} />
+            )}
+
+            {hasChildren && isExpanded && (
+              <div className="ml-4 border-l border-gray-300 pl-6 space-y-3">
+                {children.map((child) => (
+                  <EventCard key={child.id} event={child} />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -189,11 +280,7 @@ export function EventsPage({ groupId }: { groupId?: string }) {
         {events.length === 0 ? (
           <p className="text-gray-600">No events yet.</p>
         ) : (
-          <div className="space-y-3">
-            {events.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
+          <EventList events={events} />
         )}
       </div>
     );
@@ -237,11 +324,7 @@ export function EventsPage({ groupId }: { groupId?: string }) {
                   <h2 className="text-xl font-semibold mb-4 text-gray-800">
                     {groupData.group.name}
                   </h2>
-                  <div className="space-y-3">
-                    {groupData.eventsForGroup.map((event) => (
-                      <EventCard key={event.id} event={event} />
-                    ))}
-                  </div>
+                  <EventList events={groupData.eventsForGroup} />
                 </div>
               </div>
             );
