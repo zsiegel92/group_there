@@ -18,6 +18,8 @@ export type ExternalRideshareVehicle = {
     origin_id: string;
     /**
      * Car Fits
+     *
+     * Non-driver seats available; excludes the driver.
      */
     car_fits?: number;
     /**
@@ -114,6 +116,8 @@ export type Problem = {
     external_rideshare_mode?: 'disabled' | 'fallback' | 'always_available';
     /**
      * External Rideshare Seats
+     *
+     * Non-driver seats available in an external rideshare vehicle.
      */
     external_rideshare_seats?: number;
     /**
@@ -137,7 +141,7 @@ export type Problem = {
      *
      * Tuples of tripper_ids mapped to the distance in seconds between the tripper's origins
      */
-    tripper_distances: Array<TripperDistance>;
+    tripper_distances?: Array<TripperDistance>;
     /**
      * Location Distances
      *
@@ -232,6 +236,8 @@ export type Tripper = {
     required_arrival_time?: string | null;
     /**
      * Car Fits
+     *
+     * Non-driver seats available; excludes the driver.
      */
     car_fits: number;
     /**

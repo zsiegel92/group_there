@@ -122,7 +122,7 @@ export const zProblem = z.object({
     external_rideshare_fixed_cost_seconds: z.optional(z.number().gte(0)).default(0),
     external_rideshare_vehicles: z.optional(z.array(zExternalRideshareVehicle)),
     trippers: z.array(zTripper),
-    tripper_distances: z.array(zTripperDistance),
+    tripper_distances: z.optional(z.array(zTripperDistance)),
     location_distances: z.optional(z.array(zLocationDistance))
 });
 

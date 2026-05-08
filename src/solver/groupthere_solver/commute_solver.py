@@ -65,14 +65,14 @@ def _calculate_commute_party_drive_time(
     distance_lookup: dict[tuple[str, str], float],
 ) -> tuple[float | None, list[Tripper]]:
     if not passengers:
-        drive_time = _distance(
-            distance_lookup,
-            driver.origin_id,
-            driver.destination_id,
+        return (
+            _distance(
+                distance_lookup,
+                driver.origin_id,
+                driver.destination_id,
+            ),
+            [],
         )
-        if drive_time is None:
-            drive_time = driver.distance_to_destination_seconds
-        return drive_time, []
 
     min_drive_time: float | None = None
     best_order: list[Tripper] = []
@@ -163,31 +163,12 @@ def _generate_commute_groups(
 
 
 def _build_distance_lookup(problem: Problem) -> dict[tuple[str, str], float]:
-    distance_lookup = {
+    return {
         (distance.origin_location_id, distance.destination_location_id): (
             distance.distance_seconds
         )
         for distance in problem.location_distances
     }
-
-    tripper_by_user_id = {tripper.user_id: tripper for tripper in problem.trippers}
-    for distance in problem.tripper_distances:
-        origin = tripper_by_user_id.get(distance.origin_user_id)
-        destination = tripper_by_user_id.get(distance.destination_user_id)
-        if origin and destination:
-            distance_lookup.setdefault(
-                (origin.origin_id, destination.origin_id),
-                distance.distance_seconds,
-            )
-
-    for tripper in problem.trippers:
-        if tripper.destination_id:
-            distance_lookup.setdefault(
-                (tripper.origin_id, tripper.destination_id),
-                tripper.distance_to_destination_seconds,
-            )
-
-    return distance_lookup
 
 
 def solve_commute_problem(problem: Problem) -> Solution:

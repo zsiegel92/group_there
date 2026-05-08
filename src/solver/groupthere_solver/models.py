@@ -109,7 +109,7 @@ class Problem(BaseModel):
     )
     trippers: list[Tripper]
     tripper_distances: list[TripperDistance] = Field(
-        ...,
+        default_factory=list,
         description="Tuples of tripper_ids mapped to the distance in seconds between the tripper's origins",
     )
     location_distances: list[LocationDistance] = Field(
@@ -140,6 +140,9 @@ class Problem(BaseModel):
 
     @model_validator(mode="after")
     def check_whether_all_tripper_pairs_have_a_distance(self) -> Self:
+        if self.kind != "shared_destination":
+            return self
+
         tripper_pairs = set(
             (distance.origin_user_id, distance.destination_user_id)
             for distance in self.tripper_distances

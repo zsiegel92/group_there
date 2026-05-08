@@ -122,21 +122,24 @@ export async function constructTripProblem(eventId: string): Promise<Problem> {
   });
 
   const tripperDistances: TripperDistance[] = [];
-  for (const t1 of trippers) {
-    for (const t2 of trippers) {
-      if (t1.user_id !== t2.user_id) {
-        const originLocation1 = userToOriginLocationId.get(t1.user_id);
-        const originLocation2 = userToOriginLocationId.get(t2.user_id);
-        const seconds =
-          originLocation1 && originLocation2
-            ? (distanceLookup.get(`${originLocation1}:${originLocation2}`) ?? 0)
-            : 0;
+  if (event.kind === "shared_destination") {
+    for (const t1 of trippers) {
+      for (const t2 of trippers) {
+        if (t1.user_id !== t2.user_id) {
+          const originLocation1 = userToOriginLocationId.get(t1.user_id);
+          const originLocation2 = userToOriginLocationId.get(t2.user_id);
+          const seconds =
+            originLocation1 && originLocation2
+              ? (distanceLookup.get(`${originLocation1}:${originLocation2}`) ??
+                0)
+              : 0;
 
-        tripperDistances.push({
-          origin_user_id: t1.user_id,
-          destination_user_id: t2.user_id,
-          distance_seconds: seconds,
-        });
+          tripperDistances.push({
+            origin_user_id: t1.user_id,
+            destination_user_id: t2.user_id,
+            distance_seconds: seconds,
+          });
+        }
       }
     }
   }

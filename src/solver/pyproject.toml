@@ -41,7 +41,7 @@ default = { features = ["dev"], solve-group = "default" }
 
 [tool.pixi.tasks]
 mojo-build = { cmd = "mojo build mojo_app/group_generator_mojo_python_interface.mojo --emit shared-lib -o mojo_app/group_generator_mojo_python_interface.so", cwd = "." }
-mojo-format = { cmd = "mojo format mojo_app/group_generator_mojo_python_interface.mojo mojo_app/group_gen.mojo", cwd = "." }
+mojo-format = { cmd = "mojo format mojo_app/group_generator_mojo_python_interface.mojo mojo_app/group_gen.mojo mojo_app/heap_permutation_iterator.mojo", cwd = "." }
 mojo-test-local = { cmd = "python -m test_solve_fixture_local", cwd = "." }
 mojo-test-local-python = { cmd = "python -m test_solve_fixture_local -- --no-mojo", cwd = "." }
 python-benchmark = { cmd = "modal run benchmark.py", cwd = "." }

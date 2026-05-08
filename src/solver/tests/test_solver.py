@@ -101,18 +101,6 @@ def test_solve_commute_driver_and_rider():
                 distance_to_destination_seconds=900,
             ),
         ],
-        tripper_distances=[
-            TripperDistance(
-                origin_user_id="driver",
-                destination_user_id="rider",
-                distance_seconds=120,
-            ),
-            TripperDistance(
-                origin_user_id="rider",
-                destination_user_id="driver",
-                distance_seconds=120,
-            ),
-        ],
         location_distances=[
             LocationDistance(
                 origin_location_id="driver-home",
@@ -146,3 +134,69 @@ def test_solve_commute_driver_and_rider():
     assert len(solution.parties) == 1
     assert solution.parties[0].driver_tripper_id == "driver"
     assert solution.parties[0].passenger_tripper_ids == ["rider"]
+
+
+def test_solve_commute_uses_only_location_distances():
+    problem = Problem(
+        id="commute-problem-2",
+        event_id="event-1",
+        kind="commute",
+        trippers=[
+            Tripper(
+                user_id="driver",
+                origin_id="driver-home",
+                event_id="event-1",
+                destination_id="driver-office",
+                car_fits=2,
+                must_drive=True,
+                seconds_before_event_start_can_leave=1800,
+                seconds_before_required_arrival_can_leave=1800,
+                distance_to_destination_seconds=600,
+            ),
+            Tripper(
+                user_id="rider",
+                origin_id="rider-home",
+                event_id="event-1",
+                destination_id="rider-office",
+                car_fits=0,
+                must_drive=False,
+                seconds_before_event_start_can_leave=1800,
+                seconds_before_required_arrival_can_leave=1800,
+                distance_to_destination_seconds=900,
+            ),
+        ],
+        tripper_distances=[
+            TripperDistance(
+                origin_user_id="driver",
+                destination_user_id="rider",
+                distance_seconds=120,
+            ),
+            TripperDistance(
+                origin_user_id="rider",
+                destination_user_id="driver",
+                distance_seconds=120,
+            ),
+        ],
+        location_distances=[
+            LocationDistance(
+                origin_location_id="driver-home",
+                destination_location_id="driver-office",
+                distance_seconds=600,
+            ),
+            LocationDistance(
+                origin_location_id="rider-home",
+                destination_location_id="rider-office",
+                distance_seconds=480,
+            ),
+            LocationDistance(
+                origin_location_id="rider-office",
+                destination_location_id="driver-office",
+                distance_seconds=180,
+            ),
+        ],
+    )
+
+    solution = solve_problem(problem)
+
+    assert solution.kind == "commute"
+    assert not solution.feasible
