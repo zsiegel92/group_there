@@ -36,7 +36,7 @@ export function EventStatus({
         const isCompleted = i < currentStep;
 
         const currentClass = compact
-          ? `text-xs font-semibold ${stepTextColors[currentStep]}`
+          ? `text-[11px] font-semibold ${stepTextColors[currentStep]}`
           : `text-lg font-semibold ${stepTextColors[currentStep]}`;
 
         return (
@@ -49,15 +49,15 @@ export function EventStatus({
                 isCurrent
                   ? currentClass
                   : isCompleted
-                    ? `${compact ? "text-[10px]" : "text-xs"} text-gray-500`
-                    : `${compact ? "text-[10px]" : "text-xs"} text-gray-300`
+                    ? `${compact ? "text-[9px]" : "text-xs"} text-gray-500`
+                    : `${compact ? "text-[9px]" : "text-xs"} text-gray-300`
               }
             >
               {label}
             </span>
             {i < steps.length - 1 && (
               <span
-                className={`${compact ? "text-[10px]" : "text-xs"} text-gray-300`}
+                className={`${compact ? "text-[9px]" : "text-xs"} text-gray-300`}
               >
                 &rarr;
               </span>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db/db";
@@ -20,6 +20,47 @@ const createLocationSchema = z.object({
   ownerType: z.enum(locationOwnerTypeValues),
   ownerId: z.string().min(1),
 });
+
+type LocationRecord = typeof locations.$inferSelect;
+type CreateLocationInput = z.infer<typeof createLocationSchema>;
+
+function serializeLocation(loc: LocationRecord) {
+  return {
+    id: loc.id,
+    googlePlaceId: loc.googlePlaceId,
+    name: loc.name,
+    addressString: loc.addressString,
+    street1: loc.street1,
+    street2: loc.street2,
+    city: loc.city,
+    state: loc.state,
+    zip: loc.zip,
+    latitude: loc.latitude,
+    longitude: loc.longitude,
+    ownerType: loc.ownerType,
+    ownerId: loc.ownerId,
+  };
+}
+
+async function findExistingLocation(input: CreateLocationInput) {
+  const ownerPredicate = and(
+    eq(locations.ownerType, input.ownerType),
+    eq(locations.ownerId, input.ownerId)
+  );
+
+  const identityPredicate = input.googlePlaceId
+    ? eq(locations.googlePlaceId, input.googlePlaceId)
+    : eq(locations.addressString, input.addressString);
+
+  const [existing] = await db
+    .select()
+    .from(locations)
+    .where(and(ownerPredicate, identityPredicate))
+    .orderBy(asc(locations.createdAt), asc(locations.id))
+    .limit(1);
+
+  return existing ?? null;
+}
 
 export async function GET(request: NextRequest) {
   const user = await getUser(request);
@@ -55,21 +96,7 @@ export async function GET(request: NextRequest) {
     .orderBy(desc(locations.createdAt));
 
   return NextResponse.json({
-    locations: results.map((loc) => ({
-      id: loc.id,
-      googlePlaceId: loc.googlePlaceId,
-      name: loc.name,
-      addressString: loc.addressString,
-      street1: loc.street1,
-      street2: loc.street2,
-      city: loc.city,
-      state: loc.state,
-      zip: loc.zip,
-      latitude: loc.latitude,
-      longitude: loc.longitude,
-      ownerType: loc.ownerType,
-      ownerId: loc.ownerId,
-    })),
+    locations: results.map(serializeLocation),
   });
 }
 
@@ -89,31 +116,39 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const locationId = `loc_${crypto.randomUUID()}`;
+  const existing = await findExistingLocation(result.data);
+  if (existing) {
+    return NextResponse.json({
+      location: serializeLocation(existing),
+    });
+  }
 
   const [created] = await db
     .insert(locations)
     .values({
-      id: locationId,
+      id: `loc_${crypto.randomUUID()}`,
       ...result.data,
+    })
+    .onConflictDoNothing({
+      target: [locations.ownerType, locations.ownerId, locations.googlePlaceId],
     })
     .returning();
 
+  if (!created) {
+    const concurrentlyCreated = await findExistingLocation(result.data);
+    if (concurrentlyCreated) {
+      return NextResponse.json({
+        location: serializeLocation(concurrentlyCreated),
+      });
+    }
+
+    return NextResponse.json(
+      { error: "Failed to create location" },
+      { status: 500 }
+    );
+  }
+
   return NextResponse.json({
-    location: {
-      id: created.id,
-      googlePlaceId: created.googlePlaceId,
-      name: created.name,
-      addressString: created.addressString,
-      street1: created.street1,
-      street2: created.street2,
-      city: created.city,
-      state: created.state,
-      zip: created.zip,
-      latitude: created.latitude,
-      longitude: created.longitude,
-      ownerType: created.ownerType,
-      ownerId: created.ownerId,
-    },
+    location: serializeLocation(created),
   });
 }

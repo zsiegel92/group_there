@@ -95,13 +95,17 @@ function EventCard({ event }: { event: EventListItem }) {
           <div className="mt-2 text-gray-700">{event.message}</div>
         )}
       </div>
-      <div className="mt-3 flex items-baseline justify-between">
-        <span className="text-blue-600 text-sm font-medium">{linkText} →</span>
-        <EventStatus
-          scheduled={event.scheduled}
-          locked={event.locked}
-          compact
-        />
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+        <div className="order-1 sm:order-2">
+          <EventStatus
+            scheduled={event.scheduled}
+            locked={event.locked}
+            compact
+          />
+        </div>
+        <span className="order-2 text-blue-600 text-sm font-medium sm:order-1">
+          {linkText} →
+        </span>
       </div>
     </Link>
   );

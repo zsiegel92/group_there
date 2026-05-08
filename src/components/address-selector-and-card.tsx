@@ -22,6 +22,23 @@ type AddressSelectorAndCardProps = {
   disabled?: boolean;
 };
 
+function normalizeLocationText(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function getLocationIdentityKey(location: Location) {
+  if (location.googlePlaceId) return `google:${location.googlePlaceId}`;
+
+  const address = normalizeLocationText(location.addressString);
+  if (address.length > 0) return `address:${address}`;
+
+  if (location.latitude !== null && location.longitude !== null) {
+    return `coords:${location.latitude.toFixed(6)},${location.longitude.toFixed(6)}`;
+  }
+
+  return `id:${location.id}`;
+}
+
 export function AddressSelectorAndCard({
   onNewValidatedLocation,
   ownerType,
@@ -45,13 +62,14 @@ export function AddressSelectorAndCard({
     const result: Location[] = [];
 
     if (selectedLocation) {
-      seen.add(selectedLocation.id);
+      seen.add(getLocationIdentityKey(selectedLocation));
       result.push(selectedLocation);
     }
 
     for (const loc of pastLocations ?? []) {
-      if (!seen.has(loc.id)) {
-        seen.add(loc.id);
+      const identityKey = getLocationIdentityKey(loc);
+      if (!seen.has(identityKey)) {
+        seen.add(identityKey);
         result.push(loc);
       }
     }

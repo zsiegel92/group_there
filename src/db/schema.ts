@@ -9,6 +9,7 @@ import {
   real,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable(
@@ -160,6 +161,11 @@ export const locations = pgTable(
   (table) => [
     index("locations_ownerType_ownerId_idx").on(table.ownerType, table.ownerId),
     index("locations_googlePlaceId_idx").on(table.googlePlaceId),
+    uniqueIndex("locations_owner_googlePlaceId_unique_idx").on(
+      table.ownerType,
+      table.ownerId,
+      table.googlePlaceId
+    ),
   ]
 );
 
