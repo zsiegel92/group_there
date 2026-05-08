@@ -10,6 +10,7 @@ import {
   events,
   groupsToUsers,
   solutions,
+  type EventKind,
 } from "@/db/schema";
 import { getUser } from "@/lib/auth";
 import { computePartyEstimates } from "@/lib/itinerary";
@@ -25,6 +26,36 @@ const blastRequestSchema = z.object({
 
 function formatTime(date: Date) {
   return format(date, "h:mm a");
+}
+
+function formatNameAndAddress(name: string | null, address: string | null) {
+  const trimmedName = name?.trim() || null;
+  const trimmedAddress = address?.trim() || null;
+
+  if (trimmedName && trimmedAddress && trimmedName !== trimmedAddress) {
+    return `${trimmedName} (${trimmedAddress})`;
+  }
+
+  return trimmedName ?? trimmedAddress;
+}
+
+function formatEventDestination(
+  kind: EventKind,
+  locationName: string | null,
+  locationAddress: string | null
+) {
+  if (kind === "commute") {
+    return "Participants choose their own destinations";
+  }
+
+  return (
+    formatNameAndAddress(locationName, locationAddress) ?? "No location set"
+  );
+}
+
+function formatEventType(kind: EventKind, isRecurring: boolean) {
+  const kindLabel = kind === "commute" ? "Commute" : "Shared destination";
+  return `${kindLabel}${isRecurring ? " (recurring)" : ""}`;
 }
 
 // POST /api/events/[id]/blast - Send email blast (admin only)
@@ -60,6 +91,7 @@ export async function POST(request: NextRequest, props: Params) {
         with: {
           user: true,
           originLocation: true,
+          destinationLocation: true,
         },
       },
     },
@@ -112,8 +144,18 @@ export async function POST(request: NextRequest, props: Params) {
 
   const eventDate = format(event.time, "EEEE, MMMM d, yyyy");
   const eventTime = formatTime(event.time);
-  const locationName = event.location?.name ?? "TBD";
-  const locationAddress = event.location?.addressString ?? "";
+  const locationName = event.location?.name ?? null;
+  const locationAddress = event.location?.addressString ?? null;
+  const eventDestination = formatEventDestination(
+    event.kind,
+    locationName,
+    locationAddress
+  );
+  const isRecurring = event.eventSeriesId != null;
+  const eventType = formatEventType(event.kind, isRecurring);
+  const recurringNote = isRecurring
+    ? "This is one occurrence of a recurring series."
+    : null;
 
   let recipientCount = 0;
 
@@ -153,12 +195,23 @@ export async function POST(request: NextRequest, props: Params) {
         await sendEmail({
           to: member.user.email,
           subject: `You're invited to join ${event.name} on GROUPTHERE`,
-          text: `You're invited to join "${event.name}" with ${event.group.name}.\n\nWhen: ${eventDate} at ${eventTime}\nWhere: ${locationName}\n\nJoin the event: ${eventUrl}`,
+          text: [
+            `You're invited to join "${event.name}" with ${event.group.name}.`,
+            "",
+            `When: ${eventDate} at ${eventTime}`,
+            `Type: ${eventType}`,
+            `${event.kind === "commute" ? "Destinations" : "Where"}: ${eventDestination}`,
+            ...(recurringNote ? [recurringNote] : []),
+            "",
+            `Join the event: ${eventUrl}`,
+          ].join("\n"),
           html: `
             <h2>You're Invited!</h2>
             <p>You're invited to join <strong>${event.name}</strong> with ${event.group.name}.</p>
             <p><strong>When:</strong> ${eventDate} at ${eventTime}</p>
-            <p><strong>Where:</strong> ${locationName}</p>
+            <p><strong>Type:</strong> ${eventType}</p>
+            <p><strong>${event.kind === "commute" ? "Destinations" : "Where"}:</strong> ${eventDestination}</p>
+            ${recurringNote ? `<p>${recurringNote}</p>` : ""}
             <p><a href="${eventUrl}">Join the event on GROUPTHERE</a></p>
           `,
         });
@@ -197,7 +250,11 @@ export async function POST(request: NextRequest, props: Params) {
           originLocationId: att.originLocationId,
           originLocationName: att.originLocation?.name ?? null,
           originAddress: att.originLocation?.addressString ?? null,
+          destinationLocationId: att.destinationLocationId,
+          destinationLocationName: att.destinationLocation?.name ?? null,
+          destinationAddress: att.destinationLocation?.addressString ?? null,
           earliestLeaveTime: att.earliestLeaveTime,
+          requiredArrivalTime: att.requiredArrivalTime,
         },
       ])
     );
@@ -213,7 +270,10 @@ export async function POST(request: NextRequest, props: Params) {
           return {
             userId: m.userId,
             originLocationId: att?.originLocationId ?? null,
+            destinationLocationId:
+              att?.destinationLocationId ?? event.locationId,
             earliestLeaveTime: att?.earliestLeaveTime ?? null,
+            requiredArrivalTime: att?.requiredArrivalTime ?? event.time,
             pickupOrder: m.pickupOrder,
           };
         });
@@ -221,7 +281,8 @@ export async function POST(request: NextRequest, props: Params) {
         const estimates = await computePartyEstimates(
           membersForEstimate,
           event.locationId,
-          event.time
+          event.time,
+          event.kind
         );
 
         return { party, sortedMembers, estimates };
@@ -237,13 +298,35 @@ export async function POST(request: NextRequest, props: Params) {
     };
     const emails: RecipientEmail[] = [];
 
-    for (const { party: _party, sortedMembers, estimates } of partyEstimates) {
+    for (const { party, sortedMembers, estimates } of partyEstimates) {
+      const driverMember = sortedMembers.find(
+        (member) => member.userId === party.driverUserId
+      );
+      const leadMember = driverMember ?? sortedMembers[0] ?? null;
+      const leadAtt = leadMember ? attendeeLookup.get(leadMember.userId) : null;
+      const finalDestinationName =
+        event.kind === "commute"
+          ? leadAtt?.destinationLocationName
+          : locationName;
+      const finalDestinationAddress =
+        event.kind === "commute"
+          ? leadAtt?.destinationAddress
+          : locationAddress;
+
       for (const member of sortedMembers) {
         const att = attendeeLookup.get(member.userId);
         if (!att) continue;
 
-        const isDriver = member.pickupOrder === 0;
+        const isDriver =
+          party.driverUserId != null && member.userId === party.driverUserId;
         const role = isDriver ? "the Driver" : "a Passenger";
+        const recipientDestination =
+          event.kind === "commute"
+            ? (formatNameAndAddress(
+                att.destinationLocationName,
+                att.destinationAddress
+              ) ?? "Your destination")
+            : eventDestination;
 
         // Build itinerary steps
         const steps: { label: string; detail: string; time: string | null }[] =
@@ -253,8 +336,9 @@ export async function POST(request: NextRequest, props: Params) {
           const mAtt = attendeeLookup.get(m.userId);
           const pickup = estimates.estimatedPickups.get(m.userId);
           const timeStr = pickup ? formatTime(pickup) : null;
+          const isLeadMember = m.userId === leadMember?.userId;
 
-          if (m.pickupOrder === 0) {
+          if (isLeadMember) {
             steps.push({
               label: `Depart: ${mAtt?.name ?? "Driver"}`,
               detail: mAtt?.originAddress ?? mAtt?.originLocationName ?? "",
@@ -269,13 +353,27 @@ export async function POST(request: NextRequest, props: Params) {
           }
         }
 
+        if (event.kind === "commute") {
+          for (const m of sortedMembers.filter(
+            (sortedMember) => sortedMember.userId !== leadMember?.userId
+          )) {
+            const mAtt = attendeeLookup.get(m.userId);
+            steps.push({
+              label: `Drop off: ${mAtt?.name ?? "Passenger"}`,
+              detail:
+                mAtt?.destinationAddress ?? mAtt?.destinationLocationName ?? "",
+              time: null,
+            });
+          }
+        }
+
         // Final destination
         const arrivalTime = estimates.estimatedEventArrival
           ? formatTime(estimates.estimatedEventArrival)
           : null;
         steps.push({
-          label: `Arrive: ${locationName}`,
-          detail: locationAddress,
+          label: `Arrive: ${finalDestinationName ?? "Destination"}`,
+          detail: finalDestinationAddress ?? "",
           time: arrivalTime,
         });
 
@@ -293,7 +391,9 @@ export async function POST(request: NextRequest, props: Params) {
           "",
           `Event: ${event.name}`,
           `When: ${eventDate} at ${eventTime}`,
-          `Where: ${locationName}${locationAddress ? ` (${locationAddress})` : ""}`,
+          `Type: ${eventType}`,
+          `${event.kind === "commute" ? "Destination" : "Where"}: ${recipientDestination}`,
+          ...(recurringNote ? [recurringNote] : []),
           "",
           "Your Itinerary:",
           textSteps,
@@ -316,7 +416,9 @@ export async function POST(request: NextRequest, props: Params) {
           <h2>Carpool Confirmed!</h2>
           <p>Your carpool for <strong>${event.name}</strong> with ${event.group.name} is confirmed! You are <strong>${role}</strong>.</p>
           <p><strong>When:</strong> ${eventDate} at ${eventTime}</p>
-          <p><strong>Where:</strong> ${locationName}${locationAddress ? ` (${locationAddress})` : ""}</p>
+          <p><strong>Type:</strong> ${eventType}</p>
+          <p><strong>${event.kind === "commute" ? "Destination" : "Where"}:</strong> ${recipientDestination}</p>
+          ${recurringNote ? `<p>${recurringNote}</p>` : ""}
           <h3>Your Itinerary</h3>
           <table style="border-collapse:collapse;">${htmlSteps}</table>
           <p style="margin-top:16px;"><a href="${eventUrl}">View your trip details on GROUPTHERE</a></p>
