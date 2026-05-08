@@ -153,6 +153,7 @@ function EventList({ events }: { events: EventListItem[] }) {
         const seriesId = event.eventSeriesId;
         const isExpanded = seriesId ? expandedSeriesIds.has(seriesId) : false;
         const hasChildren = children.length > 0;
+        const seriesCount = children.length + 1;
 
         return (
           <div key={event.id} className="space-y-3">
@@ -169,13 +170,16 @@ function EventList({ events }: { events: EventListItem[] }) {
                   onClick={() => {
                     if (seriesId) toggleSeries(seriesId);
                   }}
-                  className="w-8 shrink-0 rounded-md border bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900 flex items-center justify-center"
+                  className="w-12 shrink-0 rounded-md border bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900 flex flex-col items-center justify-center gap-0.5"
                 >
                   {isExpanded ? (
                     <ChevronDown className="size-4" />
                   ) : (
                     <ChevronRight className="size-4" />
                   )}
+                  <span className="text-xs font-medium leading-none">
+                    {seriesCount}
+                  </span>
                 </button>
                 <div className="min-w-0 flex-1">
                   <EventCard event={event} />
