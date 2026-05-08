@@ -196,30 +196,13 @@ export const eventKindValues = ["shared_destination", "commute"] as const;
 
 export type EventKind = (typeof eventKindValues)[number];
 
-export const eventKindEnum = pgEnum("event_kind", eventKindValues);
+const eventKindEnum = pgEnum("event_kind", eventKindValues);
 
 export const eventParticipationModeValues = ["opt_in", "opt_out"] as const;
 
-export type EventParticipationMode =
-  (typeof eventParticipationModeValues)[number];
-
-export const eventParticipationModeEnum = pgEnum(
+const eventParticipationModeEnum = pgEnum(
   "event_participation_mode",
   eventParticipationModeValues
-);
-
-export const eventSeriesParticipationStatusValues = [
-  "joined",
-  "paused",
-  "declined",
-] as const;
-
-export type EventSeriesParticipationStatus =
-  (typeof eventSeriesParticipationStatusValues)[number];
-
-export const eventSeriesParticipationStatusEnum = pgEnum(
-  "event_series_participation_status",
-  eventSeriesParticipationStatusValues
 );
 
 export const externalRideshareModeValues = [
@@ -228,10 +211,7 @@ export const externalRideshareModeValues = [
   "always_available",
 ] as const;
 
-export type ExternalRideshareMode =
-  (typeof externalRideshareModeValues)[number];
-
-export const externalRideshareModeEnum = pgEnum(
+const externalRideshareModeEnum = pgEnum(
   "external_rideshare_mode",
   externalRideshareModeValues
 );
@@ -241,9 +221,7 @@ export const solutionVehicleKindValues = [
   "external_rideshare",
 ] as const;
 
-export type SolutionVehicleKind = (typeof solutionVehicleKindValues)[number];
-
-export const solutionVehicleKindEnum = pgEnum(
+const solutionVehicleKindEnum = pgEnum(
   "solution_vehicle_kind",
   solutionVehicleKindValues
 );
@@ -273,44 +251,6 @@ export const eventSeries = pgTable(
   (table) => [
     index("eventSeries_groupId_idx").on(table.groupId),
     index("eventSeries_kind_idx").on(table.kind),
-  ]
-);
-
-export const eventSeriesToUsers = pgTable(
-  "event_series_to_users",
-  {
-    eventSeriesId: text("event_series_id")
-      .notNull()
-      .references(() => eventSeries.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    participationStatus: eventSeriesParticipationStatusEnum(
-      "participation_status"
-    )
-      .default("joined")
-      .notNull(),
-    defaultDrivingStatus: drivingStatusEnum("default_driving_status"),
-    defaultCarFits: integer("default_car_fits"),
-    defaultEarliestLeaveOffsetMinutes: integer(
-      "default_earliest_leave_offset_minutes"
-    ),
-    defaultOriginLocationId: text("default_origin_location_id").references(
-      () => locations.id
-    ),
-    defaultDestinationLocationId: text(
-      "default_destination_location_id"
-    ).references(() => locations.id),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.eventSeriesId, table.userId] }),
-    index("eventSeriesToUsers_eventSeriesId_idx").on(table.eventSeriesId),
-    index("eventSeriesToUsers_userId_idx").on(table.userId),
   ]
 );
 
@@ -468,9 +408,7 @@ export const solutionParties = pgTable(
 
 export const blastTypeValues = ["event_scheduled", "event_confirmed"] as const;
 
-export type BlastType = (typeof blastTypeValues)[number];
-
-export const blastTypeEnum = pgEnum("blast_type", blastTypeValues);
+const blastTypeEnum = pgEnum("blast_type", blastTypeValues);
 
 export const blasts = pgTable(
   "blasts",
@@ -510,7 +448,6 @@ export const userRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   accounts: many(accounts),
   groupsToUsers: many(groupsToUsers),
-  eventSeriesToUsers: many(eventSeriesToUsers),
   eventsToUsers: many(eventsToUsers),
 }));
 
@@ -561,31 +498,8 @@ export const eventSeriesRelations = relations(eventSeries, ({ one, many }) => ({
     fields: [eventSeries.createdByUserId],
     references: [users.id],
   }),
-  eventSeriesToUsers: many(eventSeriesToUsers),
   events: many(events),
 }));
-
-export const eventSeriesToUsersRelations = relations(
-  eventSeriesToUsers,
-  ({ one }) => ({
-    eventSeries: one(eventSeries, {
-      fields: [eventSeriesToUsers.eventSeriesId],
-      references: [eventSeries.id],
-    }),
-    user: one(users, {
-      fields: [eventSeriesToUsers.userId],
-      references: [users.id],
-    }),
-    defaultOriginLocation: one(locations, {
-      fields: [eventSeriesToUsers.defaultOriginLocationId],
-      references: [locations.id],
-    }),
-    defaultDestinationLocation: one(locations, {
-      fields: [eventSeriesToUsers.defaultDestinationLocationId],
-      references: [locations.id],
-    }),
-  })
-);
 
 export const eventRelations = relations(events, ({ one, many }) => ({
   group: one(groups, {
