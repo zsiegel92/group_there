@@ -46,7 +46,9 @@ export async function solveProblem(eventId: string) {
       const members: {
         userId: string;
         originLocationId: string | null;
+        destinationLocationId: string | null;
         earliestLeaveTime: Date | null;
+        requiredArrivalTime: Date | null;
         pickupOrder: number;
       }[] = [];
 
@@ -55,7 +57,9 @@ export async function solveProblem(eventId: string) {
         members.push({
           userId: party.driver_tripper_id,
           originLocationId: att?.originLocationId ?? null,
+          destinationLocationId: att?.destinationLocationId ?? event.locationId,
           earliestLeaveTime: att?.earliestLeaveTime ?? null,
+          requiredArrivalTime: att?.requiredArrivalTime ?? event.time,
           pickupOrder: 0,
         });
       }
@@ -65,13 +69,20 @@ export async function solveProblem(eventId: string) {
         members.push({
           userId: pid,
           originLocationId: att?.originLocationId ?? null,
+          destinationLocationId: att?.destinationLocationId ?? event.locationId,
           earliestLeaveTime: att?.earliestLeaveTime ?? null,
+          requiredArrivalTime: att?.requiredArrivalTime ?? event.time,
           pickupOrder: i + 1,
         });
       });
 
       const { estimatedPickups, estimatedEventArrival } =
-        await computePartyEstimates(members, event.locationId, event.time);
+        await computePartyEstimates(
+          members,
+          event.locationId,
+          event.time,
+          event.kind
+        );
 
       return {
         partyId: party.id,

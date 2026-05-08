@@ -188,14 +188,18 @@ export async function GET(request: NextRequest, props: Params) {
               return {
                 userId: m.userId,
                 originLocationId: a?.originLocationId ?? null,
+                destinationLocationId:
+                  a?.destinationLocationId ?? event.locationId,
                 earliestLeaveTime: a?.earliestLeaveTime ?? null,
+                requiredArrivalTime: a?.requiredArrivalTime ?? event.time,
                 pickupOrder: m.pickupOrder,
               };
             });
             return computePartyEstimates(
               membersForEstimate,
               event.locationId,
-              event.time
+              event.time,
+              event.kind
             );
           })
         );
@@ -237,6 +241,9 @@ export async function GET(request: NextRequest, props: Params) {
                     pickupOrder: m.pickupOrder,
                     originLocation: att?.originLocation ?? null,
                     originLocationId: att?.originLocationId ?? null,
+                    destinationLocation: att?.destinationLocation ?? null,
+                    destinationLocationId: att?.destinationLocationId ?? null,
+                    requiredArrivalTime: att?.requiredArrivalTime ?? null,
                     earliestLeaveTime: att?.earliestLeaveTime ?? null,
                     estimatedPickup: pickup ? pickup.toISOString() : null,
                   };
@@ -261,7 +268,10 @@ export async function GET(request: NextRequest, props: Params) {
             return {
               userId: m.userId,
               originLocationId: a?.originLocationId ?? null,
+              destinationLocationId:
+                a?.destinationLocationId ?? event.locationId,
               earliestLeaveTime: a?.earliestLeaveTime ?? null,
+              requiredArrivalTime: a?.requiredArrivalTime ?? event.time,
               pickupOrder: m.pickupOrder,
             };
           });
@@ -270,7 +280,8 @@ export async function GET(request: NextRequest, props: Params) {
             await computePartyEstimates(
               attendeeForEstimates,
               event.locationId,
-              event.time
+              event.time,
+              event.kind
             );
 
           myParty = {
@@ -292,6 +303,9 @@ export async function GET(request: NextRequest, props: Params) {
                 pickupOrder: m.pickupOrder,
                 originLocation: memberAtt?.originLocation ?? null,
                 originLocationId: memberAtt?.originLocationId ?? null,
+                destinationLocation: memberAtt?.destinationLocation ?? null,
+                destinationLocationId: memberAtt?.destinationLocationId ?? null,
+                requiredArrivalTime: memberAtt?.requiredArrivalTime ?? null,
                 earliestLeaveTime: memberAtt?.earliestLeaveTime ?? null,
                 estimatedPickup: pickup ? pickup.toISOString() : null,
               };
@@ -461,6 +475,18 @@ export async function PATCH(request: NextRequest, props: Params) {
         { status: 400 }
       );
     }
+  }
+
+  const effectiveKind = result.data.kind ?? event.kind;
+  const effectiveLocationId =
+    result.data.locationId !== undefined
+      ? result.data.locationId
+      : event.locationId;
+  if (effectiveKind === "shared_destination" && !effectiveLocationId) {
+    return NextResponse.json(
+      { error: "Shared-destination events need a location" },
+      { status: 400 }
+    );
   }
 
   // Update the event

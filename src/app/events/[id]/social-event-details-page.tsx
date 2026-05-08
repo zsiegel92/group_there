@@ -106,6 +106,8 @@ export function SocialEventDetailPage({ eventId }: { eventId: string }) {
       <div className="space-y-6">
         {/* Event Details */}
         <EventDetailsCard
+          kind={event.kind}
+          eventSeriesId={event.eventSeriesId}
           time={event.time}
           location={event.location}
           message={event.message}
@@ -115,6 +117,7 @@ export function SocialEventDetailPage({ eventId }: { eventId: string }) {
         {event.locked && event.myParty && currentUserId && (
           <YourTrip
             myParty={event.myParty}
+            eventKind={event.kind}
             eventId={eventId}
             eventLocation={event.location}
             eventLocationId={event.locationId}
@@ -205,6 +208,33 @@ export function SocialEventDetailPage({ eventId }: { eventId: string }) {
                               .name
                           : "Unknown"}
                       </div>
+                      {event.kind === "commute" && (
+                        <>
+                          <div>
+                            <span className="font-medium">Going to:</span>{" "}
+                            {currentUserAttendee.userAttendance
+                              .destinationLocation
+                              ? currentUserAttendee.userAttendance
+                                  .destinationLocation.name
+                              : "Unknown"}
+                          </div>
+                          {currentUserAttendee.userAttendance
+                            .requiredArrivalTime && (
+                            <div>
+                              <span className="font-medium">
+                                Needs to arrive by:
+                              </span>{" "}
+                              {format(
+                                new Date(
+                                  currentUserAttendee.userAttendance
+                                    .requiredArrivalTime
+                                ),
+                                "MM/dd/yyyy h:mm a"
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                     {(() => {
                       const att = currentUserAttendee.userAttendance;
@@ -214,7 +244,7 @@ export function SocialEventDetailPage({ eventId }: { eventId: string }) {
                       )
                         return null;
                       const availableSeconds = differenceInSeconds(
-                        new Date(event.time),
+                        new Date(att.requiredArrivalTime ?? event.time),
                         new Date(att.earliestLeaveTime)
                       );
                       if (att.directTravelSeconds <= availableSeconds)
@@ -284,7 +314,10 @@ function NonAdminMap({
     const attendees: {
       userId: string;
       userName: string;
-      userAttendance: { originLocation: Location | null };
+      userAttendance: {
+        originLocation: Location | null;
+        destinationLocation?: Location | null;
+      };
     }[] = [];
 
     if (
@@ -297,6 +330,7 @@ function NonAdminMap({
         userName: "You",
         userAttendance: {
           originLocation: event.userAttendance.originLocation,
+          destinationLocation: event.userAttendance.destinationLocation,
         },
       });
     }
@@ -306,8 +340,6 @@ function NonAdminMap({
       attendees,
     };
   }, [event, currentUserId]);
-
-  if (!event.location) return null;
 
   return <EventLocationsMap event={miniEvent} currentUserId={currentUserId} />;
 }
@@ -327,6 +359,8 @@ function AdminAttendeeList({
       earliestLeaveTime: string | null;
       originLocationId: string | null;
       originLocation: { name: string } | null;
+      destinationLocation?: { name: string } | null;
+      requiredArrivalTime?: string | null;
       joinedAt: string;
     };
   }>;
@@ -379,6 +413,21 @@ function AdminAttendeeList({
                   ? attendee.userAttendance.originLocation.name
                   : "Unknown"}
               </div>
+              {attendee.userAttendance.destinationLocation && (
+                <div>
+                  <span className="font-medium">Going to:</span>{" "}
+                  {attendee.userAttendance.destinationLocation.name}
+                </div>
+              )}
+              {attendee.userAttendance.requiredArrivalTime && (
+                <div>
+                  <span className="font-medium">Needs to arrive by:</span>{" "}
+                  {format(
+                    new Date(attendee.userAttendance.requiredArrivalTime),
+                    "MM/dd/yyyy h:mm a"
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ))}

@@ -31,6 +31,8 @@ type GroupedEvents = {
   };
   eventsForGroup: Array<{
     id: string;
+    kind: "shared_destination" | "commute";
+    eventSeriesId: string | null;
     name: string;
     location: LocationSummary;
     time: string;
@@ -71,8 +73,19 @@ function EventCard({
           {format(eventDate, "MM/dd/yyyy h:mm a")}
         </div>
         <div>
-          <span className="font-medium">Where:</span>{" "}
-          {event.location ? event.location.name : "No location set"}
+          <span className="font-medium">Type:</span>{" "}
+          {event.kind === "commute" ? "Commute" : "Shared destination"}
+          {event.eventSeriesId ? " (recurring)" : ""}
+        </div>
+        <div>
+          <span className="font-medium">
+            {event.kind === "commute" ? "Destination:" : "Where:"}
+          </span>{" "}
+          {event.kind === "commute"
+            ? "Set by each participant"
+            : event.location
+              ? event.location.name
+              : "No location set"}
         </div>
         <div>
           <span className="font-medium">Participants:</span>{" "}
@@ -114,6 +127,8 @@ export function EventsPage({ groupId }: { groupId?: string }) {
         if (groupData) {
           groupData.eventsForGroup.push({
             id: event.eventDetails.id,
+            kind: event.eventDetails.kind,
+            eventSeriesId: event.eventDetails.eventSeriesId,
             name: event.eventDetails.name,
             location: event.eventDetails.location,
             time: event.eventDetails.time,

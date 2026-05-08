@@ -8,7 +8,7 @@ import { useDialog } from "@/components/dialog-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { type DrivingStatus } from "@/db/schema";
+import { type DrivingStatus, type EventKind } from "@/db/schema";
 import { useSession } from "@/lib/auth-client";
 import type { Location } from "@/lib/geo/schema";
 
@@ -19,6 +19,7 @@ import {
 } from "../../api/events/client";
 
 type Event = {
+  kind: EventKind;
   time: string;
   hasJoined: boolean;
   scheduled: boolean;
@@ -29,11 +30,20 @@ type Event = {
     earliestLeaveTime: string | null;
     originLocationId: string | null;
     originLocation: Location | null;
+    destinationLocationId: string | null;
+    destinationLocation: Location | null;
+    requiredArrivalTime: string | null;
   } | null;
 };
 
 function formatDatetimeLocal(date: Date) {
   return format(date, "yyyy-MM-dd'T'HH:mm");
+}
+
+function parseDrivingStatus(value: string): DrivingStatus {
+  if (value === "must_drive") return "must_drive";
+  if (value === "can_drive_or_not") return "can_drive_or_not";
+  return "cannot_drive";
 }
 
 type AttendanceFormProps = {
@@ -64,6 +74,11 @@ export function AttendanceForm({
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(
     null
   );
+  const [selectedDestination, setSelectedDestination] =
+    useState<Location | null>(null);
+  const [requiredArrivalTime, setRequiredArrivalTime] = useState(
+    formatDatetimeLocal(new Date(event.time))
+  );
 
   const handleAttendanceSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -71,6 +86,10 @@ export function AttendanceForm({
 
       if (!selectedLocation) {
         dialog.alert("Please select an origin location.");
+        return;
+      }
+      if (event.kind === "commute" && !selectedDestination) {
+        dialog.alert("Please select a destination.");
         return;
       }
 
@@ -83,6 +102,10 @@ export function AttendanceForm({
             ? earliestLeaveTime
             : null,
         originLocationId: selectedLocation.id,
+        destinationLocationId:
+          event.kind === "commute" ? selectedDestination?.id : null,
+        requiredArrivalTime:
+          event.kind === "commute" ? requiredArrivalTime : null,
         joinedAt: new Date().toISOString(),
       };
 
@@ -114,7 +137,10 @@ export function AttendanceForm({
       passengersCount,
       earliestLeaveTime,
       selectedLocation,
+      selectedDestination,
+      requiredArrivalTime,
       eventId,
+      event.kind,
       updateAttendance,
       attendEvent,
       event.hasJoined,
@@ -149,20 +175,36 @@ export function AttendanceForm({
       );
     }
     setSelectedLocation(event.userAttendance.originLocation);
+    setSelectedDestination(event.userAttendance.destinationLocation);
+    setRequiredArrivalTime(
+      event.userAttendance.requiredArrivalTime
+        ? formatDatetimeLocal(
+            new Date(event.userAttendance.requiredArrivalTime)
+          )
+        : formatDatetimeLocal(new Date(event.time))
+    );
     setIsEditingAttendance(true);
-  }, [event.userAttendance, setIsEditingAttendance]);
+  }, [event.time, event.userAttendance, setIsEditingAttendance]);
 
   // Calculate time difference for display
   const getTimeBefore = useCallback(() => {
     if (!earliestLeaveTime) return "";
+    const arrivalTime =
+      event.kind === "commute" && requiredArrivalTime
+        ? requiredArrivalTime
+        : event.time;
     const diff = differenceInMinutes(
-      new Date(event.time),
+      new Date(arrivalTime),
       new Date(earliestLeaveTime)
     );
-    return `${diff} minutes before the event`;
-  }, [earliestLeaveTime, event.time]);
+    return `${diff} minutes before arrival`;
+  }, [earliestLeaveTime, event.kind, event.time, requiredArrivalTime]);
 
   const canDrive = drivingStatus !== "cannot_drive";
+  const arrivalTimeForAvailability =
+    event.kind === "commute" && requiredArrivalTime
+      ? requiredArrivalTime
+      : event.time;
 
   const formContent = (
     <>
@@ -174,12 +216,7 @@ export function AttendanceForm({
           <select
             value={drivingStatus}
             onChange={(e) =>
-              setDrivingStatus(
-                e.target.value as
-                  | "cannot_drive"
-                  | "must_drive"
-                  | "can_drive_or_not"
-              )
+              setDrivingStatus(parseDrivingStatus(e.target.value))
             }
             className="w-full p-2 border rounded"
             required
@@ -213,7 +250,7 @@ export function AttendanceForm({
                 type="datetime-local"
                 value={earliestLeaveTime}
                 onChange={(e) => setEarliestLeaveTime(e.target.value)}
-                max={event.time.slice(0, 16)}
+                max={arrivalTimeForAvailability.slice(0, 16)}
                 required
               />
               <div className="flex flex-wrap gap-2 mt-2">
@@ -226,7 +263,10 @@ export function AttendanceForm({
                     onClick={() => {
                       setEarliestLeaveTime(
                         formatDatetimeLocal(
-                          subMinutes(new Date(event.time), minutes)
+                          subMinutes(
+                            new Date(arrivalTimeForAvailability),
+                            minutes
+                          )
                         )
                       );
                     }}
@@ -260,6 +300,34 @@ export function AttendanceForm({
           />
         </div>
 
+        {event.kind === "commute" && (
+          <>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Where are you going? *
+              </label>
+              <AddressSelectorAndCard
+                onNewValidatedLocation={setSelectedDestination}
+                ownerType="user"
+                ownerId={session?.user?.id ?? ""}
+                selectedLocation={selectedDestination}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Required Arrival Time *
+              </label>
+              <Input
+                type="datetime-local"
+                value={requiredArrivalTime}
+                onChange={(e) => setRequiredArrivalTime(e.target.value)}
+                required
+              />
+            </div>
+          </>
+        )}
+
         <div className="space-y-3">
           <div className="flex gap-2">
             <Button
@@ -267,7 +335,8 @@ export function AttendanceForm({
               disabled={
                 attendEvent.isPending ||
                 updateAttendance.isPending ||
-                !selectedLocation
+                !selectedLocation ||
+                (event.kind === "commute" && !selectedDestination)
               }
             >
               {attendEvent.isPending || updateAttendance.isPending

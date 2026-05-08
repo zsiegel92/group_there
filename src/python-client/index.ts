@@ -9,6 +9,7 @@ export type {
   ClientOptions,
   ExternalRideshareVehicle,
   HttpValidationError,
+  LocationDistance,
   Party,
   Problem,
   ProblemReceivedResponse,

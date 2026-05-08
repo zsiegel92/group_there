@@ -144,6 +144,19 @@ export async function POST(request: NextRequest, props: Params) {
     destinationLocationId,
     requiredArrivalTime,
   } = result.data;
+  const normalizedDestinationLocationId =
+    event.kind === "commute" ? (destinationLocationId ?? null) : null;
+  const normalizedRequiredArrivalTime =
+    event.kind === "commute"
+      ? (requiredArrivalTime ?? event.time.toISOString())
+      : null;
+
+  if (event.kind === "commute" && !normalizedDestinationLocationId) {
+    return NextResponse.json(
+      { error: "Destination location is required for commute events" },
+      { status: 400 }
+    );
+  }
 
   // Verify the location exists and is a user location
   const expectedOwnerType: LocationOwnerType = "user";
@@ -161,9 +174,9 @@ export async function POST(request: NextRequest, props: Params) {
     );
   }
 
-  if (destinationLocationId) {
+  if (normalizedDestinationLocationId) {
     const destination = await db.query.locations.findFirst({
-      where: eq(locations.id, destinationLocationId),
+      where: eq(locations.id, normalizedDestinationLocationId),
     });
 
     if (!destination) {
@@ -177,8 +190,8 @@ export async function POST(request: NextRequest, props: Params) {
   // Validate earliestLeaveTime is not after event time
   if (earliestLeaveTime) {
     const leaveTime = new Date(earliestLeaveTime);
-    const arrivalTime = requiredArrivalTime
-      ? new Date(requiredArrivalTime)
+    const arrivalTime = normalizedRequiredArrivalTime
+      ? new Date(normalizedRequiredArrivalTime)
       : event.time;
     if (leaveTime >= arrivalTime) {
       return NextResponse.json(
@@ -201,9 +214,9 @@ export async function POST(request: NextRequest, props: Params) {
     carFits: carFitsValue,
     earliestLeaveTime: earliestLeaveTime ? new Date(earliestLeaveTime) : null,
     originLocationId,
-    destinationLocationId: destinationLocationId ?? null,
-    requiredArrivalTime: requiredArrivalTime
-      ? new Date(requiredArrivalTime)
+    destinationLocationId: normalizedDestinationLocationId,
+    requiredArrivalTime: normalizedRequiredArrivalTime
+      ? new Date(normalizedRequiredArrivalTime)
       : null,
   });
 
@@ -220,8 +233,8 @@ export async function POST(request: NextRequest, props: Params) {
       carFits,
       earliestLeaveTime: earliestLeaveTime ?? null,
       originLocationId,
-      destinationLocationId: destinationLocationId ?? null,
-      requiredArrivalTime: requiredArrivalTime ?? null,
+      destinationLocationId: normalizedDestinationLocationId,
+      requiredArrivalTime: normalizedRequiredArrivalTime,
     },
   });
 }
@@ -286,6 +299,19 @@ export async function PATCH(request: NextRequest, props: Params) {
     destinationLocationId,
     requiredArrivalTime,
   } = result.data;
+  const normalizedDestinationLocationId =
+    event.kind === "commute" ? (destinationLocationId ?? null) : null;
+  const normalizedRequiredArrivalTime =
+    event.kind === "commute"
+      ? (requiredArrivalTime ?? event.time.toISOString())
+      : null;
+
+  if (event.kind === "commute" && !normalizedDestinationLocationId) {
+    return NextResponse.json(
+      { error: "Destination location is required for commute events" },
+      { status: 400 }
+    );
+  }
 
   // Verify the location exists and is a user location
   const expectedOwnerType: LocationOwnerType = "user";
@@ -303,9 +329,9 @@ export async function PATCH(request: NextRequest, props: Params) {
     );
   }
 
-  if (destinationLocationId) {
+  if (normalizedDestinationLocationId) {
     const destination = await db.query.locations.findFirst({
-      where: eq(locations.id, destinationLocationId),
+      where: eq(locations.id, normalizedDestinationLocationId),
     });
 
     if (!destination) {
@@ -319,8 +345,8 @@ export async function PATCH(request: NextRequest, props: Params) {
   // Validate earliestLeaveTime is not after event time
   if (earliestLeaveTime) {
     const leaveTime = new Date(earliestLeaveTime);
-    const arrivalTime = requiredArrivalTime
-      ? new Date(requiredArrivalTime)
+    const arrivalTime = normalizedRequiredArrivalTime
+      ? new Date(normalizedRequiredArrivalTime)
       : event.time;
     if (leaveTime >= arrivalTime) {
       return NextResponse.json(
@@ -343,9 +369,9 @@ export async function PATCH(request: NextRequest, props: Params) {
       carFits: carFitsValue,
       earliestLeaveTime: earliestLeaveTime ? new Date(earliestLeaveTime) : null,
       originLocationId,
-      destinationLocationId: destinationLocationId ?? null,
-      requiredArrivalTime: requiredArrivalTime
-        ? new Date(requiredArrivalTime)
+      destinationLocationId: normalizedDestinationLocationId,
+      requiredArrivalTime: normalizedRequiredArrivalTime
+        ? new Date(normalizedRequiredArrivalTime)
         : null,
     })
     .where(
@@ -365,8 +391,8 @@ export async function PATCH(request: NextRequest, props: Params) {
       carFits,
       earliestLeaveTime: earliestLeaveTime || null,
       originLocationId,
-      destinationLocationId: destinationLocationId ?? null,
-      requiredArrivalTime: requiredArrivalTime ?? null,
+      destinationLocationId: normalizedDestinationLocationId,
+      requiredArrivalTime: normalizedRequiredArrivalTime,
     },
   });
 }

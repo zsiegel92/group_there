@@ -14,6 +14,7 @@ type EventForMap = {
     userName: string;
     userAttendance: {
       originLocation: Location | null;
+      destinationLocation?: Location | null;
     };
   }>;
 };
@@ -54,6 +55,23 @@ export function EventLocationsMap({
             ? `You — ${origin.name}`
             : `${attendee.userName} — ${origin.name}`,
           variant: isYou ? "you" : "origin",
+        });
+      }
+
+      const destination = attendee.userAttendance.destinationLocation;
+      if (
+        destination &&
+        destination.latitude != null &&
+        destination.longitude != null
+      ) {
+        const isYou = attendee.userId === currentUserId;
+        result.push({
+          latitude: destination.latitude,
+          longitude: destination.longitude,
+          label: isYou
+            ? `Your destination — ${destination.name}`
+            : `${attendee.userName}'s destination — ${destination.name}`,
+          variant: "destination",
         });
       }
     }

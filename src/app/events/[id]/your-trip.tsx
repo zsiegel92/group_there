@@ -14,12 +14,14 @@ import { fetchRoutePolylines, type MyParty } from "../../api/events/client";
 
 export function YourTrip({
   myParty,
+  eventKind,
   eventId,
   eventLocation,
   eventLocationId,
   currentUserId,
 }: {
   myParty: MyParty;
+  eventKind: "shared_destination" | "commute";
   eventId: string;
   eventLocation: Location | null;
   eventLocationId: string | null;
@@ -37,6 +39,7 @@ export function YourTrip({
         userName: m.userName,
         userAttendance: {
           originLocation: m.originLocation,
+          destinationLocation: m.destinationLocation,
         },
       })),
     }),
@@ -50,14 +53,26 @@ export function YourTrip({
   const partyIndex = myParty.partyIndex;
 
   useEffect(() => {
-    if (!eventLocationId) return;
+    if (eventKind === "shared_destination" && !eventLocationId) return;
     const party = myPartyRef.current;
 
     const locationIds: string[] = [];
     for (const m of party.members) {
       if (m.originLocationId) locationIds.push(m.originLocationId);
     }
-    locationIds.push(eventLocationId);
+    if (eventKind === "commute") {
+      for (const m of party.members.filter(
+        (member) => member.pickupOrder > 0
+      )) {
+        if (m.destinationLocationId) locationIds.push(m.destinationLocationId);
+      }
+      const driver = party.members.find((m) => m.pickupOrder === 0);
+      if (driver?.destinationLocationId) {
+        locationIds.push(driver.destinationLocationId);
+      }
+    } else if (eventLocationId) {
+      locationIds.push(eventLocationId);
+    }
 
     if (locationIds.length < 2) return;
 
@@ -113,7 +128,7 @@ export function YourTrip({
     return () => {
       cancelled = true;
     };
-  }, [eventId, eventLocationId, partyIndex]);
+  }, [eventId, eventKind, eventLocationId, partyIndex]);
 
   const driver = myParty.members.find((m) => m.pickupOrder === 0);
   const passengers = myParty.members
@@ -167,8 +182,32 @@ export function YourTrip({
             </div>
           )}
 
+          {eventKind === "commute" &&
+            passengers.map((pass) => (
+              <ItineraryStop
+                key={`${pass.userId}-dropoff`}
+                time={null}
+                label="Drop off"
+                name={pass.userName}
+                isYou={pass.userId === currentUserId}
+                address={pass.destinationLocation?.addressString ?? null}
+                email={pass.userId !== currentUserId ? pass.userEmail : null}
+                isLast={false}
+              />
+            ))}
+
           {/* Destination */}
-          {eventLocation && (
+          {eventKind === "commute" && driver?.destinationLocation ? (
+            <ItineraryStop
+              time={myParty.estimatedEventArrival}
+              label="Arrive"
+              name={driver.destinationLocation.name}
+              isYou={driver.userId === currentUserId}
+              address={driver.destinationLocation.addressString ?? null}
+              email={null}
+              isLast={true}
+            />
+          ) : eventLocation ? (
             <ItineraryStop
               time={myParty.estimatedEventArrival}
               label="Arrive"
@@ -178,7 +217,7 @@ export function YourTrip({
               email={null}
               isLast={true}
             />
-          )}
+          ) : null}
         </div>
 
         {/* Mini map */}

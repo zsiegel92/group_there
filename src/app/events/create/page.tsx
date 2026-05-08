@@ -9,9 +9,24 @@ import { useDialog } from "@/components/dialog-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import type { EventKind } from "@/db/schema";
 import type { Location } from "@/lib/geo/schema";
 
 import { useCreateEvent } from "../../api/events/client";
+
+type RecurrenceFrequency = "none" | "daily" | "weekly" | "biweekly" | "monthly";
+
+function parseEventKind(value: string): EventKind {
+  return value === "commute" ? "commute" : "shared_destination";
+}
+
+function parseRecurrenceFrequency(value: string): RecurrenceFrequency {
+  if (value === "daily") return "daily";
+  if (value === "weekly") return "weekly";
+  if (value === "biweekly") return "biweekly";
+  if (value === "monthly") return "monthly";
+  return "none";
+}
 
 export default function CreateEventPage() {
   const router = useRouter();
@@ -22,11 +37,15 @@ export default function CreateEventPage() {
 
   const groupIdParam = searchParams.get("groupId");
   const [groupId, setGroupId] = useState(groupIdParam || "");
+  const [kind, setKind] = useState<EventKind>("shared_destination");
   const [name, setName] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(
     null
   );
   const [time, setTime] = useState("");
+  const [recurrenceFrequency, setRecurrenceFrequency] =
+    useState<RecurrenceFrequency>("none");
+  const [recurrenceCount, setRecurrenceCount] = useState(8);
   const [message, setMessage] = useState("");
 
   // Filter to only show groups where user is admin
@@ -35,14 +54,23 @@ export default function CreateEventPage() {
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!groupId || !name.trim() || !selectedLocation || !time) return;
+      if (!groupId || !name.trim() || !time) return;
+      if (kind === "shared_destination" && !selectedLocation) return;
 
       try {
         const result = await createEvent.mutateAsync({
           groupId,
+          kind,
           name: name.trim(),
-          locationId: selectedLocation.id,
+          locationId:
+            kind === "shared_destination" && selectedLocation
+              ? selectedLocation.id
+              : null,
           time,
+          recurrence: {
+            frequency: recurrenceFrequency,
+            count: recurrenceFrequency === "none" ? 1 : recurrenceCount,
+          },
           message: message.trim() || undefined,
         });
         router.push(`/events/${result.event.id}`);
@@ -53,9 +81,12 @@ export default function CreateEventPage() {
     },
     [
       groupId,
+      kind,
       name,
       selectedLocation,
       time,
+      recurrenceFrequency,
+      recurrenceCount,
       message,
       createEvent,
       router,
@@ -115,6 +146,27 @@ export default function CreateEventPage() {
         </div>
 
         <div>
+          <label htmlFor="kind" className="block text-sm font-medium mb-2">
+            Event Type *
+          </label>
+          <select
+            id="kind"
+            value={kind}
+            onChange={(e) => {
+              const nextKind = parseEventKind(e.target.value);
+              setKind(nextKind);
+              if (nextKind === "commute") setSelectedLocation(null);
+            }}
+            className="w-full p-2 border rounded"
+            required
+            disabled={createEvent.isPending}
+          >
+            <option value="shared_destination">Shared Destination</option>
+            <option value="commute">Commute</option>
+          </select>
+        </div>
+
+        <div>
           <label htmlFor="name" className="block text-sm font-medium mb-2">
             Event Name *
           </label>
@@ -130,20 +182,22 @@ export default function CreateEventPage() {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">Location *</label>
-          <AddressSelectorAndCard
-            onNewValidatedLocation={setSelectedLocation}
-            ownerType="event"
-            ownerId={groupId || "pending"}
-            selectedLocation={selectedLocation}
-            disabled={createEvent.isPending}
-          />
-        </div>
+        {kind === "shared_destination" && (
+          <div>
+            <label className="block text-sm font-medium mb-2">Location *</label>
+            <AddressSelectorAndCard
+              onNewValidatedLocation={setSelectedLocation}
+              ownerType="event"
+              ownerId={groupId || "pending"}
+              selectedLocation={selectedLocation}
+              disabled={createEvent.isPending}
+            />
+          </div>
+        )}
 
         <div>
           <label htmlFor="time" className="block text-sm font-medium mb-2">
-            Date & Time *
+            {kind === "commute" ? "Default Arrival Time *" : "Date & Time *"}
           </label>
           <Input
             id="time"
@@ -153,6 +207,54 @@ export default function CreateEventPage() {
             required
             disabled={createEvent.isPending}
           />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-[1fr_8rem]">
+          <div>
+            <label
+              htmlFor="recurrenceFrequency"
+              className="block text-sm font-medium mb-2"
+            >
+              Repeat
+            </label>
+            <select
+              id="recurrenceFrequency"
+              value={recurrenceFrequency}
+              onChange={(e) =>
+                setRecurrenceFrequency(parseRecurrenceFrequency(e.target.value))
+              }
+              className="w-full p-2 border rounded"
+              disabled={createEvent.isPending}
+            >
+              <option value="none">Does not repeat</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Every 2 weeks</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          {recurrenceFrequency !== "none" && (
+            <div>
+              <label
+                htmlFor="recurrenceCount"
+                className="block text-sm font-medium mb-2"
+              >
+                Occurrences
+              </label>
+              <Input
+                id="recurrenceCount"
+                type="number"
+                min="2"
+                max="52"
+                value={recurrenceCount}
+                onChange={(e) =>
+                  setRecurrenceCount(Number.parseInt(e.target.value, 10))
+                }
+                required
+                disabled={createEvent.isPending}
+              />
+            </div>
+          )}
         </div>
 
         <div>
@@ -184,7 +286,7 @@ export default function CreateEventPage() {
               createEvent.isPending ||
               !groupId ||
               !name.trim() ||
-              !selectedLocation ||
+              (kind === "shared_destination" && !selectedLocation) ||
               !time
             }
           >

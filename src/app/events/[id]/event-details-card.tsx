@@ -3,10 +3,14 @@ import { format } from "date-fns";
 import type { Location } from "@/lib/geo/schema";
 
 export function EventDetailsCard({
+  kind,
+  eventSeriesId,
   time,
   location,
   message,
 }: {
+  kind: "shared_destination" | "commute";
+  eventSeriesId: string | null;
   time: string;
   location: Location | null;
   message: string | null;
@@ -22,8 +26,19 @@ export function EventDetailsCard({
           {format(eventDate, "MM/dd/yyyy")} at {format(eventDate, "h:mm a")}
         </div>
         <div>
-          <span className="font-medium">Where:</span>{" "}
-          {location ? (
+          <span className="font-medium">Type:</span>{" "}
+          {kind === "commute" ? "Commute" : "Shared destination"}
+          {eventSeriesId ? " (recurring)" : ""}
+        </div>
+        <div>
+          <span className="font-medium">
+            {kind === "commute" ? "Default destination:" : "Where:"}
+          </span>{" "}
+          {kind === "commute" ? (
+            <span className="text-gray-500">
+              Participants choose their own destinations
+            </span>
+          ) : location ? (
             <span>
               {location.name}
               {location.addressString && (

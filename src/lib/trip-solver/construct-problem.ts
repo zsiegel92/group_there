@@ -7,6 +7,7 @@ import {
 } from "@/db/schema";
 import type {
   ExternalRideshareVehicle,
+  LocationDistance,
   Problem,
   Tripper,
   TripperDistance,
@@ -140,6 +141,14 @@ export async function constructTripProblem(eventId: string): Promise<Problem> {
     }
   }
 
+  const locationDistanceRows: LocationDistance[] = distances.map(
+    (distance) => ({
+      origin_location_id: distance.originLocationId,
+      destination_location_id: distance.destinationLocationId,
+      distance_seconds: distance.durationSeconds,
+    })
+  );
+
   const externalRideshareVehicles: ExternalRideshareVehicle[] =
     event.externalRideshareMode === "disabled"
       ? []
@@ -169,6 +178,7 @@ export async function constructTripProblem(eventId: string): Promise<Problem> {
     external_rideshare_vehicles: externalRideshareVehicles,
     trippers,
     tripper_distances: tripperDistances,
+    location_distances: locationDistanceRows,
   } satisfies Problem;
 }
 

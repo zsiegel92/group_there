@@ -148,6 +148,8 @@ export function TestingEventDetailPage({ eventId }: { eventId: string }) {
 
       <div className="space-y-6">
         <EventDetailsCard
+          kind={event.kind}
+          eventSeriesId={event.eventSeriesId}
           time={event.time}
           location={event.location}
           message={event.message}
@@ -170,6 +172,7 @@ export function TestingEventDetailPage({ eventId }: { eventId: string }) {
 
         <EventMapPanel
           event={{
+            kind: event.kind,
             location: event.location,
             locationId: event.locationId,
             locked: event.locked,

@@ -14,6 +14,15 @@ export const zExternalRideshareVehicle = z.object({
 });
 
 /**
+ * LocationDistance
+ */
+export const zLocationDistance = z.object({
+    origin_location_id: z.string(),
+    destination_location_id: z.string(),
+    distance_seconds: z.number()
+});
+
+/**
  * Party
  */
 export const zParty = z.object({
@@ -113,7 +122,8 @@ export const zProblem = z.object({
     external_rideshare_fixed_cost_seconds: z.optional(z.number().gte(0)).default(0),
     external_rideshare_vehicles: z.optional(z.array(zExternalRideshareVehicle)),
     trippers: z.array(zTripper),
-    tripper_distances: z.array(zTripperDistance)
+    tripper_distances: z.array(zTripperDistance),
+    location_distances: z.optional(z.array(zLocationDistance))
 });
 
 /**

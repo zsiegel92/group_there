@@ -22,6 +22,7 @@ import {
 import { solveProblem, type PartyEstimate } from "./solve-action";
 
 type EventForPanel = {
+  kind: "shared_destination" | "commute";
   location: Location | null;
   locationId: string | null;
   locked: boolean;
@@ -32,6 +33,8 @@ type EventForPanel = {
     userAttendance: {
       originLocationId: string | null;
       originLocation: Location | null;
+      destinationLocationId?: string | null;
+      destinationLocation?: Location | null;
     };
   }>;
   isAdmin: boolean;
@@ -87,13 +90,21 @@ function normalizeSolution(
 async function fetchAndBuildRoutes(
   solution: Solution,
   attendees: EventForPanel["attendees"],
-  eventLocationId: string,
+  eventKind: EventForPanel["kind"],
+  eventLocationId: string | null,
   eventId: string
 ): Promise<Route[]> {
   const userLocationMap = new Map<string, string>();
+  const userDestinationMap = new Map<string, string>();
   for (const att of attendees) {
     if (att.userAttendance.originLocationId) {
       userLocationMap.set(att.userId, att.userAttendance.originLocationId);
+    }
+    if (att.userAttendance.destinationLocationId) {
+      userDestinationMap.set(
+        att.userId,
+        att.userAttendance.destinationLocationId
+      );
     }
   }
 
@@ -120,7 +131,19 @@ async function fetchAndBuildRoutes(
       const locId = userLocationMap.get(passId);
       if (locId) locationIds.push(locId);
     }
-    locationIds.push(eventLocationId);
+
+    if (eventKind === "commute") {
+      for (const passId of party.passenger_tripper_ids) {
+        const destId = userDestinationMap.get(passId);
+        if (destId) locationIds.push(destId);
+      }
+      const driverDestinationId = userDestinationMap.get(driverId);
+      if (driverDestinationId) locationIds.push(driverDestinationId);
+    } else if (eventLocationId) {
+      locationIds.push(eventLocationId);
+    }
+
+    if (locationIds.length < 2) continue;
 
     const driverName = userNameMap.get(driverId) ?? "Driver";
     partySequences.push({ locationIds, label: `${driverName}'s car` });
@@ -230,7 +253,12 @@ export function EventMapPanel({
   useEffect(() => {
     const locationId = event.locationId;
     const sol = solutionRef.current;
-    if (!sol || !solutionId || !locationId || !sol.feasible) {
+    if (
+      !sol ||
+      !solutionId ||
+      (event.kind === "shared_destination" && !locationId) ||
+      !sol.feasible
+    ) {
       setRoutes([]);
       return;
     }
@@ -246,6 +274,7 @@ export function EventMapPanel({
         const builtRoutes = await fetchAndBuildRoutes(
           sol,
           attendeesRef.current,
+          event.kind,
           locationId,
           eventId
         );
@@ -260,7 +289,7 @@ export function EventMapPanel({
     return () => {
       cancelled = true;
     };
-  }, [solutionId, event.locationId, eventId]);
+  }, [solutionId, event.kind, event.locationId, eventId]);
 
   // For locked events without solution data (e.g., non-admin users), render nothing
   if (event.locked && !solution) return null;
@@ -498,11 +527,33 @@ function SolutionCards({
                     </div>
                   )}
 
+                  {event.kind === "commute" &&
+                    passengers.map((pass, j) => (
+                      <ItineraryRow
+                        key={`${pass?.userId ?? j}-dropoff`}
+                        time={null}
+                        label="Drop off"
+                        name={pass?.userName ?? "Unknown"}
+                        detail={
+                          pass?.userAttendance.destinationLocation?.name ??
+                          undefined
+                        }
+                        email={null}
+                        isYou={pass?.userId === currentUserId}
+                        isLast={false}
+                      />
+                    ))}
+
                   {/* Arrival */}
                   <ItineraryRow
                     time={estimate?.estimatedEventArrival ?? null}
                     label="Arrive"
-                    name={event.location?.name ?? "Event"}
+                    name={
+                      event.kind === "commute"
+                        ? (driver?.userAttendance.destinationLocation?.name ??
+                          "Driver destination")
+                        : (event.location?.name ?? "Event")
+                    }
                     isYou={false}
                     isLast={true}
                   />

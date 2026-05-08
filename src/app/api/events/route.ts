@@ -7,6 +7,7 @@ import {
   eventKindValues,
   eventParticipationModeValues,
   events,
+  eventSeries,
   externalRideshareModeValues,
   groups,
   groupsToUsers,
@@ -14,6 +15,14 @@ import {
   type LocationOwnerType,
 } from "@/db/schema";
 import { getUser } from "@/lib/auth";
+
+const recurrenceFrequencyValues = [
+  "none",
+  "daily",
+  "weekly",
+  "biweekly",
+  "monthly",
+] as const;
 
 const createEventSchema = z
   .object({
@@ -41,12 +50,47 @@ const createEventSchema = z
       .default(3),
     externalRideshareCostMultiplier: z.number().min(1).optional().default(3),
     externalRideshareFixedCostSeconds: z.number().min(0).optional().default(0),
+    recurrence: z
+      .object({
+        frequency: z.enum(recurrenceFrequencyValues).default("none"),
+        count: z.number().int().min(1).max(52).default(1),
+      })
+      .optional(),
     message: z.string().max(2000).optional(),
   })
   .refine((data) => data.kind === "commute" || data.locationId, {
     message: "locationId is required for shared-destination events",
     path: ["locationId"],
   });
+
+function recurrenceRule(recurrence: {
+  frequency: (typeof recurrenceFrequencyValues)[number];
+  count: number;
+}) {
+  if (recurrence.frequency === "none" || recurrence.count <= 1) return null;
+  if (recurrence.frequency === "biweekly") {
+    return `FREQ=WEEKLY;INTERVAL=2;COUNT=${recurrence.count}`;
+  }
+  return `FREQ=${recurrence.frequency.toUpperCase()};INTERVAL=1;COUNT=${recurrence.count}`;
+}
+
+function addRecurrenceInterval(
+  date: Date,
+  frequency: (typeof recurrenceFrequencyValues)[number],
+  occurrenceIndex: number
+) {
+  const next = new Date(date);
+  if (frequency === "daily") {
+    next.setDate(next.getDate() + occurrenceIndex);
+  } else if (frequency === "weekly") {
+    next.setDate(next.getDate() + 7 * occurrenceIndex);
+  } else if (frequency === "biweekly") {
+    next.setDate(next.getDate() + 14 * occurrenceIndex);
+  } else if (frequency === "monthly") {
+    next.setMonth(next.getMonth() + occurrenceIndex);
+  }
+  return next;
+}
 
 // GET /api/events - Get all events for groups the current user is in
 export async function GET(request: NextRequest) {
@@ -163,6 +207,7 @@ export async function POST(request: NextRequest) {
     externalRideshareSeats,
     externalRideshareCostMultiplier,
     externalRideshareFixedCostSeconds,
+    recurrence,
     message,
   } = result.data;
 
@@ -201,30 +246,75 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Create the event with a unique ID
-  const eventId = `event_${crypto.randomUUID()}`;
+  const recurrenceInput: {
+    frequency: (typeof recurrenceFrequencyValues)[number];
+    count: number;
+  } = recurrence ?? { frequency: "none", count: 1 };
+  const rule = recurrenceRule(recurrenceInput);
+  const createdEventSeriesId = rule
+    ? `event_series_${crypto.randomUUID()}`
+    : null;
+  const effectiveEventSeriesId = createdEventSeriesId ?? eventSeriesId ?? null;
 
-  const [createdEvent] = await db
-    .insert(events)
-    .values({
-      id: eventId,
+  if (eventSeriesId) {
+    const existingSeries = await db.query.eventSeries.findFirst({
+      where: and(
+        eq(eventSeries.id, eventSeriesId),
+        eq(eventSeries.groupId, groupId)
+      ),
+    });
+
+    if (!existingSeries) {
+      return NextResponse.json(
+        { error: "Event series not found" },
+        { status: 400 }
+      );
+    }
+  }
+
+  if (createdEventSeriesId && rule) {
+    await db.insert(eventSeries).values({
+      id: createdEventSeriesId,
       groupId,
-      eventSeriesId: eventSeriesId ?? null,
       kind,
       name,
-      locationId: locationId ?? null,
-      time: new Date(time),
+      recurrenceRule: rule,
       timeZone,
       participationMode,
-      externalRideshareMode,
-      externalRideshareSeats,
-      externalRideshareCostMultiplier,
-      externalRideshareFixedCostSeconds,
-      message: message || null,
-      scheduled: group?.type === "testing" ? true : false,
-      haveSentInvitationEmails: false,
-    })
-    .returning();
+      createdByUserId: user.id,
+      isActive: true,
+    });
+  }
+
+  const firstTime = new Date(time);
+  const occurrenceCount = rule ? recurrenceInput.count : 1;
+  const eventRows = Array.from({ length: occurrenceCount }, (_, index) => ({
+    id: `event_${crypto.randomUUID()}`,
+    groupId,
+    eventSeriesId: effectiveEventSeriesId,
+    kind,
+    name,
+    locationId: locationId ?? null,
+    time: addRecurrenceInterval(firstTime, recurrenceInput.frequency, index),
+    timeZone,
+    participationMode,
+    externalRideshareMode,
+    externalRideshareSeats,
+    externalRideshareCostMultiplier,
+    externalRideshareFixedCostSeconds,
+    message: message || null,
+    scheduled: group?.type === "testing" ? true : false,
+    haveSentInvitationEmails: false,
+  }));
+
+  const [createdEvent] = await db.insert(events).values(eventRows).returning();
+
+  if (!createdEvent) {
+    return NextResponse.json(
+      { error: "Failed to create event" },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({
     event: {

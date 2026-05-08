@@ -41,6 +41,24 @@ export type HttpValidationError = {
 };
 
 /**
+ * LocationDistance
+ */
+export type LocationDistance = {
+    /**
+     * Origin Location Id
+     */
+    origin_location_id: string;
+    /**
+     * Destination Location Id
+     */
+    destination_location_id: string;
+    /**
+     * Distance Seconds
+     */
+    distance_seconds: number;
+};
+
+/**
  * Party
  */
 export type Party = {
@@ -120,6 +138,12 @@ export type Problem = {
      * Tuples of tripper_ids mapped to the distance in seconds between the tripper's origins
      */
     tripper_distances: Array<TripperDistance>;
+    /**
+     * Location Distances
+     *
+     * Tuples of location_ids mapped to the distance in seconds between locations relevant to the trip
+     */
+    location_distances?: Array<LocationDistance>;
 };
 
 /**

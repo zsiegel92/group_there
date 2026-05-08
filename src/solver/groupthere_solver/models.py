@@ -83,6 +83,12 @@ class TripperDistance(BaseModel):
     distance_seconds: float
 
 
+class LocationDistance(BaseModel):
+    origin_location_id: str
+    destination_location_id: str
+    distance_seconds: float
+
+
 class Problem(BaseModel):
     id: str
     event_id: str
@@ -98,6 +104,10 @@ class Problem(BaseModel):
     tripper_distances: list[TripperDistance] = Field(
         ...,
         description="Tuples of tripper_ids mapped to the distance in seconds between the tripper's origins",
+    )
+    location_distances: list[LocationDistance] = Field(
+        default_factory=list,
+        description="Tuples of location_ids mapped to the distance in seconds between locations relevant to the trip",
     )
 
     @model_validator(mode="after")

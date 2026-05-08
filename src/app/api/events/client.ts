@@ -105,6 +105,9 @@ const solutionPartyMemberSchema = z.object({
   pickupOrder: z.number(),
   originLocation: LocationSchema.nullable(),
   originLocationId: z.string().nullable(),
+  destinationLocation: LocationSchema.nullable(),
+  destinationLocationId: z.string().nullable(),
+  requiredArrivalTime: z.string().nullable(),
   earliestLeaveTime: z.string().nullable(),
   estimatedPickup: z.string().nullable().optional(),
 });
@@ -287,6 +290,10 @@ export async function createEvent(input: {
   externalRideshareSeats?: number;
   externalRideshareCostMultiplier?: number;
   externalRideshareFixedCostSeconds?: number;
+  recurrence?: {
+    frequency: "none" | "daily" | "weekly" | "biweekly" | "monthly";
+    count: number;
+  };
   message?: string;
 }) {
   const response = await fetch("/api/events", {
@@ -570,9 +577,17 @@ export function useUpdateEvent() {
     }: {
       eventId: string;
       input: {
+        eventSeriesId?: string | null;
+        kind?: (typeof eventKindValues)[number];
         name?: string;
-        locationId?: string;
+        locationId?: string | null;
         time?: string;
+        timeZone?: string;
+        participationMode?: (typeof eventParticipationModeValues)[number];
+        externalRideshareMode?: (typeof externalRideshareModeValues)[number];
+        externalRideshareSeats?: number;
+        externalRideshareCostMultiplier?: number;
+        externalRideshareFixedCostSeconds?: number;
         message?: string;
       };
     }) => updateEvent(eventId, input),
