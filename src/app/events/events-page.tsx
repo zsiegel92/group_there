@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, UserPlus } from "lucide-react";
 
 import { useDialog } from "@/components/dialog-provider";
 import {
@@ -22,11 +22,13 @@ import {
 } from "@/lib/events/recurrence";
 
 import {
+  useEventDetails,
   useEvents,
   useExtendEventSeries,
   useScheduleEvent,
 } from "../api/events/client";
 import { useGroups } from "../api/groups/client";
+import { AttendanceForm } from "./[id]/attendance-form";
 import { EventStatus } from "./[id]/event-status";
 
 type LocationSummary = {
@@ -61,6 +63,71 @@ type EventListItem = {
   isGroupAdmin: boolean;
   isTestingGroup: boolean;
 };
+
+function QuickJoinDialog({
+  event,
+  open,
+  onClose,
+}: {
+  event: EventListItem;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { data, isLoading, error } = useEventDetails(event.id);
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      className="max-h-[90vh] max-w-2xl overflow-y-auto"
+    >
+      <div className="mb-4">
+        <h2 className="text-xl font-bold">Quick Join</h2>
+        <p className="text-sm text-gray-600">{event.name}</p>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-8">
+          <Spinner />
+        </div>
+      ) : error ? (
+        <div className="text-red-600">Error loading event: {error.message}</div>
+      ) : data?.event ? (
+        <AttendanceForm
+          event={data.event}
+          eventId={event.id}
+          presentation="plain"
+          title={null}
+          onSubmitted={onClose}
+        />
+      ) : null}
+    </Dialog>
+  );
+}
+
+function QuickJoinButton({ event }: { event: EventListItem }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        type="button"
+        className="w-full rounded-none border-t"
+        onClick={() => setOpen(true)}
+      >
+        <UserPlus className="size-4" />
+        Quick Join
+      </Button>
+      {open && (
+        <QuickJoinDialog
+          event={event}
+          open={open}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+}
 
 function EventCard({ event }: { event: EventListItem }) {
   const eventDate = new Date(event.time);
@@ -123,6 +190,20 @@ function EventCard({ event }: { event: EventListItem }) {
       </div>
     </>
   );
+
+  if (event.scheduled && !event.hasJoined && !event.locked) {
+    return (
+      <div className="overflow-hidden rounded-lg border bg-white">
+        <Link
+          href={`/events/${event.id}`}
+          className="block p-3 hover:bg-gray-50 transition-colors"
+        >
+          {cardContent}
+        </Link>
+        <QuickJoinButton event={event} />
+      </div>
+    );
+  }
 
   if (!event.scheduled && event.isGroupAdmin) {
     return (

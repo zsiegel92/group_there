@@ -75,12 +75,18 @@ type AttendanceFormProps = {
   event: Event;
   eventId: string;
   renderAsButton?: boolean;
+  presentation?: "card" | "plain";
+  title?: string | null;
+  onSubmitted?: () => void;
 };
 
 export function AttendanceForm({
   event,
   eventId,
   renderAsButton = false,
+  presentation = "card",
+  title,
+  onSubmitted,
 }: AttendanceFormProps) {
   const { data: session } = useSession();
   const attendEvent = useAttendEvent();
@@ -140,6 +146,7 @@ export function AttendanceForm({
             input: attendanceData,
           });
           setIsEditingAttendance(false);
+          onSubmitted?.();
           dialog.alert("Attendance updated successfully!");
         } else {
           await attendEvent.mutateAsync({
@@ -147,6 +154,7 @@ export function AttendanceForm({
             input: attendanceData,
           });
           setIsEditingAttendance(false);
+          onSubmitted?.();
           dialog.alert("Joined event successfully!");
         }
       } catch (error) {
@@ -170,6 +178,7 @@ export function AttendanceForm({
       event.hasJoined,
       setIsEditingAttendance,
       dialog,
+      onSubmitted,
     ]
   );
 
@@ -648,9 +657,20 @@ export function AttendanceForm({
 
   // Regular mode: for joining event initially
   if (!event.hasJoined && event.scheduled && !event.locked) {
+    const heading = title === undefined ? "Join Event" : title;
+
+    if (presentation === "plain") {
+      return (
+        <>
+          {heading && <h2 className="text-xl font-semibold mb-4">{heading}</h2>}
+          {formContent}
+        </>
+      );
+    }
+
     return (
       <div className="bg-white p-6 rounded-lg border">
-        <h2 className="text-xl font-semibold mb-4">Join Event</h2>
+        {heading && <h2 className="text-xl font-semibold mb-4">{heading}</h2>}
         {formContent}
       </div>
     );
