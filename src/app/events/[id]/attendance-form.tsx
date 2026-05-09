@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { addMinutes, differenceInMinutes, subMinutes } from "date-fns";
+import { Minus, Plus } from "lucide-react";
 
 import { AddressSelectorAndCard } from "@/components/address-selector-and-card";
 import { useDialog } from "@/components/dialog-provider";
@@ -52,10 +53,24 @@ type Event = {
 
 type SeriesAttendance = NonNullable<Event["seriesAttendances"]>[number];
 
+const MIN_NON_DRIVER_SEATS = 0;
+const MAX_NON_DRIVER_SEATS = 5;
+
 function parseDrivingStatus(value: string): DrivingStatus {
   if (value === "must_drive") return "must_drive";
   if (value === "can_drive_or_not") return "can_drive_or_not";
   return "cannot_drive";
+}
+
+function clampNonDriverSeats(seats: number) {
+  return Math.min(MAX_NON_DRIVER_SEATS, Math.max(MIN_NON_DRIVER_SEATS, seats));
+}
+
+function parseNonDriverSeats(value: string) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isNaN(parsed)
+    ? MIN_NON_DRIVER_SEATS
+    : clampNonDriverSeats(parsed);
 }
 
 function drivingStatusLabel(status: DrivingStatus) {
@@ -99,8 +114,8 @@ export function AttendanceForm({
 
   // Attendance form state
   const [drivingStatus, setDrivingStatus] =
-    useState<DrivingStatus>("cannot_drive");
-  const [nonDriverSeats, setNonDriverSeats] = useState(0);
+    useState<DrivingStatus>("can_drive_or_not");
+  const [nonDriverSeats, setNonDriverSeats] = useState(2);
   const [earliestLeaveTime, setEarliestLeaveTime] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(
     null
@@ -539,9 +554,9 @@ export function AttendanceForm({
             className="w-full p-2 border rounded"
             required
           >
+            <option value="can_drive_or_not">Can Drive or Not Drive</option>
             <option value="cannot_drive">Cannot Drive</option>
             <option value="must_drive">Must Drive</option>
-            <option value="can_drive_or_not">Can Drive or Not Drive</option>
           </select>
         </div>
 
@@ -551,19 +566,42 @@ export function AttendanceForm({
               <label className="block text-sm font-medium mb-2">
                 Non-driver Seats Available *
               </label>
-              <Input
-                type="number"
-                min="0"
-                max="5"
-                value={nonDriverSeats}
-                onChange={(e) => {
-                  const parsed = Number.parseInt(e.target.value, 10);
-                  setNonDriverSeats(
-                    Number.isNaN(parsed) ? 0 : Math.min(5, Math.max(0, parsed))
-                  );
-                }}
-                required
-              />
+              <div className="inline-flex items-center rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
+                <button
+                  type="button"
+                  aria-label="Decrease non-driver seats"
+                  onClick={() =>
+                    setNonDriverSeats((seats) => clampNonDriverSeats(seats - 1))
+                  }
+                  className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200 hover:text-gray-950 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Minus className="size-3.5" aria-hidden="true" />
+                </button>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  min={MIN_NON_DRIVER_SEATS}
+                  max={MAX_NON_DRIVER_SEATS}
+                  value={nonDriverSeats}
+                  onChange={(e) =>
+                    setNonDriverSeats(parseNonDriverSeats(e.target.value))
+                  }
+                  aria-label="Non-driver seats available"
+                  className="h-8 w-12 border-0 px-1 text-center text-sm font-medium tabular-nums shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  required
+                />
+                <button
+                  type="button"
+                  aria-label="Increase non-driver seats"
+                  onClick={() =>
+                    setNonDriverSeats((seats) => clampNonDriverSeats(seats + 1))
+                  }
+                  className="flex size-8 cursor-pointer items-center justify-center rounded-md bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200 hover:text-gray-950 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Plus className="size-3.5" aria-hidden="true" />
+                </button>
+              </div>
             </div>
 
             <div>
