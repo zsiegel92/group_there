@@ -160,6 +160,17 @@ export const zSolveSolvePostData = z.object({
  */
 export const zSolveSolvePostResponse = zSolution;
 
+export const zSolveHeuristicSolveHeuristicPostData = z.object({
+    body: zProblem,
+    path: z.optional(z.never()),
+    query: z.optional(z.never())
+});
+
+/**
+ * Successful Response
+ */
+export const zSolveHeuristicSolveHeuristicPostResponse = zSolution;
+
 export const zSolveAsyncSolveAsyncPostData = z.object({
     body: zProblem,
     path: z.optional(z.never()),

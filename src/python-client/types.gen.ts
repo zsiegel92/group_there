@@ -339,6 +339,31 @@ export type SolveSolvePostResponses = {
 
 export type SolveSolvePostResponse = SolveSolvePostResponses[keyof SolveSolvePostResponses];
 
+export type SolveHeuristicSolveHeuristicPostData = {
+    body: Problem;
+    path?: never;
+    query?: never;
+    url: '/solve/heuristic';
+};
+
+export type SolveHeuristicSolveHeuristicPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SolveHeuristicSolveHeuristicPostError = SolveHeuristicSolveHeuristicPostErrors[keyof SolveHeuristicSolveHeuristicPostErrors];
+
+export type SolveHeuristicSolveHeuristicPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: Solution;
+};
+
+export type SolveHeuristicSolveHeuristicPostResponse = SolveHeuristicSolveHeuristicPostResponses[keyof SolveHeuristicSolveHeuristicPostResponses];
+
 export type SolveAsyncSolveAsyncPostData = {
     body: Problem;
     path?: never;

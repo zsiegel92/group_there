@@ -12,6 +12,10 @@ from group_gen import (
     NativeGroupGeneratorInputs,
     generate_feasible_groups_native,
 )
+from heuristic_solver import (
+    NativeHeuristicGroups,
+    solve_shared_destination_heuristic_native,
+)
 from std.os import abort
 from std.python import Python, PythonObject
 from std.python.bindings import PythonModuleBuilder
@@ -24,6 +28,10 @@ def PyInit_group_generator_mojo_python_interface() -> PythonObject:
         m.def_function[generate_feasible_groups_mojo](
             "generate_feasible_groups_mojo",
             docstring="Generate all feasible carpooling groups (parallel).",
+        )
+        m.def_function[solve_shared_destination_heuristic_mojo](
+            "solve_shared_destination_heuristic_mojo",
+            docstring="Build a greedy heuristic shared-destination solution.",
         )
         return m.finalize()
     except e:
@@ -73,6 +81,40 @@ def generate_feasible_groups_mojo(
     )
     var native_groups = _generate_feasible_groups_native(native_inputs)
     return _pack_generated_groups_py(native_groups)
+
+
+def solve_shared_destination_heuristic_mojo(
+    py_n: PythonObject,  # Int
+    py_can_drive: PythonObject,  # Python sequence[Bool]
+    py_non_driver_seats: PythonObject,  # Python sequence[Int]
+    py_must_drive: PythonObject,  # Python sequence[Bool]
+    py_distance_to_dest: PythonObject,  # Python sequence[Float64], length n + 3
+    py_dist_matrix: PythonObject,  # Python sequence[Float64]
+) raises -> PythonObject:  # (bool, list[tuple[...]])
+    print("Solving shared-destination heuristic in Mojo.")
+    var native_inputs = _unpack_python_inputs(
+        py_n,
+        py_can_drive,
+        py_non_driver_seats,
+        py_must_drive,
+        py_distance_to_dest,
+        py_dist_matrix,
+    )
+    var native_groups = solve_shared_destination_heuristic_native(
+        native_inputs.n,
+        native_inputs.can_drive_flags,
+        native_inputs.non_driver_seats,
+        native_inputs.must_drive_flags,
+        native_inputs.distance_to_dest,
+        native_inputs.dist_matrix,
+        native_inputs.external_rideshare_cost_multiplier,
+        native_inputs.external_rideshare_seats,
+        native_inputs.external_rideshare_fixed_cost_seconds,
+    )
+    return Python.tuple(
+        native_groups.feasible,
+        _pack_heuristic_groups_py(native_groups),
+    )
 
 
 def _unpack_python_inputs(
@@ -138,6 +180,46 @@ def _pack_generated_groups_py(
 ) raises -> PythonObject:
     var py_results = Python.list()
     for wi in range(groups.total_work):
+        var slot = groups.result_slots + wi * INTS_PER_SLOT
+        if slot[0] == 1:  # valid
+            var k = Int(slot[1])
+            var driver_idx = Int(slot[2])
+            var is_external_rideshare = Bool(slot[3] == 1)
+            var drive_time = groups.drive_times[wi]
+            var assignment_cost = groups.assignment_costs[wi]
+            var cost_multiplier = groups.cost_multipliers[wi]
+
+            var py_tripper_indices = Python.list()
+            for ti in range(k):
+                _ = py_tripper_indices.append(Int(slot[4 + ti]))
+
+            var py_passenger_indices = Python.list()
+            var num_passengers = k - 1
+            if is_external_rideshare:
+                num_passengers = k
+            for pi in range(num_passengers):
+                _ = py_passenger_indices.append(Int(slot[4 + MAX_K + pi]))
+
+            _ = py_results.append(
+                Python.tuple(
+                    py_tripper_indices,
+                    driver_idx,
+                    py_passenger_indices,
+                    drive_time,
+                    is_external_rideshare,
+                    assignment_cost,
+                    cost_multiplier,
+                )
+            )
+
+    return py_results^
+
+
+def _pack_heuristic_groups_py(
+    groups: NativeHeuristicGroups,
+) raises -> PythonObject:
+    var py_results = Python.list()
+    for wi in range(groups.total_groups):
         var slot = groups.result_slots + wi * INTS_PER_SLOT
         if slot[0] == 1:  # valid
             var k = Int(slot[1])
