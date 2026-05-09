@@ -79,6 +79,61 @@ def test_solve_zero_non_driver_seat_driver_can_drive_solo():
     assert solution.parties[0].passenger_tripper_ids == []
 
 
+def test_solve_shared_destination_uses_rideshare_when_no_driver():
+    problem = Problem(
+        id="rideshare-problem",
+        event_id="event-1",
+        external_rideshare_mode="always_available",
+        external_rideshare_cost_multiplier=1.5,
+        trippers=[
+            Tripper(
+                user_id="rider-1",
+                origin_id="origin-1",
+                event_id="event-1",
+                can_drive=False,
+                non_driver_seats=0,
+                must_drive=False,
+                seconds_before_event_start_can_leave=600,
+                distance_to_destination_seconds=300.0,
+            ),
+            Tripper(
+                user_id="rider-2",
+                origin_id="origin-2",
+                event_id="event-1",
+                can_drive=False,
+                non_driver_seats=0,
+                must_drive=False,
+                seconds_before_event_start_can_leave=600,
+                distance_to_destination_seconds=240.0,
+            ),
+        ],
+        tripper_distances=[
+            TripperDistance(
+                origin_user_id="rider-1",
+                destination_user_id="rider-2",
+                distance_seconds=60,
+            ),
+            TripperDistance(
+                origin_user_id="rider-2",
+                destination_user_id="rider-1",
+                distance_seconds=80,
+            ),
+        ],
+    )
+
+    solution = solve_problem(problem, use_mojo=False)
+
+    assert solution.feasible
+    assert solution.total_drive_seconds == 300.0
+    assert solution.external_rideshare_vehicle_count == 1
+    assert solution.total_external_rideshare_seconds == 300.0
+    assert solution.total_external_rideshare_cost_seconds == 450.0
+    assert len(solution.parties) == 1
+    assert solution.parties[0].vehicle_kind == "external_rideshare"
+    assert solution.parties[0].driver_tripper_id is None
+    assert solution.parties[0].passenger_tripper_ids == ["rider-1", "rider-2"]
+
+
 def test_solve_scale_problem():
     """
     Regression test with a real 39-tripper problem dumped from the database.

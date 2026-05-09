@@ -29,9 +29,12 @@ _MOJO_SEARCH_DIRS = [
 
 RawGroup: TypeAlias = tuple[
     list[int],  # All tripper indices in the feasible group, in (sorted) subset order.
-    int,  # The chosen driver index within the original trippers list.
+    int,  # The chosen driver index, or -1 for an external rideshare.
     list[int],  # Passenger tripper indices in the optimal pickup order.
-    float,  # Total drive time in seconds for that driver + pickup order.
+    float,  # Actual route drive time in seconds for that pickup order.
+    bool,  # Whether this group uses an external rideshare.
+    float,  # Preference-weighted assignment cost in seconds.
+    float,  # Cost multiplier used for this group.
 ]
 
 
@@ -86,6 +89,9 @@ except Exception as exc:
 def generate_feasible_groups_mojo(
     trippers: list[Tripper],
     distance_lookup: dict[tuple[str, str], float],
+    external_rideshare_cost_multiplier: float | None = None,
+    external_rideshare_seats: int = 3,
+    external_rideshare_fixed_cost_seconds: float = 0.0,
 ) -> list[FeasibleGroup]:
     """
     Generate all feasible groups using the Mojo implementation.
@@ -105,7 +111,15 @@ def generate_feasible_groups_mojo(
     can_drive = [t.can_drive for t in trippers]
     non_driver_seats = [t.non_driver_seats for t in trippers]
     must_drive = [t.must_drive for t in trippers]
-    distance_to_dest = [t.distance_to_destination_seconds for t in trippers]
+    distance_to_dest = [t.distance_to_destination_seconds for t in trippers] + [
+        (
+            -1.0
+            if external_rideshare_cost_multiplier is None
+            else external_rideshare_cost_multiplier
+        ),
+        float(external_rideshare_seats),
+        external_rideshare_fixed_cost_seconds,
+    ]
 
     # Build n*n flat distance matrix (row-major: dist_matrix[i*n + j] = distance from i to j)
     # Use user_id ordering matching the trippers list
@@ -135,13 +149,23 @@ def generate_feasible_groups_mojo(
         driver_index,
         passenger_indices,
         drive_time,
+        is_external_rideshare,
+        assignment_cost_seconds,
+        cost_multiplier,
     ) in validated_groups.root:
         feasible_groups.append(
             FeasibleGroup(
                 tripper_indices=tripper_indices,
-                driver_index=driver_index,
+                driver_index=None if is_external_rideshare else driver_index,
                 passenger_indices=passenger_indices,
                 drive_time=drive_time,
+                vehicle_kind=(
+                    "external_rideshare"
+                    if is_external_rideshare
+                    else "participant_vehicle"
+                ),
+                assignment_cost_seconds=assignment_cost_seconds,
+                cost_multiplier=cost_multiplier,
             )
         )
 

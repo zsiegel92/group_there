@@ -134,6 +134,88 @@ def test_generate_feasible_groups_no_drivers():
     assert len(groups) == 0
 
 
+def test_generate_feasible_groups_no_drivers_with_rideshare():
+    trippers = [
+        Tripper(
+            user_id="rider-1",
+            origin_id="origin-1",
+            event_id="event-1",
+            can_drive=False,
+            non_driver_seats=0,
+            must_drive=False,
+            seconds_before_event_start_can_leave=600,
+            distance_to_destination_seconds=300.0,
+        ),
+        Tripper(
+            user_id="rider-2",
+            origin_id="origin-2",
+            event_id="event-1",
+            can_drive=False,
+            non_driver_seats=0,
+            must_drive=False,
+            seconds_before_event_start_can_leave=600,
+            distance_to_destination_seconds=240.0,
+        ),
+    ]
+
+    groups = generate_feasible_groups(
+        trippers,
+        {
+            ("rider-1", "rider-2"): 60.0,
+            ("rider-2", "rider-1"): 80.0,
+        },
+        external_rideshare_cost_multiplier=1.5,
+    )
+
+    combined_group = [g for g in groups if len(g.tripper_indices) == 2][0]
+    assert combined_group.vehicle_kind == "external_rideshare"
+    assert combined_group.driver_index is None
+    assert combined_group.passenger_indices == [0, 1]
+    assert combined_group.drive_time == 300.0
+    assert combined_group.assignment_cost_seconds == 450.0
+
+
+def test_generate_feasible_groups_rideshare_does_not_carry_must_drive():
+    trippers = [
+        Tripper(
+            user_id="must-driver",
+            origin_id="origin-1",
+            event_id="event-1",
+            can_drive=True,
+            non_driver_seats=0,
+            must_drive=True,
+            seconds_before_event_start_can_leave=600,
+            distance_to_destination_seconds=300.0,
+        ),
+        Tripper(
+            user_id="rider",
+            origin_id="origin-2",
+            event_id="event-1",
+            can_drive=False,
+            non_driver_seats=0,
+            must_drive=False,
+            seconds_before_event_start_can_leave=600,
+            distance_to_destination_seconds=200.0,
+        ),
+    ]
+
+    groups = generate_feasible_groups(
+        trippers,
+        {
+            ("must-driver", "rider"): 60.0,
+            ("rider", "must-driver"): 60.0,
+        },
+        external_rideshare_cost_multiplier=1.0,
+    )
+
+    groups_with_must_driver = [
+        g
+        for g in groups
+        if 0 in g.tripper_indices and g.vehicle_kind == "external_rideshare"
+    ]
+    assert groups_with_must_driver == []
+
+
 def test_generate_feasible_groups_zero_non_driver_seats_can_drive_solo():
     """A driver with zero non-driver seats can still drive themself."""
     trippers = [

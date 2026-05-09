@@ -160,7 +160,7 @@ export async function constructTripProblem(eventId: string): Promise<Problem> {
       : event.eventsToUsers
           .filter(
             (eventToUser) =>
-              eventToUser.drivingStatus === "cannot_drive" &&
+              eventToUser.drivingStatus !== "must_drive" &&
               eventToUser.originLocationId
           )
           .map((eventToUser) => ({
@@ -177,7 +177,10 @@ export async function constructTripProblem(eventId: string): Promise<Problem> {
     kind: event.kind,
     external_rideshare_mode: event.externalRideshareMode,
     external_rideshare_seats: event.externalRideshareSeats,
-    external_rideshare_cost_multiplier: event.externalRideshareCostMultiplier,
+    external_rideshare_cost_multiplier:
+      event.externalRideshareMode === "disabled"
+        ? null
+        : event.externalRideshareCostMultiplier,
     external_rideshare_fixed_cost_seconds:
       event.externalRideshareFixedCostSeconds,
     external_rideshare_vehicles: externalRideshareVehicles,

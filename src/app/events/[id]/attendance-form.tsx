@@ -551,7 +551,7 @@ export function AttendanceForm({
             onChange={(e) =>
               setDrivingStatus(parseDrivingStatus(e.target.value))
             }
-            className="w-full p-2 border rounded"
+            className="w-full cursor-pointer rounded border p-2"
             required
           >
             <option value="can_drive_or_not">Can Drive or Not Drive</option>

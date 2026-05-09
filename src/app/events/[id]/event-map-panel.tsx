@@ -42,6 +42,14 @@ type EventForPanel = {
   solution?: EventDetail["solution"];
 };
 
+function formatMinutes(seconds: number) {
+  const mins = Math.round(seconds / 60);
+  if (mins < 60) return `${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  const remainMins = mins % 60;
+  return `${hrs}h ${remainMins}m`;
+}
+
 /**
  * Normalize persisted DB solution into the solver's canonical shape
  * so we can use a single rendering path for both locked and ephemeral solutions.
@@ -59,6 +67,7 @@ function normalizeSolution(
     optimal: sol.optimal,
     total_drive_seconds: sol.totalDriveSeconds,
     external_rideshare_vehicle_count: sol.externalRideshareVehicleCount,
+    total_external_rideshare_seconds: sol.totalExternalRideshareSeconds,
     total_external_rideshare_cost_seconds:
       sol.totalExternalRideshareCostSeconds,
     parties: sol.parties
@@ -69,10 +78,15 @@ function normalizeSolution(
         driver_tripper_id: party.driverUserId,
         external_rideshare_origin_id: party.externalRideshareOriginLocationId,
         cost_multiplier: party.costMultiplier,
-        passenger_tripper_ids: party.members
-          .filter((m) => m.pickupOrder > 0)
-          .toSorted((a, b) => a.pickupOrder - b.pickupOrder)
-          .map((m) => m.userId),
+        passenger_tripper_ids:
+          party.vehicleKind === "external_rideshare"
+            ? party.members
+                .toSorted((a, b) => a.pickupOrder - b.pickupOrder)
+                .map((m) => m.userId)
+            : party.members
+                .filter((m) => m.pickupOrder > 0)
+                .toSorted((a, b) => a.pickupOrder - b.pickupOrder)
+                .map((m) => m.userId),
       })),
   };
 
@@ -118,9 +132,45 @@ async function fetchAndBuildRoutes(
     originLocationId: string;
     destinationLocationId: string;
   }[] = [];
-  const partySequences: { locationIds: string[]; label: string }[] = [];
+  const partySequences: {
+    locationIds: string[];
+    label: string;
+    variant: Route["variant"];
+  }[] = [];
 
   for (const party of solution.parties) {
+    if (party.vehicle_kind === "external_rideshare") {
+      const locationIds: string[] = [];
+      for (const passId of party.passenger_tripper_ids) {
+        const locId = userLocationMap.get(passId);
+        if (locId) locationIds.push(locId);
+      }
+
+      if (eventKind === "shared_destination" && eventLocationId) {
+        locationIds.push(eventLocationId);
+      }
+
+      if (locationIds.length < 2) continue;
+
+      partySequences.push({
+        locationIds,
+        label: `Rideshare ${partySequences.length + 1}`,
+        variant: "rideshare",
+      });
+
+      for (let i = 0; i < locationIds.length - 1; i++) {
+        const originId = locationIds[i];
+        const destId = locationIds[i + 1];
+        if (originId && destId) {
+          allPairs.push({
+            originLocationId: originId,
+            destinationLocationId: destId,
+          });
+        }
+      }
+      continue;
+    }
+
     const driverId = party.driver_tripper_id;
     if (!driverId) continue;
 
@@ -147,7 +197,11 @@ async function fetchAndBuildRoutes(
     if (locationIds.length < 2) continue;
 
     const driverName = userNameMap.get(driverId) ?? "Driver";
-    partySequences.push({ locationIds, label: `${driverName}'s car` });
+    partySequences.push({
+      locationIds,
+      label: `${driverName}'s car`,
+      variant: "carpool",
+    });
 
     for (let i = 0; i < locationIds.length - 1; i++) {
       const originId = locationIds[i];
@@ -197,7 +251,12 @@ async function fetchAndBuildRoutes(
     }
 
     if (coordinates.length > 0) {
-      routes.push({ coordinates, color, label: seq.label });
+      routes.push({
+        coordinates,
+        color,
+        label: seq.label,
+        variant: seq.variant,
+      });
     }
   }
 
@@ -346,10 +405,16 @@ export function EventMapPanel({
       input: {
         parties,
         problemKind: solution.kind ?? "shared_destination",
+        externalRideshareMode:
+          (solution.external_rideshare_vehicle_count ?? 0) > 0
+            ? "always_available"
+            : "disabled",
         externalRideshareVehicleCount:
           solution.external_rideshare_vehicle_count ?? 0,
         totalExternalRideshareCostSeconds:
           solution.total_external_rideshare_cost_seconds ?? 0,
+        totalExternalRideshareSeconds:
+          solution.total_external_rideshare_seconds ?? 0,
         totalDriveSeconds: solution.total_drive_seconds,
         feasible: solution.feasible,
         optimal: solution.optimal,
@@ -376,7 +441,7 @@ export function EventMapPanel({
         {event.locked && solution ? (
           <>
             <h2 className="text-xl font-semibold mb-4">
-              Confirmed Solution — {solution.parties.length} carpool
+              Confirmed Solution — {solution.parties.length} vehicle group
               {solution.parties.length === 1 ? "" : "s"},{" "}
               {Math.round(solution.total_drive_seconds / 60)} min total
             </h2>
@@ -461,23 +526,56 @@ function SolutionCards({
   currentUserId: string | undefined;
   showHeading?: boolean;
 }) {
+  const rideshareParties = solution.parties.filter(
+    (party) => party.vehicle_kind === "external_rideshare"
+  );
+  const totalRideshareSeconds = solution.total_external_rideshare_seconds ?? 0;
+
   return (
     <div>
       {showHeading && (
         <h3 className="font-medium mb-3">
           {solution.feasible
-            ? `Solution found — ${solution.parties.length} carpool${solution.parties.length === 1 ? "" : "s"}, ${Math.round(solution.total_drive_seconds / 60)} min total`
+            ? `Solution found — ${solution.parties.length} vehicle group${solution.parties.length === 1 ? "" : "s"}, ${Math.round(solution.total_drive_seconds / 60)} min total`
             : "No feasible solution found"}
         </h3>
       )}
       {solution.feasible && (
         <div className="space-y-3">
+          {rideshareParties.length > 0 && (
+            <div className="bg-white rounded-lg border border-dashed border-gray-300 p-4">
+              <h4 className="font-medium mb-2">Auxiliary Rideshares</h4>
+              <div className="grid gap-3 sm:grid-cols-3 text-sm">
+                <div>
+                  <div className="text-gray-500">Rideshares to call</div>
+                  <div className="text-xl font-semibold text-gray-900">
+                    {rideshareParties.length}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Total rideshare time</div>
+                  <div className="text-xl font-semibold text-gray-900">
+                    {formatMinutes(totalRideshareSeconds)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Cost multiplier</div>
+                  <div className="text-xl font-semibold text-gray-900">
+                    {rideshareParties[0]?.cost_multiplier ?? 1}x
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {solution.parties.map((party, i) => {
             const color = ROUTE_COLORS[i % ROUTE_COLORS.length] ?? "#16a34a";
             const estimate = partyEstimates.find((e) => e.partyId === party.id);
-            const driver = event.attendees.find(
-              (a) => a.userId === party.driver_tripper_id
-            );
+            const isRideshare = party.vehicle_kind === "external_rideshare";
+            const driver = isRideshare
+              ? undefined
+              : event.attendees.find(
+                  (a) => a.userId === party.driver_tripper_id
+                );
             const passengers = party.passenger_tripper_ids.map((pid) =>
               event.attendees.find((a) => a.userId === pid)
             );
@@ -489,29 +587,45 @@ function SolutionCards({
             return (
               <div
                 key={party.id}
-                className="bg-white rounded-lg border overflow-hidden"
+                className={`bg-white rounded-lg border overflow-hidden ${isRideshare ? "border-dashed border-gray-300" : ""}`}
               >
                 <div className="h-1.5" style={{ backgroundColor: color }} />
                 <div className="p-4 space-y-0">
-                  {/* Driver stop */}
-                  <ItineraryRow
-                    time={driver ? getStopTime(driver.userId) : null}
-                    label="Depart"
-                    name={driver?.userName ?? "Unknown"}
-                    detail={
-                      driver?.userAttendance.originLocation?.name ?? undefined
-                    }
-                    email={driver?.userEmail}
-                    isYou={driver?.userId === currentUserId}
-                    isLast={false}
-                  />
+                  {isRideshare && (
+                    <div className="mb-3 flex items-center gap-2 text-sm">
+                      <span className="rounded border border-gray-300 px-2 py-0.5 font-medium text-gray-700">
+                        Rideshare
+                      </span>
+                      <span className="text-gray-500">
+                        {passengers.length} rider
+                        {passengers.length === 1 ? "" : "s"} at{" "}
+                        {party.cost_multiplier ?? 1}x
+                      </span>
+                    </div>
+                  )}
+
+                  {!isRideshare && (
+                    <ItineraryRow
+                      time={driver ? getStopTime(driver.userId) : null}
+                      label="Depart"
+                      name={driver?.userName ?? "Unknown"}
+                      detail={
+                        driver?.userAttendance.originLocation?.name ?? undefined
+                      }
+                      email={driver?.userEmail}
+                      isYou={driver?.userId === currentUserId}
+                      isLast={false}
+                    />
+                  )}
 
                   {/* Passenger stops */}
                   {passengers.map((pass, j) => (
                     <ItineraryRow
                       key={pass?.userId ?? j}
                       time={pass ? getStopTime(pass.userId) : null}
-                      label="Pick up"
+                      label={
+                        isRideshare && j === 0 ? "Rideshare pickup" : "Pick up"
+                      }
                       name={pass?.userName ?? "Unknown"}
                       detail={
                         pass?.userAttendance.originLocation?.name ?? undefined
@@ -522,7 +636,7 @@ function SolutionCards({
                     />
                   ))}
 
-                  {passengers.length === 0 && (
+                  {!isRideshare && passengers.length === 0 && (
                     <div className="text-sm text-gray-400 italic pl-20 py-1">
                       Solo driver
                     </div>

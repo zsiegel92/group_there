@@ -142,6 +142,7 @@ const solutionSchema = z.object({
   totalDriveSeconds: z.number(),
   externalRideshareMode: z.enum(externalRideshareModeValues),
   externalRideshareVehicleCount: z.number(),
+  totalExternalRideshareSeconds: z.number(),
   totalExternalRideshareCostSeconds: z.number(),
   parties: z.array(solutionPartySchema),
 });
@@ -153,6 +154,8 @@ const myPartyMemberSchema = solutionPartyMemberSchema.extend({
 
 const myPartySchema = z.object({
   role: z.enum(["driver", "passenger"]),
+  vehicleKind: z.enum(solutionVehicleKindValues),
+  costMultiplier: z.number(),
   partyIndex: z.number(),
   estimatedEventArrival: z.string().nullable(),
   members: z.array(myPartyMemberSchema),
@@ -485,6 +488,7 @@ export type ConfirmItineraryInput = {
   problemKind?: EventKind;
   externalRideshareMode?: (typeof externalRideshareModeValues)[number];
   externalRideshareVehicleCount?: number;
+  totalExternalRideshareSeconds?: number;
   totalExternalRideshareCostSeconds?: number;
   totalDriveSeconds: number;
   feasible: boolean;

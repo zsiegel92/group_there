@@ -123,7 +123,7 @@ export type Problem = {
     /**
      * External Rideshare Cost Multiplier
      */
-    external_rideshare_cost_multiplier?: number;
+    external_rideshare_cost_multiplier?: number | null;
     /**
      * External Rideshare Fixed Cost Seconds
      */
@@ -200,6 +200,10 @@ export type Solution = {
      * External Rideshare Vehicle Count
      */
     external_rideshare_vehicle_count?: number;
+    /**
+     * Total External Rideshare Seconds
+     */
+    total_external_rideshare_seconds?: number;
     /**
      * Total External Rideshare Cost Seconds
      */

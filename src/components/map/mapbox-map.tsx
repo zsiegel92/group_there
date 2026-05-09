@@ -135,7 +135,7 @@ export default function MapboxMap({
             coordinates: route.coordinates,
           },
         };
-        return { feature, color: route.color };
+        return { feature, color: route.color, variant: route.variant };
       }),
     [routes]
   );
@@ -172,6 +172,8 @@ export default function MapboxMap({
               "line-color": rd.color,
               "line-width": 4,
               "line-opacity": 0.8,
+              "line-dasharray":
+                rd.variant === "rideshare" ? [1.5, 1.2] : [1, 0],
             }}
             layout={{
               "line-cap": "round",

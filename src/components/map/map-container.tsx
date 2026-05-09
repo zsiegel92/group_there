@@ -13,6 +13,7 @@ export type Route = {
   coordinates: [number, number][]; // [lng, lat][] for GeoJSON
   color: string;
   label: string;
+  variant?: "carpool" | "rideshare";
 };
 
 export const ROUTE_COLORS = [

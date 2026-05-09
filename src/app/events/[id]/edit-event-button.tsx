@@ -13,6 +13,7 @@ import { EVENT_KIND_SELECT_LABELS } from "@/lib/feature-brand-copy";
 import type { Location } from "@/lib/geo/schema";
 
 import { useUpdateEvent } from "../../api/events/client";
+import { RideshareMultiplierControl } from "../rideshare-multiplier-control";
 
 type Event = {
   kind: EventKind;
@@ -20,6 +21,8 @@ type Event = {
   locationId: string | null;
   location: Location | null;
   time: string;
+  externalRideshareMode: "disabled" | "fallback" | "always_available";
+  externalRideshareCostMultiplier: number;
   message: string | null;
 };
 
@@ -41,6 +44,9 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
   const [editName, setEditName] = useState("");
   const [editLocation, setEditLocation] = useState<Location | null>(null);
   const [editTime, setEditTime] = useState("");
+  const [editAllowRideshare, setEditAllowRideshare] = useState(false);
+  const [editRideshareCostMultiplier, setEditRideshareCostMultiplier] =
+    useState(1.5);
   const [editMessage, setEditMessage] = useState("");
 
   const openEditForm = useCallback(() => {
@@ -48,6 +54,8 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
     setEditName(event.name);
     setEditLocation(event.location);
     setEditTime(formatDatetimeLocal(new Date(event.time)));
+    setEditAllowRideshare(event.externalRideshareMode !== "disabled");
+    setEditRideshareCostMultiplier(event.externalRideshareCostMultiplier);
     setEditMessage(event.message || "");
     setShowEditForm(true);
   }, [event]);
@@ -75,6 +83,17 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
               new Date(editTimeIso).getTime() !== new Date(event.time).getTime()
                 ? editTimeIso
                 : undefined,
+            externalRideshareMode:
+              editKind === "shared_destination"
+                ? editAllowRideshare
+                  ? "always_available"
+                  : "disabled"
+                : "disabled",
+            externalRideshareCostMultiplier:
+              editRideshareCostMultiplier !==
+              event.externalRideshareCostMultiplier
+                ? editRideshareCostMultiplier
+                : undefined,
             message:
               editMessage !== (event.message || "") ? editMessage : undefined,
           },
@@ -93,6 +112,8 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
       editName,
       editLocation,
       editTime,
+      editAllowRideshare,
+      editRideshareCostMultiplier,
       editMessage,
       updateEvent,
       dialog,
@@ -123,7 +144,7 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
                 setEditKind(nextKind);
                 if (nextKind === "commute") setEditLocation(null);
               }}
-              className="w-full p-2 border rounded"
+              className="w-full cursor-pointer rounded border p-2"
               required
             >
               <option value="shared_destination">
@@ -164,6 +185,17 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
               required
             />
           </div>
+          {editKind === "shared_destination" && (
+            <RideshareMultiplierControl
+              allowRideshare={editAllowRideshare}
+              costMultiplier={editRideshareCostMultiplier}
+              disabled={updateEvent.isPending}
+              onChange={(value) => {
+                setEditAllowRideshare(value.allowRideshare);
+                setEditRideshareCostMultiplier(value.costMultiplier);
+              }}
+            />
+          )}
           <div>
             <label className="block text-sm font-medium mb-2">
               Message (optional)

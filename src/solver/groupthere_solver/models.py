@@ -49,7 +49,7 @@ class ExternalRideshareVehicle(BaseModel):
         title="Non-driver Seats",
         description="Non-driver seats available; excludes the driver.",
     )
-    cost_multiplier: float = Field(default=3.0, ge=1.0)
+    cost_multiplier: float = Field(default=1.5, ge=1.0)
     fixed_cost_seconds: float = Field(default=0.0, ge=0.0)
 
 
@@ -119,7 +119,7 @@ class Problem(BaseModel):
         le=5,
         description="Non-driver seats available in an external rideshare vehicle.",
     )
-    external_rideshare_cost_multiplier: float = Field(default=3.0, ge=1.0)
+    external_rideshare_cost_multiplier: float | None = Field(default=None, ge=1.0)
     external_rideshare_fixed_cost_seconds: float = Field(default=0.0, ge=0.0)
     external_rideshare_vehicles: list[ExternalRideshareVehicle] = Field(
         default_factory=list
@@ -199,5 +199,6 @@ class Solution(BaseModel):
     parties: list[Party]
     total_drive_seconds: float
     external_rideshare_vehicle_count: int = Field(default=0, ge=0)
+    total_external_rideshare_seconds: float = Field(default=0.0, ge=0.0)
     total_external_rideshare_cost_seconds: float = Field(default=0.0, ge=0.0)
     status_message: str | None = None

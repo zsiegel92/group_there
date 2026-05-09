@@ -258,6 +258,7 @@ export async function GET(request: NextRequest, props: Params) {
           totalDriveSeconds: sol.totalDriveSeconds,
           externalRideshareMode: sol.externalRideshareMode,
           externalRideshareVehicleCount: sol.externalRideshareVehicleCount,
+          totalExternalRideshareSeconds: sol.totalExternalRideshareSeconds,
           totalExternalRideshareCostSeconds:
             sol.totalExternalRideshareCostSeconds,
           parties: sortedParties.map((party, pi) => {
@@ -325,7 +326,14 @@ export async function GET(request: NextRequest, props: Params) {
             );
 
           myParty = {
-            role: currentMember?.pickupOrder === 0 ? "driver" : "passenger",
+            role:
+              party.vehicleKind === "external_rideshare"
+                ? "passenger"
+                : currentMember?.pickupOrder === 0
+                  ? "driver"
+                  : "passenger",
+            vehicleKind: party.vehicleKind,
+            costMultiplier: party.costMultiplier,
             partyIndex: party.partyIndex,
             estimatedEventArrival: estimatedEventArrival
               ? estimatedEventArrival.toISOString()

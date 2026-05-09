@@ -99,6 +99,12 @@ export function EventLocationsMap({
           <span className="inline-block w-3 h-3 rounded-full bg-blue-600" />{" "}
           Attendee origins
         </span>
+        {routes.some((route) => route.variant === "rideshare") && (
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-5 border-t-2 border-dashed border-gray-700" />{" "}
+            Rideshare route
+          </span>
+        )}
       </div>
       <MapboxMap points={points} routes={routes} />
     </div>

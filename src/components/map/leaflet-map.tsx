@@ -79,7 +79,12 @@ export default function LeafletMapComponent({
           positions={route.coordinates.map(
             ([lng, lat]) => [lat, lng] satisfies [number, number]
           )}
-          pathOptions={{ color: route.color, weight: 4, opacity: 0.8 }}
+          pathOptions={{
+            color: route.color,
+            weight: 4,
+            opacity: 0.8,
+            dashArray: route.variant === "rideshare" ? "6 5" : undefined,
+          }}
         />
       ))}
       {points.map((point, i) => {

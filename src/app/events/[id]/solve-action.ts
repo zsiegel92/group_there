@@ -121,6 +121,7 @@ export async function loadSolveResult(
     optimal: sol.optimal,
     total_drive_seconds: sol.totalDriveSeconds,
     external_rideshare_vehicle_count: sol.externalRideshareVehicleCount,
+    total_external_rideshare_seconds: sol.totalExternalRideshareSeconds,
     total_external_rideshare_cost_seconds:
       sol.totalExternalRideshareCostSeconds,
     parties: sol.parties
@@ -131,10 +132,15 @@ export async function loadSolveResult(
         driver_tripper_id: party.driverUserId,
         external_rideshare_origin_id: party.externalRideshareOriginLocationId,
         cost_multiplier: party.costMultiplier,
-        passenger_tripper_ids: party.members
-          .filter((m) => m.pickupOrder > 0)
-          .sort((a, b) => a.pickupOrder - b.pickupOrder)
-          .map((m) => m.userId),
+        passenger_tripper_ids:
+          party.vehicleKind === "external_rideshare"
+            ? party.members
+                .sort((a, b) => a.pickupOrder - b.pickupOrder)
+                .map((m) => m.userId)
+            : party.members
+                .filter((m) => m.pickupOrder > 0)
+                .sort((a, b) => a.pickupOrder - b.pickupOrder)
+                .map((m) => m.userId),
       })),
   };
 

@@ -9,7 +9,7 @@ from std.algorithm import parallelize
 
 
 comptime MAX_K = 6
-comptime INTS_PER_SLOT = 3 + 2 * MAX_K
+comptime INTS_PER_SLOT = 4 + 2 * MAX_K
 
 
 struct NativeGroupGeneratorInputs:
@@ -19,6 +19,9 @@ struct NativeGroupGeneratorInputs:
     var must_drive_flags: UnsafePointer[Bool, MutExternalOrigin]
     var distance_to_dest: UnsafePointer[Float64, MutExternalOrigin]
     var dist_matrix: UnsafePointer[Float64, MutExternalOrigin]
+    var external_rideshare_cost_multiplier: Float64
+    var external_rideshare_seats: Int
+    var external_rideshare_fixed_cost_seconds: Float64
 
     def __init__(
         out self,
@@ -28,6 +31,9 @@ struct NativeGroupGeneratorInputs:
         must_drive_flags: UnsafePointer[Bool, MutExternalOrigin],
         distance_to_dest: UnsafePointer[Float64, MutExternalOrigin],
         dist_matrix: UnsafePointer[Float64, MutExternalOrigin],
+        external_rideshare_cost_multiplier: Float64,
+        external_rideshare_seats: Int,
+        external_rideshare_fixed_cost_seconds: Float64,
     ):
         self.n = n
         self.can_drive_flags = can_drive_flags
@@ -35,6 +41,13 @@ struct NativeGroupGeneratorInputs:
         self.must_drive_flags = must_drive_flags
         self.distance_to_dest = distance_to_dest
         self.dist_matrix = dist_matrix
+        self.external_rideshare_cost_multiplier = (
+            external_rideshare_cost_multiplier
+        )
+        self.external_rideshare_seats = external_rideshare_seats
+        self.external_rideshare_fixed_cost_seconds = (
+            external_rideshare_fixed_cost_seconds
+        )
 
     def __del__(deinit self):
         self.can_drive_flags.free()
@@ -48,20 +61,28 @@ struct NativeGeneratedGroups:
     var total_work: Int
     var result_slots: UnsafePointer[Int64, MutExternalOrigin]
     var drive_times: UnsafePointer[Float64, MutExternalOrigin]
+    var assignment_costs: UnsafePointer[Float64, MutExternalOrigin]
+    var cost_multipliers: UnsafePointer[Float64, MutExternalOrigin]
 
     def __init__(
         out self,
         total_work: Int,
         result_slots: UnsafePointer[Int64, MutExternalOrigin],
         drive_times: UnsafePointer[Float64, MutExternalOrigin],
+        assignment_costs: UnsafePointer[Float64, MutExternalOrigin],
+        cost_multipliers: UnsafePointer[Float64, MutExternalOrigin],
     ):
         self.total_work = total_work
         self.result_slots = result_slots
         self.drive_times = drive_times
+        self.assignment_costs = assignment_costs
+        self.cost_multipliers = cost_multipliers
 
     def __del__(deinit self):
         self.result_slots.free()
         self.drive_times.free()
+        self.assignment_costs.free()
+        self.cost_multipliers.free()
 
 
 struct BinomialLookup:
@@ -128,12 +149,23 @@ def generate_feasible_groups_native(
     must_drive_flags: UnsafePointer[Bool, MutAnyOrigin],
     distance_to_dest: UnsafePointer[Float64, MutAnyOrigin],
     dist_matrix: UnsafePointer[Float64, MutAnyOrigin],
+    external_rideshare_cost_multiplier: Float64,
+    external_rideshare_seats: Int,
+    external_rideshare_fixed_cost_seconds: Float64,
 ) -> NativeGeneratedGroups:
+    var rideshare_enabled = external_rideshare_cost_multiplier >= 1.0
+
     var max_capacity = 0
     for i in range(n):
         if can_drive_flags[i] and non_driver_seats[i] > max_capacity:
             max_capacity = non_driver_seats[i]
-    var max_group_size = max_capacity + 1
+    var max_participant_group_size = max_capacity + 1
+    var max_rideshare_group_size = 0
+    if rideshare_enabled:
+        max_rideshare_group_size = external_rideshare_seats
+    var max_group_size = max(
+        max_participant_group_size, max_rideshare_group_size
+    )
 
     var num_sizes = min(n, max_group_size)
     var binomial_lookup = BinomialLookup(n, num_sizes)
@@ -149,10 +181,14 @@ def generate_feasible_groups_native(
 
     var result_slots = alloc[Int64](total_work * INTS_PER_SLOT)
     var drive_times = alloc[Float64](total_work)
+    var assignment_costs = alloc[Float64](total_work)
+    var cost_multipliers = alloc[Float64](total_work)
 
     for i in range(total_work):
         result_slots[i * INTS_PER_SLOT] = 0
         drive_times[i] = 0.0
+        assignment_costs[i] = 0.0
+        cost_multipliers[i] = 1.0
 
     @parameter
     def process_work_item(work_idx: Int) capturing:
@@ -177,8 +213,14 @@ def generate_feasible_groups_native(
             must_drive_flags,
             distance_to_dest,
             dist_matrix,
+            rideshare_enabled,
+            external_rideshare_cost_multiplier,
+            external_rideshare_seats,
+            external_rideshare_fixed_cost_seconds,
             slot,
             drive_times + work_idx,
+            assignment_costs + work_idx,
+            cost_multipliers + work_idx,
         )
 
         group.free()
@@ -188,7 +230,13 @@ def generate_feasible_groups_native(
     size_offsets.free()
     size_k_values.free()
 
-    return NativeGeneratedGroups(total_work, result_slots, drive_times)
+    return NativeGeneratedGroups(
+        total_work,
+        result_slots,
+        drive_times,
+        assignment_costs,
+        cost_multipliers,
+    )
 
 
 def _check_group_into_slot(
@@ -200,8 +248,14 @@ def _check_group_into_slot(
     must_drive_flags: UnsafePointer[Bool, MutAnyOrigin],
     distance_to_dest: UnsafePointer[Float64, MutAnyOrigin],
     dist_matrix: UnsafePointer[Float64, MutAnyOrigin],
+    rideshare_enabled: Bool,
+    external_rideshare_cost_multiplier: Float64,
+    external_rideshare_seats: Int,
+    external_rideshare_fixed_cost_seconds: Float64,
     slot: UnsafePointer[Int64, MutAnyOrigin],
     drive_time_out: UnsafePointer[Float64, MutAnyOrigin],
+    assignment_cost_out: UnsafePointer[Float64, MutAnyOrigin],
+    cost_multiplier_out: UnsafePointer[Float64, MutAnyOrigin],
 ):
     var must_drive_count = 0
     var must_drive_idx = -1
@@ -222,7 +276,7 @@ def _check_group_into_slot(
             group_drivers[num_group_drivers] = idx
             num_group_drivers += 1
 
-    if num_group_drivers == 0:
+    if num_group_drivers == 0 and not rideshare_enabled:
         group_drivers.free()
         return
 
@@ -239,7 +293,11 @@ def _check_group_into_slot(
         num_group_drivers = 1
 
     var best_drive_time = Float64(1e18)
+    var best_assignment_cost = Float64(1e18)
     var best_driver_idx = -1
+    var best_is_external_rideshare = False
+    var best_num_passengers = k - 1
+    var best_cost_multiplier = Float64(1.0)
     var best_passenger_order = alloc[Int](k)
     var candidate_passenger_order = alloc[Int](k)
     var passengers = alloc[Int](k)
@@ -276,27 +334,104 @@ def _check_group_into_slot(
             candidate_passenger_order,
         )
 
-        if drive_time < best_drive_time:
+        if drive_time < best_assignment_cost:
             best_drive_time = drive_time
+            best_assignment_cost = drive_time
             best_driver_idx = driver_idx
+            best_is_external_rideshare = False
+            best_num_passengers = num_passengers
+            best_cost_multiplier = 1.0
             for pi in range(num_passengers):
                 best_passenger_order[pi] = candidate_passenger_order[pi]
 
-    if best_driver_idx >= 0:
+    if (
+        rideshare_enabled
+        and must_drive_count == 0
+        and k <= external_rideshare_seats
+    ):
+        var rideshare_order = alloc[Int](k)
+        var rideshare_drive_time = _best_rideshare_order_unsafe(
+            group,
+            k,
+            n,
+            distance_to_dest,
+            dist_matrix,
+            rideshare_order,
+        )
+        var rideshare_assignment_cost = (
+            rideshare_drive_time * external_rideshare_cost_multiplier
+            + external_rideshare_fixed_cost_seconds
+        )
+
+        if rideshare_assignment_cost < best_assignment_cost:
+            best_drive_time = rideshare_drive_time
+            best_assignment_cost = rideshare_assignment_cost
+            best_driver_idx = -1
+            best_is_external_rideshare = True
+            best_num_passengers = k
+            best_cost_multiplier = external_rideshare_cost_multiplier
+            for pi in range(k):
+                best_passenger_order[pi] = rideshare_order[pi]
+
+        rideshare_order.free()
+
+    if best_driver_idx >= 0 or best_is_external_rideshare:
         slot[0] = 1
         slot[1] = Int64(k)
         slot[2] = Int64(best_driver_idx)
+        if best_is_external_rideshare:
+            slot[3] = 1
+        else:
+            slot[3] = 0
         drive_time_out[0] = best_drive_time
+        assignment_cost_out[0] = best_assignment_cost
+        cost_multiplier_out[0] = best_cost_multiplier
 
         for gi in range(k):
-            slot[3 + gi] = Int64(group[gi])
-        for pi in range(k - 1):
-            slot[3 + MAX_K + pi] = Int64(best_passenger_order[pi])
+            slot[4 + gi] = Int64(group[gi])
+        for pi in range(best_num_passengers):
+            slot[4 + MAX_K + pi] = Int64(best_passenger_order[pi])
 
     group_drivers.free()
     passengers.free()
     best_passenger_order.free()
     candidate_passenger_order.free()
+
+
+def _best_rideshare_order_unsafe(
+    group: UnsafePointer[Int, MutAnyOrigin],
+    k: Int,
+    n: Int,
+    distance_to_dest: UnsafePointer[Float64, MutAnyOrigin],
+    dist_matrix: UnsafePointer[Float64, MutAnyOrigin],
+    best_order_out: UnsafePointer[Int, MutAnyOrigin],
+) -> Float64:
+    if k == 1:
+        var rider = group[0]
+        best_order_out[0] = rider
+        return distance_to_dest[rider]
+
+    var riders = alloc[Int](k)
+    for i in range(k):
+        riders[i] = group[i]
+
+    var best_time = Float64(1e18)
+    for perm in HeapPermutations(riders, k):
+        var t = _eval_route(
+            perm[0],
+            perm + 1,
+            k - 1,
+            n,
+            distance_to_dest,
+            dist_matrix,
+        )
+        if t < best_time:
+            best_time = t
+            for j in range(k):
+                best_order_out[j] = perm[j]
+
+    riders.free()
+    return best_time
 
 
 def _best_pickup_order_unsafe(

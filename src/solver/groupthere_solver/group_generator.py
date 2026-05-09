@@ -7,7 +7,7 @@ as inputs to the MILP solver.
 """
 
 from itertools import permutations
-from groupthere_solver.models import Tripper
+from groupthere_solver.models import PartyVehicleKind, Tripper
 from groupthere_solver.subsets import SubsetEnumerator
 
 
@@ -27,20 +27,29 @@ class FeasibleGroup:
     def __init__(
         self,
         tripper_indices: list[int],
-        driver_index: int,
+        driver_index: int | None,
         passenger_indices: list[int],
         drive_time: float,
+        vehicle_kind: PartyVehicleKind = "participant_vehicle",
+        assignment_cost_seconds: float | None = None,
+        cost_multiplier: float = 1.0,
     ):
         self.tripper_indices = tripper_indices
         self.driver_index = driver_index
         self.passenger_indices = passenger_indices
         self.drive_time = drive_time
+        self.vehicle_kind = vehicle_kind
+        self.assignment_cost_seconds = (
+            drive_time if assignment_cost_seconds is None else assignment_cost_seconds
+        )
+        self.cost_multiplier = cost_multiplier
 
     def __repr__(self) -> str:
         return (
-            f"FeasibleGroup(driver={self.driver_index}, "
+            f"FeasibleGroup(kind={self.vehicle_kind}, driver={self.driver_index}, "
             f"passengers={self.passenger_indices}, "
-            f"drive_time={self.drive_time:.1f}s)"
+            f"drive_time={self.drive_time:.1f}s, "
+            f"assignment_cost={self.assignment_cost_seconds:.1f}s)"
         )
 
 
@@ -95,6 +104,9 @@ def calculate_party_drive_time(
 def generate_feasible_groups(
     trippers: list[Tripper],
     distance_lookup: dict[tuple[str, str], float],
+    external_rideshare_cost_multiplier: float | None = None,
+    external_rideshare_seats: int = 3,
+    external_rideshare_fixed_cost_seconds: float = 0.0,
 ) -> list[FeasibleGroup]:
     """
     Generate all feasible carpooling groups.
@@ -119,12 +131,20 @@ def generate_feasible_groups(
     driver_indices = [i for i, t in enumerate(trippers) if t.can_drive]
     must_drive_indices = [i for i, t in enumerate(trippers) if t.must_drive]
 
-    if not driver_indices:
+    rideshare_enabled = external_rideshare_cost_multiplier is not None
+
+    if not driver_indices and not rideshare_enabled:
         # No drivers available - no feasible groups
         return []
 
     # Total group size is non-driver seat capacity plus the driver.
-    max_group_size = max(trippers[i].non_driver_seats for i in driver_indices) + 1
+    max_participant_group_size = (
+        max(trippers[i].non_driver_seats for i in driver_indices) + 1
+        if driver_indices
+        else 0
+    )
+    max_rideshare_group_size = external_rideshare_seats if rideshare_enabled else 0
+    max_group_size = max(max_participant_group_size, max_rideshare_group_size)
 
     # Generate feasible groups of each size
     for group_size in range(1, min(n, max_group_size) + 1):
@@ -139,7 +159,7 @@ def generate_feasible_groups(
             # Find potential drivers in this group
             group_drivers = [i for i in group_indices if i in driver_indices]
 
-            if not group_drivers:
+            if not group_drivers and not rideshare_enabled:
                 # No driver in this group - infeasible
                 continue
 
@@ -154,7 +174,7 @@ def generate_feasible_groups(
 
             # For each potential driver, calculate optimal configuration
             best_group: FeasibleGroup | None = None
-            best_drive_time = float("inf")
+            best_assignment_cost = float("inf")
 
             for driver_idx in group_drivers:
                 driver = trippers[driver_idx]
@@ -179,13 +199,54 @@ def generate_feasible_groups(
                     tripper_to_idx[t.user_id] for t in optimal_order
                 ]
 
-                if drive_time < best_drive_time:
-                    best_drive_time = drive_time
+                if drive_time < best_assignment_cost:
+                    best_assignment_cost = drive_time
                     best_group = FeasibleGroup(
                         tripper_indices=group_indices,
                         driver_index=driver_idx,
                         passenger_indices=optimal_passenger_indices,
                         drive_time=drive_time,
+                    )
+
+            if (
+                rideshare_enabled
+                and len(must_drive_in_group) == 0
+                and len(group_indices) <= external_rideshare_seats
+            ):
+                best_rideshare_drive_time = float("inf")
+                best_rideshare_order: list[int] = []
+                for first_stop_idx in group_indices:
+                    first_stop = trippers[first_stop_idx]
+                    other_indices = [i for i in group_indices if i != first_stop_idx]
+                    other_trippers = [trippers[i] for i in other_indices]
+                    drive_time, optimal_order = calculate_party_drive_time(
+                        first_stop,
+                        other_trippers,
+                        distance_lookup,
+                    )
+                    tripper_to_idx = {t.user_id: i for i, t in enumerate(trippers)}
+                    rideshare_order = [
+                        first_stop_idx,
+                        *[tripper_to_idx[t.user_id] for t in optimal_order],
+                    ]
+                    if drive_time < best_rideshare_drive_time:
+                        best_rideshare_drive_time = drive_time
+                        best_rideshare_order = rideshare_order
+
+                rideshare_assignment_cost = (
+                    best_rideshare_drive_time * external_rideshare_cost_multiplier
+                    + external_rideshare_fixed_cost_seconds
+                )
+                if rideshare_assignment_cost < best_assignment_cost:
+                    best_assignment_cost = rideshare_assignment_cost
+                    best_group = FeasibleGroup(
+                        tripper_indices=group_indices,
+                        driver_index=None,
+                        passenger_indices=best_rideshare_order,
+                        drive_time=best_rideshare_drive_time,
+                        vehicle_kind="external_rideshare",
+                        assignment_cost_seconds=rideshare_assignment_cost,
+                        cost_multiplier=external_rideshare_cost_multiplier,
                     )
 
             if best_group is not None:

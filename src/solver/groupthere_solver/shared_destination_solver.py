@@ -10,7 +10,7 @@ import time
 from groupthere_solver.group_generator import generate_feasible_groups
 from groupthere_solver.milp import MilpSolver, solve_assignment
 from groupthere_solver.models import Problem, Solution
-from groupthere_solver.solution_builder import build_participant_vehicle_parties
+from groupthere_solver.solution_builder import build_parties
 
 
 def solve_shared_destination_problem(
@@ -47,6 +47,12 @@ def solve_shared_destination_problem(
             dist.distance_seconds
         )
 
+    rideshare_cost_multiplier = (
+        problem.external_rideshare_cost_multiplier
+        if problem.external_rideshare_mode != "disabled"
+        else None
+    )
+
     if use_mojo:
         try:
             from groupthere_solver.mojo_group_generator import (
@@ -56,17 +62,26 @@ def solve_shared_destination_problem(
             feasible_groups = generate_feasible_groups_mojo(
                 problem.trippers,
                 distance_lookup,
+                rideshare_cost_multiplier,
+                problem.external_rideshare_seats,
+                problem.external_rideshare_fixed_cost_seconds,
             )
         except Exception as e:
             print(f"Mojo group generator failed ({e}), falling back to Python")
             feasible_groups = generate_feasible_groups(
                 problem.trippers,
                 distance_lookup,
+                rideshare_cost_multiplier,
+                problem.external_rideshare_seats,
+                problem.external_rideshare_fixed_cost_seconds,
             )
     else:
         feasible_groups = generate_feasible_groups(
             problem.trippers,
             distance_lookup,
+            rideshare_cost_multiplier,
+            problem.external_rideshare_seats,
+            problem.external_rideshare_fixed_cost_seconds,
         )
 
     constructed_groups_end = time.time()
@@ -113,10 +128,15 @@ def solve_shared_destination_problem(
             total_drive_seconds=0,
         )
 
-    parties = build_participant_vehicle_parties(
+    parties = build_parties(
         problem.trippers,
         assignment.selected_groups,
     )
+    external_rideshare_groups = [
+        group
+        for group in assignment.selected_groups
+        if group.vehicle_kind == "external_rideshare"
+    ]
 
     print(
         f"Constructed solution with {len(parties)} parties, took {time.time() - finished_milp:.2f} seconds"
@@ -129,4 +149,11 @@ def solve_shared_destination_problem(
         optimal=assignment.optimal,
         parties=parties,
         total_drive_seconds=assignment.total_drive_time,
+        external_rideshare_vehicle_count=len(external_rideshare_groups),
+        total_external_rideshare_seconds=sum(
+            group.drive_time for group in external_rideshare_groups
+        ),
+        total_external_rideshare_cost_seconds=sum(
+            group.assignment_cost_seconds for group in external_rideshare_groups
+        ),
     )

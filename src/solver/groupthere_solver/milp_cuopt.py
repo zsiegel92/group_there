@@ -82,7 +82,7 @@ def solve_assignment_cuopt(
 
     # Objective coefficients: drive_time for each group
     obj_coefficients = np.array(
-        [g.drive_time for g in feasible_groups], dtype=np.float64
+        [g.assignment_cost_seconds for g in feasible_groups], dtype=np.float64
     )
 
     # Variable bounds: all in [0, 1]

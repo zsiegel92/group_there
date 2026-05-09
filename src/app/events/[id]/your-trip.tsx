@@ -116,7 +116,20 @@ export function YourTrip({
             ROUTE_COLORS[party.partyIndex % ROUTE_COLORS.length] ??
             ROUTE_COLORS[0] ??
             "#16a34a";
-          setRoutes([{ coordinates, color, label: "Your trip" }]);
+          setRoutes([
+            {
+              coordinates,
+              color,
+              label:
+                party.vehicleKind === "external_rideshare"
+                  ? "Your rideshare"
+                  : "Your trip",
+              variant:
+                party.vehicleKind === "external_rideshare"
+                  ? "rideshare"
+                  : "carpool",
+            },
+          ]);
         }
       } catch (err) {
         if (!cancelled)
@@ -131,19 +144,26 @@ export function YourTrip({
     };
   }, [eventId, eventKind, eventLocationId, partyIndex]);
 
-  const driver = myParty.members.find((m) => m.pickupOrder === 0);
+  const isRideshare = myParty.vehicleKind === "external_rideshare";
+  const driver = isRideshare
+    ? null
+    : myParty.members.find((m) => m.pickupOrder === 0);
   const passengers = myParty.members
-    .filter((m) => m.pickupOrder > 0)
+    .filter((m) => (isRideshare ? true : m.pickupOrder > 0))
     .sort((a, b) => a.pickupOrder - b.pickupOrder);
 
   return (
     <div className="bg-white border-2 border-blue-200 rounded-lg overflow-hidden">
       <div className="bg-blue-50 px-6 py-4">
-        <h2 className="text-xl font-semibold">Your Trip</h2>
+        <h2 className="text-xl font-semibold">
+          {isRideshare ? "Your Rideshare" : "Your Trip"}
+        </h2>
         <p className="text-sm text-blue-700 mt-1">
-          {myParty.role === "driver"
-            ? "You are the Driver"
-            : "You are a Passenger"}
+          {isRideshare
+            ? `Auxiliary rideshare at ${myParty.costMultiplier}x`
+            : myParty.role === "driver"
+              ? "You are the Driver"
+              : "You are a Passenger"}
         </p>
       </div>
 
@@ -164,11 +184,13 @@ export function YourTrip({
           )}
 
           {/* Passengers */}
-          {passengers.map((pass) => (
+          {passengers.map((pass, index) => (
             <ItineraryStop
               key={pass.userId}
               time={pass.estimatedPickup}
-              label="Pick up"
+              label={
+                isRideshare && index === 0 ? "Rideshare pickup" : "Pick up"
+              }
               name={pass.userName}
               isYou={pass.userId === currentUserId}
               address={pass.originLocation?.addressString ?? null}
@@ -177,7 +199,7 @@ export function YourTrip({
             />
           ))}
 
-          {passengers.length === 0 && (
+          {!isRideshare && passengers.length === 0 && (
             <div className="text-sm text-gray-400 italic pl-20 py-2">
               Solo driver
             </div>

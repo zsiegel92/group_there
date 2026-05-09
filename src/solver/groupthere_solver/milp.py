@@ -19,7 +19,7 @@ class AssignmentSolution:
 
     Attributes:
         selected_groups: List of groups that were selected in the optimal solution
-        total_drive_time: Total drive time across all selected groups (in seconds)
+        total_drive_time: Actual drive time across all selected groups (in seconds)
         feasible: Whether a feasible solution was found
         optimal: Whether the solution is proven optimal
     """
@@ -87,9 +87,11 @@ def solve_assignment(
     # Decision variables: x[g] = 1 if group g is selected
     model.x = pyo.Var(model.GROUPS, domain=pyo.Binary)  # pyright: ignore[reportAttributeAccessIssue]
 
-    # Objective: minimize total drive time
+    # Objective: minimize preference-weighted assignment cost.
     def objective_rule(m):
-        return sum(feasible_groups[g].drive_time * m.x[g] for g in m.GROUPS)
+        return sum(
+            feasible_groups[g].assignment_cost_seconds * m.x[g] for g in m.GROUPS
+        )
 
     model.objective = pyo.Objective(rule=objective_rule, sense=pyo.minimize)  # pyright: ignore[reportAttributeAccessIssue]
 

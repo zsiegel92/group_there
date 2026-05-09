@@ -46,7 +46,7 @@ const createEventSchema = z
       .max(5)
       .optional()
       .default(3),
-    externalRideshareCostMultiplier: z.number().min(1).optional().default(3),
+    externalRideshareCostMultiplier: z.number().min(1).optional().default(1.5),
     externalRideshareFixedCostSeconds: z.number().min(0).optional().default(0),
     recurrence: z
       .object({

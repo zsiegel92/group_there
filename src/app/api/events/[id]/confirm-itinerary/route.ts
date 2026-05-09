@@ -40,6 +40,7 @@ const confirmItinerarySchema = z.object({
     .optional()
     .default("disabled"),
   externalRideshareVehicleCount: z.number().int().min(0).optional().default(0),
+  totalExternalRideshareSeconds: z.number().min(0).optional().default(0),
   totalExternalRideshareCostSeconds: z.number().min(0).optional().default(0),
   totalDriveSeconds: z.number(),
   feasible: z.boolean(),
@@ -146,6 +147,7 @@ export async function POST(request: NextRequest, props: Params) {
     totalDriveSeconds: result.data.totalDriveSeconds,
     externalRideshareMode: result.data.externalRideshareMode,
     externalRideshareVehicleCount: result.data.externalRideshareVehicleCount,
+    totalExternalRideshareSeconds: result.data.totalExternalRideshareSeconds,
     totalExternalRideshareCostSeconds:
       result.data.totalExternalRideshareCostSeconds,
   });

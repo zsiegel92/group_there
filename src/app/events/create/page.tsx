@@ -19,6 +19,7 @@ import { EVENT_KIND_SELECT_LABELS } from "@/lib/feature-brand-copy";
 import type { Location } from "@/lib/geo/schema";
 
 import { useCreateEvent } from "../../api/events/client";
+import { RideshareMultiplierControl } from "../rideshare-multiplier-control";
 
 function parseEventKind(value: string): EventKind {
   return value === "commute" ? "commute" : "shared_destination";
@@ -42,6 +43,8 @@ export default function CreateEventPage() {
   const [recurrenceFrequency, setRecurrenceFrequency] =
     useState<RecurrenceFrequency>("none");
   const [recurrenceCount, setRecurrenceCount] = useState(8);
+  const [allowRideshare, setAllowRideshare] = useState(false);
+  const [rideshareCostMultiplier, setRideshareCostMultiplier] = useState(1.5);
   const [message, setMessage] = useState("");
 
   // Filter to only show groups where user is admin
@@ -67,6 +70,11 @@ export default function CreateEventPage() {
             frequency: recurrenceFrequency,
             count: recurrenceFrequency === "none" ? 1 : recurrenceCount,
           },
+          externalRideshareMode:
+            kind === "shared_destination" && allowRideshare
+              ? "always_available"
+              : "disabled",
+          externalRideshareCostMultiplier: rideshareCostMultiplier,
           message: message.trim() || undefined,
         });
         router.push(`/events/${result.event.id}`);
@@ -83,6 +91,8 @@ export default function CreateEventPage() {
       time,
       recurrenceFrequency,
       recurrenceCount,
+      allowRideshare,
+      rideshareCostMultiplier,
       message,
       createEvent,
       router,
@@ -125,7 +135,7 @@ export default function CreateEventPage() {
             id="groupId"
             value={groupId}
             onChange={(e) => setGroupId(e.target.value)}
-            className="w-full p-2 border rounded"
+            className="w-full cursor-pointer rounded border p-2"
             required
             disabled={createEvent.isPending}
           >
@@ -153,7 +163,7 @@ export default function CreateEventPage() {
               setKind(nextKind);
               if (nextKind === "commute") setSelectedLocation(null);
             }}
-            className="w-full p-2 border rounded"
+            className="w-full cursor-pointer rounded border p-2"
             required
             disabled={createEvent.isPending}
           >
@@ -221,7 +231,7 @@ export default function CreateEventPage() {
               onChange={(e) =>
                 setRecurrenceFrequency(parseRecurrenceFrequency(e.target.value))
               }
-              className="w-full p-2 border rounded"
+              className="w-full cursor-pointer rounded border p-2 disabled:cursor-not-allowed"
               disabled={createEvent.isPending}
             >
               <option value="none">Does not repeat</option>
@@ -254,6 +264,18 @@ export default function CreateEventPage() {
             </div>
           )}
         </div>
+
+        {kind === "shared_destination" && (
+          <RideshareMultiplierControl
+            allowRideshare={allowRideshare}
+            costMultiplier={rideshareCostMultiplier}
+            disabled={createEvent.isPending}
+            onChange={(value) => {
+              setAllowRideshare(value.allowRideshare);
+              setRideshareCostMultiplier(value.costMultiplier);
+            }}
+          />
+        )}
 
         <div>
           <label htmlFor="message" className="block text-sm font-medium mb-2">

@@ -144,7 +144,7 @@ export function AddressSelectorAndCard({
             <button
               type="button"
               onClick={handleChange}
-              className="text-sm text-blue-600 hover:text-blue-800 shrink-0"
+              className="shrink-0 cursor-pointer text-sm text-blue-600 hover:text-blue-800"
             >
               Change
             </button>
@@ -167,8 +167,8 @@ export function AddressSelectorAndCard({
                 onClick={() => handleSelectSuggested(loc)}
                 disabled={disabled}
                 className={cn(
-                  "shrink-0 rounded-full border px-3 py-1 text-sm transition-colors",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                  "shrink-0 cursor-pointer rounded-full border px-3 py-1 text-sm transition-colors",
+                  "disabled:cursor-not-allowed disabled:opacity-50",
                   isSelected
                     ? "border-blue-300 bg-blue-50 text-blue-700"
                     : "bg-white hover:bg-gray-50"
@@ -214,7 +214,7 @@ export function AddressSelectorAndCard({
             <button
               key={prediction.placeId}
               type="button"
-              className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b last:border-b-0"
+              className="w-full cursor-pointer border-b px-4 py-3 text-left hover:bg-gray-50 last:border-b-0"
               onMouseDown={(e) => {
                 // Prevent blur from firing before click
                 e.preventDefault();

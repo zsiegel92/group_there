@@ -299,7 +299,7 @@ export const events = pgTable(
       .default(3)
       .notNull(),
     externalRideshareCostMultiplier: real("external_rideshare_cost_multiplier")
-      .default(3)
+      .default(1.5)
       .notNull(),
     externalRideshareFixedCostSeconds: real(
       "external_rideshare_fixed_cost_seconds"
@@ -401,6 +401,9 @@ export const solutions = pgTable("solutions", {
     .default("disabled")
     .notNull(),
   externalRideshareVehicleCount: integer("external_rideshare_vehicle_count")
+    .default(0)
+    .notNull(),
+  totalExternalRideshareSeconds: real("total_external_rideshare_seconds")
     .default(0)
     .notNull(),
   totalExternalRideshareCostSeconds: real(
