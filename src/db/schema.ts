@@ -21,8 +21,10 @@ export const users = pgTable(
     emailVerified: boolean("email_verified").default(false).notNull(),
     image: text("image"),
     isTestUser: boolean("is_test_user").default(false).notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
@@ -34,10 +36,12 @@ export const sessions = pgTable(
   "sessions",
   {
     id: text("id").primaryKey(),
-    expiresAt: timestamp("expires_at").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     token: text("token").notNull().unique(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
@@ -65,12 +69,18 @@ export const accounts = pgTable(
     accessToken: text("access_token"),
     refreshToken: text("refresh_token"),
     idToken: text("id_token"),
-    accessTokenExpiresAt: timestamp("access_token_expires_at"),
-    refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", {
+      withTimezone: true,
+    }),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
+      withTimezone: true,
+    }),
     scope: text("scope"),
     password: text("password"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
@@ -84,9 +94,11 @@ export const verifications = pgTable(
     id: text("id").primaryKey(),
     identifier: text("identifier").notNull(),
     value: text("value").notNull(),
-    expiresAt: timestamp("expires_at").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
@@ -105,8 +117,10 @@ export const groups = pgTable("groups", {
   name: text("name").notNull(),
   secret: text("secret").notNull(), // hashed group secret for invite verification
   type: groupTypeEnum("type").default("social").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
@@ -122,7 +136,9 @@ export const groupsToUsers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     isAdmin: boolean("is_admin").default(false).notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.groupId, table.userId] }),
@@ -156,7 +172,9 @@ export const locations = pgTable(
     longitude: real("longitude"),
     ownerType: locationOwnerTypeEnum("owner_type").notNull(),
     ownerId: text("owner_id").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [
     index("locations_ownerType_ownerId_idx").on(table.ownerType, table.ownerId),
@@ -242,8 +260,10 @@ export const eventSeries = pgTable(
       .notNull(),
     createdByUserId: text("created_by_user_id").references(() => users.id),
     isActive: boolean("is_active").default(true).notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
@@ -267,7 +287,7 @@ export const events = pgTable(
     kind: eventKindEnum("kind").default("shared_destination").notNull(),
     name: text("name").notNull(),
     locationId: text("location_id").references(() => locations.id),
-    time: timestamp("time").notNull(),
+    time: timestamp("time", { withTimezone: true }).notNull(),
     timeZone: text("time_zone").default("America/New_York").notNull(),
     participationMode: eventParticipationModeEnum("participation_mode")
       .default("opt_in")
@@ -292,8 +312,10 @@ export const events = pgTable(
     haveSentInvitationEmails: boolean("have_sent_invitation_emails")
       .default(false)
       .notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
@@ -318,7 +340,9 @@ export const locationDistances = pgTable(
     durationSeconds: real("duration_seconds").notNull(),
     distanceMeters: integer("distance_meters").notNull(),
     encodedPolyline: text("encoded_polyline"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [
     primaryKey({
@@ -339,13 +363,17 @@ export const eventsToUsers = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     drivingStatus: drivingStatusEnum("driving_status").notNull(),
     carFits: integer("car_fits").notNull(), // non-driver seats available; excludes driver
-    earliestLeaveTime: timestamp("earliest_leave_time"), // null if cannot drive
+    earliestLeaveTime: timestamp("earliest_leave_time", { withTimezone: true }), // null if cannot drive
     originLocationId: text("origin_location_id").references(() => locations.id),
     destinationLocationId: text("destination_location_id").references(
       () => locations.id
     ),
-    requiredArrivalTime: timestamp("required_arrival_time"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    requiredArrivalTime: timestamp("required_arrival_time", {
+      withTimezone: true,
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.eventId, table.userId] }),
@@ -380,7 +408,9 @@ export const solutions = pgTable("solutions", {
   )
     .default(0)
     .notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export const solutionParties = pgTable(
@@ -422,7 +452,9 @@ export const blasts = pgTable(
       .notNull()
       .references(() => users.id),
     recipientCount: integer("recipient_count").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [index("blasts_eventId_idx").on(table.eventId)]
 );

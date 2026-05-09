@@ -1,6 +1,13 @@
 import { format } from "date-fns";
 
 import type { EventKind } from "@/db/schema";
+import {
+  EVENT_KIND_LABELS,
+  EVENT_LOCATION_LABELS,
+  NO_LOCATION_SET_COPY,
+  PARTICIPANT_CHOSEN_DESTINATIONS_COPY,
+  RECURRING_EVENT_TYPE_SUFFIX,
+} from "@/lib/feature-brand-copy";
 import type { Location } from "@/lib/geo/schema";
 
 export function EventDetailsCard({
@@ -27,17 +34,14 @@ export function EventDetailsCard({
           {format(eventDate, "MM/dd/yyyy")} at {format(eventDate, "h:mm a")}
         </div>
         <div>
-          <span className="font-medium">Type:</span>{" "}
-          {kind === "commute" ? "Commute" : "Shared destination"}
-          {eventSeriesId ? " (recurring)" : ""}
+          <span className="font-medium">Type:</span> {EVENT_KIND_LABELS[kind]}
+          {eventSeriesId ? RECURRING_EVENT_TYPE_SUFFIX : ""}
         </div>
         <div>
-          <span className="font-medium">
-            {kind === "commute" ? "Default destination:" : "Where:"}
-          </span>{" "}
+          <span className="font-medium">{EVENT_LOCATION_LABELS[kind]}</span>{" "}
           {kind === "commute" ? (
             <span className="text-gray-500">
-              Participants choose their own destinations
+              {PARTICIPANT_CHOSEN_DESTINATIONS_COPY}
             </span>
           ) : location ? (
             <span>
@@ -49,7 +53,7 @@ export function EventDetailsCard({
               )}
             </span>
           ) : (
-            <span className="text-gray-400">No location set</span>
+            <span className="text-gray-400">{NO_LOCATION_SET_COPY}</span>
           )}
         </div>
         {message && (

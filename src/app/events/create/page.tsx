@@ -10,10 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import type { EventKind } from "@/db/schema";
+import { datetimeLocalToIso } from "@/lib/date-time";
 import {
   parseRecurrenceFrequency,
   type RecurrenceFrequency,
 } from "@/lib/events/recurrence";
+import { EVENT_KIND_SELECT_LABELS } from "@/lib/feature-brand-copy";
 import type { Location } from "@/lib/geo/schema";
 
 import { useCreateEvent } from "../../api/events/client";
@@ -60,7 +62,7 @@ export default function CreateEventPage() {
             kind === "shared_destination" && selectedLocation
               ? selectedLocation.id
               : null,
-          time,
+          time: datetimeLocalToIso(time),
           recurrence: {
             frequency: recurrenceFrequency,
             count: recurrenceFrequency === "none" ? 1 : recurrenceCount,
@@ -155,8 +157,10 @@ export default function CreateEventPage() {
             required
             disabled={createEvent.isPending}
           >
-            <option value="shared_destination">Shared Destination</option>
-            <option value="commute">Commute</option>
+            <option value="shared_destination">
+              {EVENT_KIND_SELECT_LABELS.shared_destination}
+            </option>
+            <option value="commute">{EVENT_KIND_SELECT_LABELS.commute}</option>
           </select>
         </div>
 

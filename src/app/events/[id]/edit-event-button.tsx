@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { format } from "date-fns";
 
 import { AddressSelectorAndCard } from "@/components/address-selector-and-card";
 import { useDialog } from "@/components/dialog-provider";
@@ -9,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { EventKind } from "@/db/schema";
+import { datetimeLocalToIso, formatDatetimeLocal } from "@/lib/date-time";
+import { EVENT_KIND_SELECT_LABELS } from "@/lib/feature-brand-copy";
 import type { Location } from "@/lib/geo/schema";
 
 import { useUpdateEvent } from "../../api/events/client";
@@ -46,8 +47,7 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
     setEditKind(event.kind);
     setEditName(event.name);
     setEditLocation(event.location);
-    // Convert ISO string to datetime-local format
-    setEditTime(format(new Date(event.time), "yyyy-MM-dd'T'HH:mm"));
+    setEditTime(formatDatetimeLocal(new Date(event.time)));
     setEditMessage(event.message || "");
     setShowEditForm(true);
   }, [event]);
@@ -57,6 +57,7 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
       e.preventDefault();
 
       try {
+        const editTimeIso = datetimeLocalToIso(editTime);
         await updateEvent.mutateAsync({
           eventId,
           input: {
@@ -70,7 +71,10 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
                 : editLocation?.id !== event.locationId
                   ? (editLocation?.id ?? undefined)
                   : undefined,
-            time: editTime !== event.time ? editTime : undefined,
+            time:
+              new Date(editTimeIso).getTime() !== new Date(event.time).getTime()
+                ? editTimeIso
+                : undefined,
             message:
               editMessage !== (event.message || "") ? editMessage : undefined,
           },
@@ -122,8 +126,12 @@ export function EditEventButton({ event, eventId }: EditEventButtonProps) {
               className="w-full p-2 border rounded"
               required
             >
-              <option value="shared_destination">Shared Destination</option>
-              <option value="commute">Commute</option>
+              <option value="shared_destination">
+                {EVENT_KIND_SELECT_LABELS.shared_destination}
+              </option>
+              <option value="commute">
+                {EVENT_KIND_SELECT_LABELS.commute}
+              </option>
             </select>
           </div>
           <div>

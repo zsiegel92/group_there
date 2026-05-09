@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { addMinutes, differenceInMinutes, format, subMinutes } from "date-fns";
+import { addMinutes, differenceInMinutes, subMinutes } from "date-fns";
 
 import { AddressSelectorAndCard } from "@/components/address-selector-and-card";
 import { useDialog } from "@/components/dialog-provider";
@@ -10,6 +10,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { type DrivingStatus, type EventKind } from "@/db/schema";
 import { useSession } from "@/lib/auth-client";
+import { datetimeLocalToIso, formatDatetimeLocal } from "@/lib/date-time";
 import type { Location } from "@/lib/geo/schema";
 import { cn } from "@/lib/utils";
 
@@ -50,10 +51,6 @@ type Event = {
 };
 
 type SeriesAttendance = NonNullable<Event["seriesAttendances"]>[number];
-
-function formatDatetimeLocal(date: Date) {
-  return format(date, "yyyy-MM-dd'T'HH:mm");
-}
 
 function parseDrivingStatus(value: string): DrivingStatus {
   if (value === "must_drive") return "must_drive";
@@ -127,18 +124,23 @@ export function AttendanceForm({
         return;
       }
 
+      const earliestLeaveTimeIso =
+        drivingStatus !== "cannot_drive" && earliestLeaveTime
+          ? datetimeLocalToIso(earliestLeaveTime)
+          : null;
+      const requiredArrivalTimeIso =
+        event.kind === "commute"
+          ? datetimeLocalToIso(requiredArrivalTime)
+          : null;
+
       const attendanceData = {
         drivingStatus,
         carFits: drivingStatus !== "cannot_drive" ? passengersCount : 0,
-        earliestLeaveTime:
-          drivingStatus !== "cannot_drive" && earliestLeaveTime
-            ? earliestLeaveTime
-            : null,
+        earliestLeaveTime: earliestLeaveTimeIso,
         originLocationId: selectedLocation.id,
         destinationLocationId:
           event.kind === "commute" ? selectedDestination?.id : null,
-        requiredArrivalTime:
-          event.kind === "commute" ? requiredArrivalTime : null,
+        requiredArrivalTime: requiredArrivalTimeIso,
         joinedAt: new Date().toISOString(),
       };
 
@@ -240,6 +242,9 @@ export function AttendanceForm({
     event.kind === "commute" && requiredArrivalTime
       ? requiredArrivalTime
       : event.time;
+  const arrivalTimeForAvailabilityLocal = formatDatetimeLocal(
+    new Date(arrivalTimeForAvailability)
+  );
 
   const seriesSuggestions = useMemo(() => {
     const currentTime = new Date(event.time).getTime();
@@ -564,7 +569,7 @@ export function AttendanceForm({
                 type="datetime-local"
                 value={earliestLeaveTime}
                 onChange={(e) => setEarliestLeaveTime(e.target.value)}
-                max={arrivalTimeForAvailability.slice(0, 16)}
+                max={arrivalTimeForAvailabilityLocal}
                 required
               />
               <div className="flex flex-wrap gap-2 mt-2">

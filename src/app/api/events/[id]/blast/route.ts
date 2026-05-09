@@ -13,6 +13,14 @@ import {
   type EventKind,
 } from "@/db/schema";
 import { getUser } from "@/lib/auth";
+import {
+  EVENT_KIND_LABELS,
+  EVENT_LOCATION_EMAIL_LABELS,
+  EVENT_LOCATION_EMAIL_SUMMARY_LABELS,
+  NO_LOCATION_SET_COPY,
+  PARTICIPANT_CHOSEN_DESTINATIONS_COPY,
+  RECURRING_EVENT_TYPE_SUFFIX,
+} from "@/lib/feature-brand-copy";
 import { buildEstimateMembers, computePartyEstimates } from "@/lib/itinerary";
 import { sendEmail } from "@/lib/resend";
 
@@ -45,17 +53,16 @@ function formatEventDestination(
   locationAddress: string | null
 ) {
   if (kind === "commute") {
-    return "Participants choose their own destinations";
+    return PARTICIPANT_CHOSEN_DESTINATIONS_COPY;
   }
 
   return (
-    formatNameAndAddress(locationName, locationAddress) ?? "No location set"
+    formatNameAndAddress(locationName, locationAddress) ?? NO_LOCATION_SET_COPY
   );
 }
 
 function formatEventType(kind: EventKind, isRecurring: boolean) {
-  const kindLabel = kind === "commute" ? "Commute" : "Shared destination";
-  return `${kindLabel}${isRecurring ? " (recurring)" : ""}`;
+  return `${EVENT_KIND_LABELS[kind]}${isRecurring ? RECURRING_EVENT_TYPE_SUFFIX : ""}`;
 }
 
 // POST /api/events/[id]/blast - Send email blast (admin only)
@@ -151,6 +158,9 @@ export async function POST(request: NextRequest, props: Params) {
     locationName,
     locationAddress
   );
+  const eventDestinationSummaryLabel =
+    EVENT_LOCATION_EMAIL_SUMMARY_LABELS[event.kind];
+  const eventDestinationLabel = EVENT_LOCATION_EMAIL_LABELS[event.kind];
   const isRecurring = event.eventSeriesId != null;
   const eventType = formatEventType(event.kind, isRecurring);
   const recurringNote = isRecurring
@@ -200,7 +210,7 @@ export async function POST(request: NextRequest, props: Params) {
             "",
             `When: ${eventDate} at ${eventTime}`,
             `Type: ${eventType}`,
-            `${event.kind === "commute" ? "Destinations" : "Where"}: ${eventDestination}`,
+            `${eventDestinationSummaryLabel}: ${eventDestination}`,
             ...(recurringNote ? [recurringNote] : []),
             "",
             `Join the event: ${eventUrl}`,
@@ -210,7 +220,7 @@ export async function POST(request: NextRequest, props: Params) {
             <p>You're invited to join <strong>${event.name}</strong> with ${event.group.name}.</p>
             <p><strong>When:</strong> ${eventDate} at ${eventTime}</p>
             <p><strong>Type:</strong> ${eventType}</p>
-            <p><strong>${event.kind === "commute" ? "Destinations" : "Where"}:</strong> ${eventDestination}</p>
+            <p><strong>${eventDestinationSummaryLabel}:</strong> ${eventDestination}</p>
             ${recurringNote ? `<p>${recurringNote}</p>` : ""}
             <p><a href="${eventUrl}">Join the event on GROUPTHERE</a></p>
           `,
@@ -386,7 +396,7 @@ export async function POST(request: NextRequest, props: Params) {
           `Event: ${event.name}`,
           `When: ${eventDate} at ${eventTime}`,
           `Type: ${eventType}`,
-          `${event.kind === "commute" ? "Destination" : "Where"}: ${recipientDestination}`,
+          `${eventDestinationLabel}: ${recipientDestination}`,
           ...(recurringNote ? [recurringNote] : []),
           "",
           "Your Itinerary:",
@@ -411,7 +421,7 @@ export async function POST(request: NextRequest, props: Params) {
           <p>Your carpool for <strong>${event.name}</strong> with ${event.group.name} is confirmed! You are <strong>${role}</strong>.</p>
           <p><strong>When:</strong> ${eventDate} at ${eventTime}</p>
           <p><strong>Type:</strong> ${eventType}</p>
-          <p><strong>${event.kind === "commute" ? "Destination" : "Where"}:</strong> ${recipientDestination}</p>
+          <p><strong>${eventDestinationLabel}:</strong> ${recipientDestination}</p>
           ${recurringNote ? `<p>${recurringNote}</p>` : ""}
           <h3>Your Itinerary</h3>
           <table style="border-collapse:collapse;">${htmlSteps}</table>

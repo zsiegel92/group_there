@@ -26,6 +26,13 @@ import {
   parseRecurrenceFrequency,
   type RecurrenceFrequency,
 } from "@/lib/events/recurrence";
+import {
+  EVENT_KIND_LABELS,
+  EVENT_LOCATION_LABELS,
+  NO_LOCATION_SET_COPY,
+  PARTICIPANT_CHOSEN_DESTINATIONS_COPY,
+  RECURRING_EVENT_TYPE_SUFFIX,
+} from "@/lib/feature-brand-copy";
 import { cn } from "@/lib/utils";
 
 import {
@@ -208,18 +215,18 @@ function EventCard({
         </div>
         <div>
           <span className="font-medium">Type:</span>{" "}
-          {event.kind === "commute" ? "Commute" : "Shared destination"}
-          {event.eventSeriesId ? " (recurring)" : ""}
+          {EVENT_KIND_LABELS[event.kind]}
+          {event.eventSeriesId ? RECURRING_EVENT_TYPE_SUFFIX : ""}
         </div>
         <div>
           <span className="font-medium">
-            {event.kind === "commute" ? "Destination:" : "Where:"}
+            {EVENT_LOCATION_LABELS[event.kind]}
           </span>{" "}
           {event.kind === "commute"
-            ? "Set by each participant"
+            ? PARTICIPANT_CHOSEN_DESTINATIONS_COPY
             : event.location
               ? event.location.name
-              : "No location set"}
+              : NO_LOCATION_SET_COPY}
         </div>
         <div>
           <span className="font-medium">Participants:</span>{" "}

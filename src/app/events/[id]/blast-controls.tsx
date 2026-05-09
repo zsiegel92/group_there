@@ -13,6 +13,10 @@ const blastTypeLabels = {
   event_confirmed: "Sent confirmation emails",
 } as const;
 
+function formatRecipientCount(recipientCount: number) {
+  return `${recipientCount} ${recipientCount === 1 ? "recipient" : "recipients"}`;
+}
+
 export function BlastControls({
   event,
   eventId,
@@ -95,7 +99,7 @@ export function BlastControls({
                     ? blastTypeLabels[blast.type]
                     : blast.type}
                 </span>
-                <span>({blast.recipientCount} recipients)</span>
+                <span>({formatRecipientCount(blast.recipientCount)})</span>
                 <span>
                   {formatDistanceToNow(new Date(blast.createdAt), {
                     addSuffix: true,
