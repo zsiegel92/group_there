@@ -3,7 +3,13 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { ChevronDown, ChevronRight, Plus, UserPlus } from "lucide-react";
+import {
+  CalendarPlus,
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  UserPlus,
+} from "lucide-react";
 
 import { useDialog } from "@/components/dialog-provider";
 import {
@@ -20,6 +26,7 @@ import {
   parseRecurrenceFrequency,
   type RecurrenceFrequency,
 } from "@/lib/events/recurrence";
+import { cn } from "@/lib/utils";
 
 import {
   useEventDetails,
@@ -29,7 +36,7 @@ import {
 } from "../api/events/client";
 import { useGroups } from "../api/groups/client";
 import { AttendanceForm } from "./[id]/attendance-form";
-import { EventStatus } from "./[id]/event-status";
+import { EventStatus, type EventStatusSize } from "./[id]/event-status";
 
 type LocationSummary = {
   id: string;
@@ -63,6 +70,29 @@ type EventListItem = {
   isGroupAdmin: boolean;
   isTestingGroup: boolean;
 };
+
+type EventCardAction = "join" | "schedule";
+
+const eventCardBaseClassName =
+  "overflow-hidden rounded-lg border-2 bg-white transition-colors duration-150";
+const eventCardDefaultBorderClassName =
+  "border-gray-200 md:hover:border-gray-400";
+const eventCardLinkClassName =
+  "block p-3 transition-colors duration-150 md:hover:bg-gray-50";
+
+const eventCardActionButtonClassName =
+  "h-11 w-full rounded-none border-x-0 border-b-0 border-t-2 bg-white text-sm font-semibold tracking-normal shadow-none transition-colors duration-150";
+
+const eventCardActionClassNames = {
+  join: "border-sky-200 text-sky-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-900",
+  schedule:
+    "border-emerald-200 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-900",
+} satisfies Record<EventCardAction, string>;
+
+const eventCardBorderClassNamesByHoveredAction = {
+  join: "border-sky-300",
+  schedule: "border-emerald-300",
+} satisfies Record<EventCardAction, string>;
 
 function QuickJoinDialog({
   event,
@@ -105,18 +135,32 @@ function QuickJoinDialog({
   );
 }
 
-function QuickJoinButton({ event }: { event: EventListItem }) {
+function QuickJoinButton({
+  event,
+  onHoverChange,
+}: {
+  event: EventListItem;
+  onHoverChange: (isHovering: boolean) => void;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <Button
         type="button"
-        className="w-full rounded-none border-t"
+        variant="outline"
+        className={cn(
+          eventCardActionButtonClassName,
+          eventCardActionClassNames.join
+        )}
+        onPointerEnter={() => onHoverChange(true)}
+        onPointerLeave={() => onHoverChange(false)}
+        onFocus={() => onHoverChange(true)}
+        onBlur={() => onHoverChange(false)}
         onClick={() => setOpen(true)}
       >
         <UserPlus className="size-4" />
-        Quick Join
+        join
       </Button>
       {open && (
         <QuickJoinDialog
@@ -129,8 +173,17 @@ function QuickJoinButton({ event }: { event: EventListItem }) {
   );
 }
 
-function EventCard({ event }: { event: EventListItem }) {
+function EventCard({
+  event,
+  eventStatusSize = "medium",
+}: {
+  event: EventListItem;
+  eventStatusSize?: EventStatusSize;
+}) {
   const eventDate = new Date(event.time);
+  const [hoveredAction, setHoveredAction] = useState<EventCardAction | null>(
+    null
+  );
   const linkText = !event.scheduled
     ? "View Event"
     : event.hasJoined
@@ -181,7 +234,7 @@ function EventCard({ event }: { event: EventListItem }) {
           <EventStatus
             scheduled={event.scheduled}
             locked={event.locked}
-            compact
+            eventStatusSize={eventStatusSize}
           />
         </div>
         <span className="order-2 text-blue-600 text-sm font-medium sm:order-1">
@@ -193,31 +246,52 @@ function EventCard({ event }: { event: EventListItem }) {
 
   if (event.scheduled && !event.hasJoined && !event.locked) {
     return (
-      <div className="overflow-hidden rounded-lg border bg-white">
-        <Link
-          href={`/events/${event.id}`}
-          className="block p-3 hover:bg-gray-50 transition-colors"
-        >
+      <div
+        className={cn(
+          eventCardBaseClassName,
+          hoveredAction
+            ? eventCardBorderClassNamesByHoveredAction[hoveredAction]
+            : eventCardDefaultBorderClassName
+        )}
+      >
+        <Link href={`/events/${event.id}`} className={eventCardLinkClassName}>
           {cardContent}
         </Link>
-        <QuickJoinButton event={event} />
+        <QuickJoinButton
+          event={event}
+          onHoverChange={(isHovering) =>
+            setHoveredAction(isHovering ? "join" : null)
+          }
+        />
       </div>
     );
   }
 
   if (!event.scheduled && event.isGroupAdmin) {
     return (
-      <div className="overflow-hidden rounded-lg border bg-white">
-        <Link
-          href={`/events/${event.id}`}
-          className="block p-3 hover:bg-gray-50 transition-colors"
-        >
+      <div
+        className={cn(
+          eventCardBaseClassName,
+          hoveredAction
+            ? eventCardBorderClassNamesByHoveredAction[hoveredAction]
+            : eventCardDefaultBorderClassName
+        )}
+      >
+        <Link href={`/events/${event.id}`} className={eventCardLinkClassName}>
           {cardContent}
         </Link>
         <Button
           type="button"
-          className="w-full rounded-none border-t"
+          variant="outline"
+          className={cn(
+            eventCardActionButtonClassName,
+            eventCardActionClassNames.schedule
+          )}
           disabled={scheduleEvent.isPending}
+          onPointerEnter={() => setHoveredAction("schedule")}
+          onPointerLeave={() => setHoveredAction(null)}
+          onFocus={() => setHoveredAction("schedule")}
+          onBlur={() => setHoveredAction(null)}
           onClick={async () => {
             try {
               await scheduleEvent.mutateAsync(event.id);
@@ -226,7 +300,8 @@ function EventCard({ event }: { event: EventListItem }) {
             }
           }}
         >
-          {scheduleEvent.isPending ? "Scheduling..." : "Schedule Event"}
+          <CalendarPlus className="size-4" />
+          {scheduleEvent.isPending ? "scheduling..." : "schedule"}
         </Button>
       </div>
     );
@@ -235,7 +310,10 @@ function EventCard({ event }: { event: EventListItem }) {
   return (
     <Link
       href={`/events/${event.id}`}
-      className="block p-4 bg-white border rounded-lg hover:border-gray-400 transition-colors"
+      className={cn(
+        "block rounded-lg border-2 bg-white p-4 transition-colors duration-150 md:hover:bg-gray-50",
+        eventCardDefaultBorderClassName
+      )}
     >
       {cardContent}
     </Link>
@@ -266,7 +344,7 @@ function ExtendSeriesButton({ event }: { event: EventListItem }) {
         type="button"
         aria-label="Extend recurring series"
         onClick={() => setOpen(true)}
-        className="w-12 shrink-0 rounded-md border bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900 flex items-center justify-center"
+        className="flex w-12 shrink-0 cursor-pointer items-center justify-center rounded-md border-2 border-gray-200 bg-white text-gray-600 transition-colors hover:border-gray-400 hover:bg-gray-50 hover:text-gray-900"
       >
         <Plus className="size-4" />
       </button>
@@ -405,7 +483,56 @@ function EventList({ events }: { events: EventListItem[] }) {
 
         return (
           <div key={event.id} className="space-y-3">
-            {hasChildren ? (
+            {hasChildren && isExpanded ? (
+              <>
+                <div className="flex items-stretch gap-2">
+                  <button
+                    type="button"
+                    aria-label={`Hide recurring events. ${seriesCounts.total} total, ${seriesCounts.scheduled} scheduled, ${seriesCounts.joined} joined.`}
+                    aria-expanded={true}
+                    onClick={() => {
+                      if (seriesId) toggleSeries(seriesId);
+                    }}
+                    className="flex min-h-10 flex-1 cursor-pointer flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md border-2 border-gray-200 bg-white px-3 py-2 text-gray-700 transition-colors hover:border-gray-400 hover:bg-gray-50 hover:text-gray-950"
+                  >
+                    <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+                      <ChevronDown
+                        className="size-5 shrink-0"
+                        strokeWidth={3}
+                      />
+                      <span className="truncate">Collapse series</span>
+                    </span>
+                    <span className="flex min-w-0 flex-wrap justify-end gap-x-3 gap-y-1 text-xs leading-none">
+                      <span>
+                        <span className="text-gray-500">Total</span>{" "}
+                        <span className="font-semibold text-gray-900">
+                          {seriesCounts.total}
+                        </span>
+                      </span>
+                      <span>
+                        <span className="text-gray-500">Scheduled</span>{" "}
+                        <span className="font-semibold text-gray-900">
+                          {seriesCounts.scheduled}
+                        </span>
+                      </span>
+                      <span>
+                        <span className="text-gray-500">Joined</span>{" "}
+                        <span className="font-semibold text-gray-900">
+                          {seriesCounts.joined}
+                        </span>
+                      </span>
+                    </span>
+                  </button>
+                  {event.isGroupAdmin && <ExtendSeriesButton event={event} />}
+                </div>
+                <div className="ml-4 space-y-3 border-l border-gray-300 pl-6">
+                  <EventCard event={event} />
+                  {children.map((child) => (
+                    <EventCard key={child.id} event={child} />
+                  ))}
+                </div>
+              </>
+            ) : hasChildren ? (
               <div className="flex items-stretch gap-2">
                 <button
                   type="button"
@@ -418,51 +545,39 @@ function EventList({ events }: { events: EventListItem[] }) {
                   onClick={() => {
                     if (seriesId) toggleSeries(seriesId);
                   }}
-                  className="w-20 shrink-0 rounded-md border bg-white px-2 py-3 text-gray-600 hover:bg-gray-50 hover:text-gray-900 flex flex-col items-stretch gap-2"
+                  className="flex w-20 shrink-0 cursor-pointer flex-col items-stretch gap-2 rounded-md border-2 border-gray-200 bg-white px-2 py-3 text-gray-600 transition-colors hover:border-gray-400 hover:bg-gray-50 hover:text-gray-900"
                 >
-                  <span className="grid gap-1.5 text-[10px] leading-none">
+                  <span className="grid flex-1 gap-1.5 text-[10px] leading-none">
                     <span className="grid">
                       <span className="text-left text-gray-400">Total</span>
-                      <span className="text-right text-sm font-medium text-gray-800">
+                      <span className="text-sm font-medium text-gray-800">
                         {seriesCounts.total}
                       </span>
                     </span>
                     <span className="grid">
                       <span className="text-left text-gray-400">Scheduled</span>
-                      <span className="text-right text-sm font-medium text-gray-800">
+                      <span className="text-sm font-medium text-gray-800">
                         {seriesCounts.scheduled}
                       </span>
                     </span>
                     <span className="grid">
                       <span className="text-left text-gray-400">Joined</span>
-                      <span className="text-right text-sm font-medium text-gray-800">
+                      <span className="text-sm font-medium text-gray-800">
                         {seriesCounts.joined}
                       </span>
                     </span>
                   </span>
-                  <span className="flex justify-center">
-                    {isExpanded ? (
-                      <ChevronDown className="size-4" />
-                    ) : (
-                      <ChevronRight className="size-4" />
-                    )}
+                  <span className="mt-auto flex justify-center">
+                    <ChevronRight className="size-5" strokeWidth={3} />
                   </span>
                 </button>
                 <div className="min-w-0 flex-1">
-                  <EventCard event={event} />
+                  <EventCard event={event} eventStatusSize="small" />
                 </div>
                 {event.isGroupAdmin && <ExtendSeriesButton event={event} />}
               </div>
             ) : (
               <EventCard event={event} />
-            )}
-
-            {hasChildren && isExpanded && (
-              <div className="ml-4 border-l border-gray-300 pl-6 space-y-3">
-                {children.map((child) => (
-                  <EventCard key={child.id} event={child} />
-                ))}
-              </div>
             )}
           </div>
         );

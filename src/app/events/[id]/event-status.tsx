@@ -8,15 +8,35 @@ const allStepTextColors = [
   "text-green-600",
 ] as const;
 
+export type EventStatusSize = "small" | "medium" | "large";
+
+const gapClassNames = {
+  small: "gap-0.5",
+  medium: "gap-1",
+  large: "gap-2",
+} satisfies Record<EventStatusSize, string>;
+
+const currentTextClassNames = {
+  small: "text-[10px]",
+  medium: "text-[11px]",
+  large: "text-lg",
+} satisfies Record<EventStatusSize, string>;
+
+const secondaryTextClassNames = {
+  small: "text-[8px]",
+  medium: "text-[9px]",
+  large: "text-xs",
+} satisfies Record<EventStatusSize, string>;
+
 export function EventStatus({
   scheduled,
   locked,
-  compact = false,
+  eventStatusSize = "large",
   hideUnscheduled = false,
 }: {
   scheduled: boolean;
   locked: boolean;
-  compact?: boolean;
+  eventStatusSize?: EventStatusSize;
   hideUnscheduled?: boolean;
 }) {
   const fullIndex = locked ? 2 : scheduled ? 1 : 0;
@@ -26,39 +46,33 @@ export function EventStatus({
     ? allStepTextColors.slice(1)
     : allStepTextColors;
   const currentStep = hideUnscheduled ? fullIndex - 1 : fullIndex;
+  const gapClassName = gapClassNames[eventStatusSize];
+  const currentTextClassName = currentTextClassNames[eventStatusSize];
+  const secondaryTextClassName = secondaryTextClassNames[eventStatusSize];
 
   return (
-    <div
-      className={`inline-flex items-baseline ${compact ? "gap-1" : "gap-2"}`}
-    >
+    <div className={`inline-flex items-baseline ${gapClassName}`}>
       {steps.map((label, i) => {
         const isCurrent = i === currentStep;
         const isCompleted = i < currentStep;
 
-        const currentClass = compact
-          ? `text-[11px] font-semibold ${stepTextColors[currentStep]}`
-          : `text-lg font-semibold ${stepTextColors[currentStep]}`;
+        const currentClass = `${currentTextClassName} font-semibold ${stepTextColors[currentStep]}`;
 
         return (
-          <div
-            key={label}
-            className={`flex items-baseline ${compact ? "gap-1" : "gap-2"}`}
-          >
+          <div key={label} className={`flex items-baseline ${gapClassName}`}>
             <span
               className={
                 isCurrent
                   ? currentClass
                   : isCompleted
-                    ? `${compact ? "text-[9px]" : "text-xs"} text-gray-500`
-                    : `${compact ? "text-[9px]" : "text-xs"} text-gray-300`
+                    ? `${secondaryTextClassName} text-gray-500`
+                    : `${secondaryTextClassName} text-gray-300`
               }
             >
               {label}
             </span>
             {i < steps.length - 1 && (
-              <span
-                className={`${compact ? "text-[9px]" : "text-xs"} text-gray-300`}
-              >
+              <span className={`${secondaryTextClassName} text-gray-300`}>
                 &rarr;
               </span>
             )}
