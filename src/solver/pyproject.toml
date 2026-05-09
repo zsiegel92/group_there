@@ -41,7 +41,7 @@ default = { features = ["dev"], solve-group = "default" }
 
 [tool.pixi.tasks]
 mojo-build = { cmd = "mojo build mojo_app/group_generator_mojo_python_interface.mojo --emit shared-lib -o mojo_app/group_generator_mojo_python_interface.so", cwd = "." }
-mojo-format = { cmd = "mojo format mojo_app/group_generator_mojo_python_interface.mojo mojo_app/group_gen.mojo mojo_app/heap_permutation_iterator.mojo", cwd = "." }
+mojo-format = { cmd = "mojo format mojo_app/group_generator_mojo_python_interface.mojo mojo_app/group_gen.mojo mojo_app/heap_permutation_iterator.mojo mojo_app/heuristic_solver.mojo", cwd = "." }
 mojo-test-local = { cmd = "python -m test_solve_fixture_local", cwd = "." }
 mojo-test-local-python = { cmd = "python -m test_solve_fixture_local -- --no-mojo", cwd = "." }
 python-benchmark = { cmd = "modal run benchmark.py", cwd = "." }
@@ -52,8 +52,9 @@ python-dev-fastapi-2 = { cmd = "fastapi run server.py --reload --port 8000", cwd
 python-dump-openapi = { cmd = "python dump_openapi.py", cwd = "." }
 python-format = { cmd = "ruff format --check .", cwd = "." }
 python-format-fix = { cmd = "ruff format .", cwd = "." }
+python-heuristic-benchmark = { cmd = "python -m groupthere_solver.heuristic_benchmark", cwd = "." }
 python-lint = { cmd = "ruff check .", cwd = "." }
-python-test = { cmd = "pytest tests", cwd = "." }
+python-test = { cmd = "mojo build mojo_app/group_generator_mojo_python_interface.mojo --emit shared-lib -o mojo_app/group_generator_mojo_python_interface.so && pytest tests", cwd = "." }
 python-test-fixture-cuopt = { cmd = "modal run test_solve_fixture_cuopt.py", cwd = "." }
 python-test-fixture-local = { cmd = "python -m test_solve_fixture_local", cwd = "." }
 python-test-fixture-remote = { cmd = "modal run test_solve_fixture_remote.py", cwd = "." }

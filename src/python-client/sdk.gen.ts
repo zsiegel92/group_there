@@ -2,8 +2,8 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { SolveAsyncSolveAsyncPostData, SolveAsyncSolveAsyncPostErrors, SolveAsyncSolveAsyncPostResponses, SolveSolvePostData, SolveSolvePostErrors, SolveSolvePostResponses } from './types.gen';
-import { zSolveAsyncSolveAsyncPostData, zSolveAsyncSolveAsyncPostResponse, zSolveSolvePostData, zSolveSolvePostResponse } from './zod.gen';
+import type { SolveAsyncSolveAsyncPostData, SolveAsyncSolveAsyncPostErrors, SolveAsyncSolveAsyncPostResponses, SolveHeuristicSolveHeuristicPostData, SolveHeuristicSolveHeuristicPostErrors, SolveHeuristicSolveHeuristicPostResponses, SolveSolvePostData, SolveSolvePostErrors, SolveSolvePostResponses } from './types.gen';
+import { zSolveAsyncSolveAsyncPostData, zSolveAsyncSolveAsyncPostResponse, zSolveHeuristicSolveHeuristicPostData, zSolveHeuristicSolveHeuristicPostResponse, zSolveSolvePostData, zSolveSolvePostResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -27,6 +27,21 @@ export const solveSolvePost = <ThrowOnError extends boolean = false>(options: Op
     responseValidator: async (data) => await zSolveSolvePostResponse.parseAsync(data),
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/solve',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Solve Heuristic
+ */
+export const solveHeuristicSolveHeuristicPost = <ThrowOnError extends boolean = false>(options: Options<SolveHeuristicSolveHeuristicPostData, ThrowOnError>) => (options.client ?? client).post<SolveHeuristicSolveHeuristicPostResponses, SolveHeuristicSolveHeuristicPostErrors, ThrowOnError>({
+    requestValidator: async (data) => await zSolveHeuristicSolveHeuristicPostData.parseAsync(data),
+    responseValidator: async (data) => await zSolveHeuristicSolveHeuristicPostResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/solve/heuristic',
     ...options,
     headers: {
         'Content-Type': 'application/json',
