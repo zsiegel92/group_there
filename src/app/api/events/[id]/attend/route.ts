@@ -57,6 +57,16 @@ const attendanceSchema = z
     }
   );
 
+function testingEventAttendanceResponse() {
+  return NextResponse.json(
+    {
+      error:
+        "Testing playground events manage riders through the testing rider tools",
+    },
+    { status: 403 }
+  );
+}
+
 // POST /api/events/[id]/attend - Join event with attendance details
 export async function POST(request: NextRequest, props: Params) {
   const params = await props.params;
@@ -81,10 +91,17 @@ export async function POST(request: NextRequest, props: Params) {
   // Get event
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
+    with: {
+      group: true,
+    },
   });
 
   if (!event) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  if (event.group.type === "testing") {
+    return testingEventAttendanceResponse();
   }
 
   // Event must be scheduled for users to join
@@ -259,10 +276,17 @@ export async function PATCH(request: NextRequest, props: Params) {
   // Get event
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
+    with: {
+      group: true,
+    },
   });
 
   if (!event) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  if (event.group.type === "testing") {
+    return testingEventAttendanceResponse();
   }
 
   if (event.locked) {
@@ -407,9 +431,20 @@ export async function DELETE(request: NextRequest, props: Params) {
   // Check if event is locked
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
+    with: {
+      group: true,
+    },
   });
 
-  if (event?.locked) {
+  if (!event) {
+    return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  if (event.group.type === "testing") {
+    return testingEventAttendanceResponse();
+  }
+
+  if (event.locked) {
     return NextResponse.json(
       { error: "Cannot modify attendance for a locked event" },
       { status: 400 }

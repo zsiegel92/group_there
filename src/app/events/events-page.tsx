@@ -191,11 +191,20 @@ function EventCard({
   const [hoveredAction, setHoveredAction] = useState<EventCardAction | null>(
     null
   );
+  const canSelfJoinEvent =
+    event.scheduled &&
+    !event.hasJoined &&
+    !event.locked &&
+    !event.isTestingGroup;
   const linkText = !event.scheduled
     ? "View Event"
     : event.hasJoined
       ? "View/Edit Attendance"
-      : "Join Event";
+      : event.locked
+        ? "View Event"
+        : !canSelfJoinEvent
+          ? "View Event"
+          : "Join Event";
   const scheduleEvent = useScheduleEvent();
   const dialog = useDialog();
 
@@ -251,7 +260,7 @@ function EventCard({
     </>
   );
 
-  if (event.scheduled && !event.hasJoined && !event.locked) {
+  if (canSelfJoinEvent) {
     return (
       <div
         className={cn(
