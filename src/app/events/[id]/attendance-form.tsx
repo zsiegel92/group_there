@@ -28,7 +28,7 @@ type Event = {
   locked: boolean;
   userAttendance: {
     drivingStatus: DrivingStatus;
-    carFits: number | null;
+    nonDriverSeats: number | null;
     earliestLeaveTime: string | null;
     originLocationId: string | null;
     originLocation: Location | null;
@@ -38,7 +38,7 @@ type Event = {
   } | null;
   seriesAttendances?: {
     drivingStatus: DrivingStatus;
-    carFits: number | null;
+    nonDriverSeats: number | null;
     earliestLeaveTime: string | null;
     originLocationId: string | null;
     originLocation: Location | null;
@@ -100,7 +100,7 @@ export function AttendanceForm({
   // Attendance form state
   const [drivingStatus, setDrivingStatus] =
     useState<DrivingStatus>("cannot_drive");
-  const [passengersCount, setPassengersCount] = useState(1);
+  const [nonDriverSeats, setNonDriverSeats] = useState(0);
   const [earliestLeaveTime, setEarliestLeaveTime] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(
     null
@@ -135,7 +135,7 @@ export function AttendanceForm({
 
       const attendanceData = {
         drivingStatus,
-        carFits: drivingStatus !== "cannot_drive" ? passengersCount : 0,
+        nonDriverSeats: drivingStatus !== "cannot_drive" ? nonDriverSeats : 0,
         earliestLeaveTime: earliestLeaveTimeIso,
         originLocationId: selectedLocation.id,
         destinationLocationId:
@@ -171,7 +171,7 @@ export function AttendanceForm({
     },
     [
       drivingStatus,
-      passengersCount,
+      nonDriverSeats,
       earliestLeaveTime,
       selectedLocation,
       selectedDestination,
@@ -204,8 +204,8 @@ export function AttendanceForm({
   const openAttendanceForm = useCallback(() => {
     if (!event.userAttendance) return;
     setDrivingStatus(event.userAttendance.drivingStatus);
-    const carFits = event.userAttendance.carFits;
-    setPassengersCount(carFits != null && carFits > 0 ? carFits : 1);
+    const nonDriverSeats = event.userAttendance.nonDriverSeats;
+    setNonDriverSeats(nonDriverSeats ?? 0);
     if (event.userAttendance.earliestLeaveTime) {
       setEarliestLeaveTime(
         formatDatetimeLocal(new Date(event.userAttendance.earliestLeaveTime))
@@ -309,10 +309,7 @@ export function AttendanceForm({
 
         return {
           drivingStatus: attendance.drivingStatus,
-          effectiveCarFits:
-            attendance.carFits != null && attendance.carFits > 0
-              ? attendance.carFits
-              : 1,
+          nonDriverSeats: attendance.nonDriverSeats ?? 0,
           earliestLeaveTime: formatDatetimeLocal(
             subMinutes(new Date(targetArrival), minutes)
           ),
@@ -322,7 +319,7 @@ export function AttendanceForm({
 
       return {
         drivingStatus: attendance.drivingStatus,
-        effectiveCarFits: 0,
+        nonDriverSeats: 0,
         earliestLeaveTime: "",
         originLocationId: attendance.originLocationId,
       };
@@ -335,9 +332,7 @@ export function AttendanceForm({
       const originDetails = getOriginDetails(attendance);
       setSelectedLocation(attendance.originLocation);
       setDrivingStatus(originDetails.drivingStatus);
-      setPassengersCount(
-        originDetails.effectiveCarFits > 0 ? originDetails.effectiveCarFits : 1
-      );
+      setNonDriverSeats(originDetails.nonDriverSeats);
       setEarliestLeaveTime(originDetails.earliestLeaveTime);
     },
     [getOriginDetails]
@@ -384,8 +379,8 @@ export function AttendanceForm({
       return (
         selectedLocation?.id === originDetails.originLocationId &&
         drivingStatus === originDetails.drivingStatus &&
-        (drivingStatus === "cannot_drive" ? 0 : passengersCount) ===
-          originDetails.effectiveCarFits &&
+        (drivingStatus === "cannot_drive" ? 0 : nonDriverSeats) ===
+          originDetails.nonDriverSeats &&
         (drivingStatus === "cannot_drive" ? "" : earliestLeaveTime) ===
           originDetails.earliestLeaveTime
       );
@@ -394,7 +389,7 @@ export function AttendanceForm({
       drivingStatus,
       earliestLeaveTime,
       getOriginDetails,
-      passengersCount,
+      nonDriverSeats,
       selectedLocation,
     ]
   );
@@ -464,7 +459,9 @@ export function AttendanceForm({
                   </div>
                   <div className="text-gray-500">
                     {drivingStatusLabel(attendance.drivingStatus)}
-                    {attendance.carFits ? `, ${attendance.carFits} seats` : ""}
+                    {attendance.drivingStatus !== "cannot_drive"
+                      ? `, ${attendance.nonDriverSeats ?? 0} non-driver seats`
+                      : ""}
                   </div>
                   <div className="text-gray-500">
                     {offsetLabel(leaveOffset)}
@@ -513,7 +510,9 @@ export function AttendanceForm({
               </div>
               <div className="text-gray-500">
                 {drivingStatusLabel(attendance.drivingStatus)}
-                {attendance.carFits ? `, ${attendance.carFits} seats` : ""}
+                {attendance.drivingStatus !== "cannot_drive"
+                  ? `, ${attendance.nonDriverSeats ?? 0} non-driver seats`
+                  : ""}
               </div>
               <div className="text-gray-500">{offsetLabel(leaveOffset)}</div>
             </button>
@@ -554,9 +553,15 @@ export function AttendanceForm({
               </label>
               <Input
                 type="number"
-                min="1"
-                value={passengersCount}
-                onChange={(e) => setPassengersCount(parseInt(e.target.value))}
+                min="0"
+                max="5"
+                value={nonDriverSeats}
+                onChange={(e) => {
+                  const parsed = Number.parseInt(e.target.value, 10);
+                  setNonDriverSeats(
+                    Number.isNaN(parsed) ? 0 : Math.min(5, Math.max(0, parsed))
+                  );
+                }}
                 required
               />
             </div>

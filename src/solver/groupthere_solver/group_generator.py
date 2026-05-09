@@ -100,10 +100,10 @@ def generate_feasible_groups(
     Generate all feasible carpooling groups.
 
     A group is feasible if:
-    1. It contains at least one driver with sufficient capacity
+    1. It contains at least one tripper who can drive
     2. It respects must_drive constraints (at most one must_drive person,
-       and they must have enough capacity)
-    3. All non-driver trippers who have cars are willing to ride
+       and that driver has enough non-driver seats)
+    3. It never assigns a must_drive tripper as a passenger
 
     Args:
         trippers: List of all trippers
@@ -116,18 +116,15 @@ def generate_feasible_groups(
     enum = SubsetEnumerator()
     feasible_groups: list[FeasibleGroup] = []
 
-    # Identify potential drivers
-    driver_indices = [i for i, t in enumerate(trippers) if t.car_fits > 0]
+    driver_indices = [i for i, t in enumerate(trippers) if t.can_drive]
     must_drive_indices = [i for i, t in enumerate(trippers) if t.must_drive]
 
     if not driver_indices:
         # No drivers available - no feasible groups
         return []
 
-    # Find max group size (limited by max car capacity)
-    max_group_size = (
-        max(trippers[i].car_fits for i in driver_indices) + 1
-    )  # +1 for driver
+    # Total group size is non-driver seat capacity plus the driver.
+    max_group_size = max(trippers[i].non_driver_seats for i in driver_indices) + 1
 
     # Generate feasible groups of each size
     for group_size in range(1, min(n, max_group_size) + 1):
@@ -162,20 +159,12 @@ def generate_feasible_groups(
             for driver_idx in group_drivers:
                 driver = trippers[driver_idx]
                 passenger_indices = [i for i in group_indices if i != driver_idx]
+                non_driver_seats = driver.non_driver_seats
 
-                # Check capacity
-                if len(passenger_indices) > driver.car_fits:
+                if len(passenger_indices) > non_driver_seats:
                     continue
 
-                # Check if non-driver trippers who have cars are willing to ride
-                can_all_ride = True
-                for pass_idx in passenger_indices:
-                    passenger = trippers[pass_idx]
-                    if passenger.car_fits > 0 and passenger.must_drive:
-                        can_all_ride = False
-                        break
-
-                if not can_all_ride:
+                if any(trippers[pass_idx].must_drive for pass_idx in passenger_indices):
                     continue
 
                 # Calculate optimal drive time and pickup order

@@ -17,11 +17,11 @@ export type ExternalRideshareVehicle = {
      */
     origin_id: string;
     /**
-     * Car Fits
+     * Non-driver Seats
      *
      * Non-driver seats available; excludes the driver.
      */
-    car_fits?: number;
+    non_driver_seats?: number;
     /**
      * Cost Multiplier
      */
@@ -235,11 +235,17 @@ export type Tripper = {
      */
     required_arrival_time?: string | null;
     /**
-     * Car Fits
+     * Can Drive
+     *
+     * Whether this tripper can be assigned as the driver. Independent of non_driver_seats so a driver can have zero non-driver seats.
+     */
+    can_drive: boolean;
+    /**
+     * Non-driver Seats
      *
      * Non-driver seats available; excludes the driver.
      */
-    car_fits: number;
+    non_driver_seats: number;
     /**
      * Must Drive
      */

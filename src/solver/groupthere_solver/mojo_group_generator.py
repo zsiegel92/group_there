@@ -18,7 +18,7 @@ from groupthere_solver.models import Tripper
 # Search paths for the compiled Mojo shared library:
 # - Local dev: mojo_app/ relative to this file's parent (src/solver/)
 # - Modal: /solver/mojo_app/ in the current shared-manifest image layout
-# - Legacy Modal images may still use /mojo_app/
+# - /mojo_app/ fallback search path
 _MOJO_MODULE_NAME = "group_generator_mojo_python_interface"
 _MOJO_SEARCH_DIRS = [
     Path(__file__).resolve().parent.parent / "mojo_app",
@@ -43,7 +43,8 @@ class MojoGroupGeneratorModule(Protocol):
     def generate_feasible_groups_mojo(
         self,
         n: int,
-        car_fits: list[int],
+        can_drive: list[bool],
+        non_driver_seats: list[int],
         must_drive: list[bool],
         distance_to_dest: list[float],
         dist_matrix: list[float],
@@ -101,7 +102,8 @@ def generate_feasible_groups_mojo(
         ) from _MOJO_IMPORT_ERROR
 
     # Pack data into flat lists for the Mojo interface
-    car_fits = [t.car_fits for t in trippers]
+    can_drive = [t.can_drive for t in trippers]
+    non_driver_seats = [t.non_driver_seats for t in trippers]
     must_drive = [t.must_drive for t in trippers]
     distance_to_dest = [t.distance_to_destination_seconds for t in trippers]
 
@@ -118,7 +120,8 @@ def generate_feasible_groups_mojo(
     # Call Mojo
     raw_groups = _MOJO_MODULE.generate_feasible_groups_mojo(
         n,
-        car_fits,
+        can_drive,
+        non_driver_seats,
         must_drive,
         distance_to_dest,
         dist_matrix,

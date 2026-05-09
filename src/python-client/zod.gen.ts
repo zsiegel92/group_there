@@ -8,7 +8,7 @@ import { z } from 'zod';
 export const zExternalRideshareVehicle = z.object({
     id: z.string(),
     origin_id: z.string(),
-    car_fits: z.optional(z.int().gte(1).lte(5)).default(3),
+    non_driver_seats: z.optional(z.int().gte(1).lte(5)).default(3),
     cost_multiplier: z.optional(z.number().gte(1)).default(3),
     fixed_cost_seconds: z.optional(z.number().gte(0)).default(0)
 });
@@ -86,7 +86,8 @@ export const zTripper = z.object({
         z.iso.datetime(),
         z.null()
     ])),
-    car_fits: z.int().gte(0).lte(5),
+    can_drive: z.boolean(),
+    non_driver_seats: z.int().gte(0).lte(5),
     must_drive: z.boolean(),
     seconds_before_event_start_can_leave: z.int().gte(0),
     seconds_before_required_arrival_can_leave: z.optional(z.union([

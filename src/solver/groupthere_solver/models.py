@@ -42,10 +42,11 @@ PartyVehicleKind = Literal["participant_vehicle", "external_rideshare"]
 class ExternalRideshareVehicle(BaseModel):
     id: str
     origin_id: str
-    car_fits: int = Field(
+    non_driver_seats: int = Field(
         default=3,
         ge=1,
         le=5,
+        title="Non-driver Seats",
         description="Non-driver seats available; excludes the driver.",
     )
     cost_multiplier: float = Field(default=3.0, ge=1.0)
@@ -58,10 +59,18 @@ class Tripper(BaseModel):
     event_id: str
     destination_id: str | None = None
     required_arrival_time: datetime.datetime | None = None
-    car_fits: int = Field(
+    can_drive: bool = Field(
+        ...,
+        description=(
+            "Whether this tripper can be assigned as the driver. "
+            "Independent of non_driver_seats so a driver can have zero non-driver seats."
+        ),
+    )
+    non_driver_seats: int = Field(
         ...,
         ge=0,
         le=5,
+        title="Non-driver Seats",
         description="Non-driver seats available; excludes the driver.",
     )
     must_drive: bool
@@ -77,6 +86,14 @@ class Tripper(BaseModel):
         ...,
         ge=0,
     )
+
+    @model_validator(mode="after")
+    def check_driving_fields_are_consistent(self) -> Self:
+        if self.must_drive and not self.can_drive:
+            raise ValueError("A tripper who must_drive must also have can_drive=true")
+        if not self.can_drive and self.non_driver_seats != 0:
+            raise ValueError("A tripper who cannot drive cannot offer non-driver seats")
+        return self
 
 
 class TripperDistance(BaseModel):

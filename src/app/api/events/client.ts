@@ -68,7 +68,7 @@ const eventsResponseSchema = z.object({
 
 const userAttendanceResponseSchema = z.object({
   drivingStatus: z.enum(drivingStatusEnumValues),
-  carFits: z.number().nullable(),
+  nonDriverSeats: z.number().int().min(0).max(5).nullable(),
   earliestLeaveTime: z.string().nullable(),
   originLocationId: z.string().nullable(),
   originLocation: LocationSchema.nullable(),
@@ -91,7 +91,7 @@ const seriesAttendanceSchema = userAttendanceResponseSchema
 
 type UserAttendanceInput = {
   drivingStatus: DrivingStatus;
-  carFits: number | null;
+  nonDriverSeats: number | null;
   earliestLeaveTime: string | null;
   originLocationId: string;
   destinationLocationId?: string | null;
@@ -283,7 +283,7 @@ const attendanceResponseSchema = z.object({
     eventId: z.string(),
     userId: z.string(),
     drivingStatus: z.enum(drivingStatusEnumValues),
-    carFits: z.number().nullable(),
+    nonDriverSeats: z.number().int().min(0).max(5).nullable(),
     earliestLeaveTime: z.string().nullable(),
     originLocationId: z.string(),
     destinationLocationId: z.string().nullable(),

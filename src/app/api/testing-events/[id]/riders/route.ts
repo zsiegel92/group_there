@@ -102,7 +102,7 @@ export async function GET(request: NextRequest, props: Params) {
       userEmail: a.user.email,
       isTestUser: a.user.isTestUser,
       drivingStatus: a.drivingStatus,
-      carFits: a.carFits,
+      nonDriverSeats: a.nonDriverSeats,
       earliestLeaveTime: a.earliestLeaveTime?.toISOString() ?? null,
       originLocationId: a.originLocationId,
       originLocation: a.originLocation
@@ -141,7 +141,7 @@ const bulkUpdateSchema = z.object({
     z.object({
       userId: z.string(),
       drivingStatus: z.enum(drivingStatusEnumValues).optional(),
-      carFits: z.number().optional(),
+      nonDriverSeats: z.number().int().min(0).max(5).optional(),
       earliestLeaveTime: z.string().nullable().optional(),
     })
   ),
@@ -168,7 +168,8 @@ export async function PATCH(request: NextRequest, props: Params) {
     const setValues: Partial<typeof eventsToUsers.$inferInsert> = {};
     if (update.drivingStatus !== undefined)
       setValues.drivingStatus = update.drivingStatus;
-    if (update.carFits !== undefined) setValues.carFits = update.carFits;
+    if (update.nonDriverSeats !== undefined)
+      setValues.nonDriverSeats = update.nonDriverSeats;
     if (update.earliestLeaveTime !== undefined)
       setValues.earliestLeaveTime = update.earliestLeaveTime
         ? new Date(update.earliestLeaveTime)

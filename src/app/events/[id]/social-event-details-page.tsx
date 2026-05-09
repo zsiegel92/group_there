@@ -182,11 +182,12 @@ export function SocialEventDetailPage({ eventId }: { eventId: string }) {
                             ? "Must Drive"
                             : "Can Drive or Not Drive"}
                       </div>
-                      {currentUserAttendee.userAttendance.carFits &&
-                      currentUserAttendee.userAttendance.carFits > 0 ? (
+                      {currentUserAttendee.userAttendance.drivingStatus !==
+                      "cannot_drive" ? (
                         <div>
                           <span className="font-medium">Non-driver seats:</span>{" "}
-                          {currentUserAttendee.userAttendance.carFits}
+                          {currentUserAttendee.userAttendance.nonDriverSeats ??
+                            0}
                         </div>
                       ) : null}
                       {currentUserAttendee.userAttendance.earliestLeaveTime && (
@@ -355,7 +356,7 @@ function AdminAttendeeList({
     userImage: string | null;
     userAttendance: {
       drivingStatus: string;
-      carFits: number | null;
+      nonDriverSeats: number | null;
       earliestLeaveTime: string | null;
       originLocationId: string | null;
       originLocation: { name: string } | null;
@@ -391,11 +392,10 @@ function AdminAttendeeList({
                     ? "Must Drive"
                     : "Can Drive or Not Drive"}
               </div>
-              {attendee.userAttendance.carFits &&
-              attendee.userAttendance.carFits > 0 ? (
+              {attendee.userAttendance.drivingStatus !== "cannot_drive" ? (
                 <div>
                   <span className="font-medium">Non-driver seats:</span>{" "}
-                  {attendee.userAttendance.carFits}
+                  {attendee.userAttendance.nonDriverSeats ?? 0}
                 </div>
               ) : null}
               {attendee.userAttendance.earliestLeaveTime && (

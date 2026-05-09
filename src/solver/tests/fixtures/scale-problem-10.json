@@ -6,91 +6,101 @@
       "user_id": "test_5a7d4e6e-2bf9-45c6-9420-3e7cb4756ebd",
       "origin_id": "loc_6936273f-38aa-43e3-bbd8-9fa409ed3338",
       "event_id": "event_6c07b920-bda0-4795-b4f9-ffddbfbcaf43",
-      "car_fits": 3,
+      "non_driver_seats": 3,
       "must_drive": true,
       "seconds_before_event_start_can_leave": 0,
-      "distance_to_destination_seconds": 1808.7
+      "distance_to_destination_seconds": 1808.7,
+      "can_drive": true
     },
     {
       "user_id": "test_a9c0244d-7435-4e42-a211-fe184cbf62a3",
       "origin_id": "loc_e1695544-b8a3-4821-a636-5a8425816881",
       "event_id": "event_6c07b920-bda0-4795-b4f9-ffddbfbcaf43",
-      "car_fits": 2,
+      "non_driver_seats": 2,
       "must_drive": false,
       "seconds_before_event_start_can_leave": 0,
-      "distance_to_destination_seconds": 698.1
+      "distance_to_destination_seconds": 698.1,
+      "can_drive": true
     },
     {
       "user_id": "test_d143d3a1-254b-417c-8a5d-efea7a63c721",
       "origin_id": "loc_0ac66ccb-c98d-4301-8fd4-e0a1537fa9c8",
       "event_id": "event_6c07b920-bda0-4795-b4f9-ffddbfbcaf43",
-      "car_fits": 3,
+      "non_driver_seats": 3,
       "must_drive": false,
       "seconds_before_event_start_can_leave": 0,
-      "distance_to_destination_seconds": 1691.8
+      "distance_to_destination_seconds": 1691.8,
+      "can_drive": true
     },
     {
       "user_id": "test_f82c1c41-742f-4dbb-8f7f-fdde9b5cff88",
       "origin_id": "loc_9d4cf380-e991-4b1c-b3fc-d0dca2f15609",
       "event_id": "event_6c07b920-bda0-4795-b4f9-ffddbfbcaf43",
-      "car_fits": 3,
+      "non_driver_seats": 3,
       "must_drive": true,
       "seconds_before_event_start_can_leave": 0,
-      "distance_to_destination_seconds": 1991.6
+      "distance_to_destination_seconds": 1991.6,
+      "can_drive": true
     },
     {
       "user_id": "test_f8080352-3f08-4a9b-bba5-fdfe48d4efd6",
       "origin_id": "loc_bcb826a4-cde5-4b9b-a6c2-3d268f7f2966",
       "event_id": "event_6c07b920-bda0-4795-b4f9-ffddbfbcaf43",
-      "car_fits": 0,
+      "non_driver_seats": 0,
       "must_drive": false,
       "seconds_before_event_start_can_leave": 0,
-      "distance_to_destination_seconds": 896.9
+      "distance_to_destination_seconds": 896.9,
+      "can_drive": false
     },
     {
       "user_id": "test_dcf4b8c3-0a36-45a5-ae7d-c13c181ada0b",
       "origin_id": "loc_0c41bf54-9912-41dd-bfa8-f9798d827ef7",
       "event_id": "event_6c07b920-bda0-4795-b4f9-ffddbfbcaf43",
-      "car_fits": 2,
+      "non_driver_seats": 2,
       "must_drive": false,
       "seconds_before_event_start_can_leave": 0,
-      "distance_to_destination_seconds": 880.6
+      "distance_to_destination_seconds": 880.6,
+      "can_drive": true
     },
     {
       "user_id": "test_672efd0e-e367-463f-98f8-c740374c6f2b",
       "origin_id": "loc_1e544085-e5ec-4c14-bb8d-e97e25d6190c",
       "event_id": "event_6c07b920-bda0-4795-b4f9-ffddbfbcaf43",
-      "car_fits": 3,
+      "non_driver_seats": 3,
       "must_drive": false,
       "seconds_before_event_start_can_leave": 0,
-      "distance_to_destination_seconds": 840.1
+      "distance_to_destination_seconds": 840.1,
+      "can_drive": true
     },
     {
       "user_id": "test_379d92c4-bea5-448f-87cc-c96bbe337fce",
       "origin_id": "loc_4ef2250c-0310-456b-8047-007f2c3a371f",
       "event_id": "event_6c07b920-bda0-4795-b4f9-ffddbfbcaf43",
-      "car_fits": 2,
+      "non_driver_seats": 2,
       "must_drive": true,
       "seconds_before_event_start_can_leave": 0,
-      "distance_to_destination_seconds": 535.3
+      "distance_to_destination_seconds": 535.3,
+      "can_drive": true
     },
     {
       "user_id": "test_c116a10e-1a0f-40dc-afa5-79c8b0b010a9",
       "origin_id": "loc_4169ae66-ecb8-4814-afcd-b2876f1d9cd3",
       "event_id": "event_6c07b920-bda0-4795-b4f9-ffddbfbcaf43",
-      "car_fits": 1,
+      "non_driver_seats": 1,
       "must_drive": false,
       "seconds_before_event_start_can_leave": 0,
-      "distance_to_destination_seconds": 1250.4
+      "distance_to_destination_seconds": 1250.4,
+      "can_drive": true
     },
     {
       "user_id": "test_8f4fec42-d5d8-426d-8e97-5c5aa1599ca2",
       "origin_id": "loc_2ae3118b-a032-4847-a87d-3bd21f5b9642",
       "event_id": "event_6c07b920-bda0-4795-b4f9-ffddbfbcaf43",
-      "car_fits": 0,
+      "non_driver_seats": 0,
       "must_drive": false,
       "seconds_before_event_start_can_leave": 0,
-      "distance_to_destination_seconds": 1512.6
+      "distance_to_destination_seconds": 1512.6,
+      "can_drive": false
     }
   ],
   "tripper_distances": [
@@ -107,7 +117,7 @@
     {
       "origin_user_id": "test_5a7d4e6e-2bf9-45c6-9420-3e7cb4756ebd",
       "destination_user_id": "test_f82c1c41-742f-4dbb-8f7f-fdde9b5cff88",
-      "distance_seconds": 1237.0
+      "distance_seconds": 1237
     },
     {
       "origin_user_id": "test_5a7d4e6e-2bf9-45c6-9420-3e7cb4756ebd",
@@ -117,7 +127,7 @@
     {
       "origin_user_id": "test_5a7d4e6e-2bf9-45c6-9420-3e7cb4756ebd",
       "destination_user_id": "test_dcf4b8c3-0a36-45a5-ae7d-c13c181ada0b",
-      "distance_seconds": 973.0
+      "distance_seconds": 973
     },
     {
       "origin_user_id": "test_5a7d4e6e-2bf9-45c6-9420-3e7cb4756ebd",
@@ -137,7 +147,7 @@
     {
       "origin_user_id": "test_5a7d4e6e-2bf9-45c6-9420-3e7cb4756ebd",
       "destination_user_id": "test_8f4fec42-d5d8-426d-8e97-5c5aa1599ca2",
-      "distance_seconds": 200.0
+      "distance_seconds": 200
     },
     {
       "origin_user_id": "test_a9c0244d-7435-4e42-a211-fe184cbf62a3",
@@ -182,7 +192,7 @@
     {
       "origin_user_id": "test_a9c0244d-7435-4e42-a211-fe184cbf62a3",
       "destination_user_id": "test_8f4fec42-d5d8-426d-8e97-5c5aa1599ca2",
-      "distance_seconds": 672.0
+      "distance_seconds": 672
     },
     {
       "origin_user_id": "test_d143d3a1-254b-417c-8a5d-efea7a63c721",
@@ -272,7 +282,7 @@
     {
       "origin_user_id": "test_f82c1c41-742f-4dbb-8f7f-fdde9b5cff88",
       "destination_user_id": "test_8f4fec42-d5d8-426d-8e97-5c5aa1599ca2",
-      "distance_seconds": 1215.0
+      "distance_seconds": 1215
     },
     {
       "origin_user_id": "test_f8080352-3f08-4a9b-bba5-fdfe48d4efd6",
@@ -422,7 +432,7 @@
     {
       "origin_user_id": "test_379d92c4-bea5-448f-87cc-c96bbe337fce",
       "destination_user_id": "test_d143d3a1-254b-417c-8a5d-efea7a63c721",
-      "distance_seconds": 276.0
+      "distance_seconds": 276
     },
     {
       "origin_user_id": "test_379d92c4-bea5-448f-87cc-c96bbe337fce",
@@ -462,7 +472,7 @@
     {
       "origin_user_id": "test_c116a10e-1a0f-40dc-afa5-79c8b0b010a9",
       "destination_user_id": "test_a9c0244d-7435-4e42-a211-fe184cbf62a3",
-      "distance_seconds": 633.0
+      "distance_seconds": 633
     },
     {
       "origin_user_id": "test_c116a10e-1a0f-40dc-afa5-79c8b0b010a9",
@@ -477,7 +487,7 @@
     {
       "origin_user_id": "test_c116a10e-1a0f-40dc-afa5-79c8b0b010a9",
       "destination_user_id": "test_f8080352-3f08-4a9b-bba5-fdfe48d4efd6",
-      "distance_seconds": 446.0
+      "distance_seconds": 446
     },
     {
       "origin_user_id": "test_c116a10e-1a0f-40dc-afa5-79c8b0b010a9",

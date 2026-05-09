@@ -13,7 +13,8 @@ def test_calculate_party_drive_time_no_passengers():
         user_id="driver",
         origin_id="origin-driver",
         event_id="event-1",
-        car_fits=2,
+        can_drive=True,
+        non_driver_seats=2,
         must_drive=False,
         seconds_before_event_start_can_leave=600,
         distance_to_destination_seconds=300.0,
@@ -33,7 +34,8 @@ def test_calculate_party_drive_time_one_passenger():
         user_id="driver",
         origin_id="origin-driver",
         event_id="event-1",
-        car_fits=2,
+        can_drive=True,
+        non_driver_seats=2,
         must_drive=False,
         seconds_before_event_start_can_leave=600,
         distance_to_destination_seconds=300.0,
@@ -43,7 +45,8 @@ def test_calculate_party_drive_time_one_passenger():
         user_id="passenger",
         origin_id="origin-passenger",
         event_id="event-1",
-        car_fits=0,
+        can_drive=False,
+        non_driver_seats=0,
         must_drive=False,
         seconds_before_event_start_can_leave=600,
         distance_to_destination_seconds=300.0,
@@ -66,7 +69,8 @@ def test_calculate_party_drive_time_two_passengers():
         user_id="driver",
         origin_id="origin-driver",
         event_id="event-1",
-        car_fits=3,
+        can_drive=True,
+        non_driver_seats=3,
         must_drive=False,
         seconds_before_event_start_can_leave=600,
         distance_to_destination_seconds=300.0,
@@ -76,7 +80,8 @@ def test_calculate_party_drive_time_two_passengers():
         user_id="p1",
         origin_id="origin-p1",
         event_id="event-1",
-        car_fits=0,
+        can_drive=False,
+        non_driver_seats=0,
         must_drive=False,
         seconds_before_event_start_can_leave=600,
         distance_to_destination_seconds=300.0,
@@ -86,7 +91,8 @@ def test_calculate_party_drive_time_two_passengers():
         user_id="p2",
         origin_id="origin-p2",
         event_id="event-1",
-        car_fits=0,
+        can_drive=False,
+        non_driver_seats=0,
         must_drive=False,
         seconds_before_event_start_can_leave=600,
         distance_to_destination_seconds=300.0,
@@ -115,7 +121,8 @@ def test_generate_feasible_groups_no_drivers():
             user_id="user-1",
             origin_id="origin-1",
             event_id="event-1",
-            car_fits=0,
+            can_drive=False,
+            non_driver_seats=0,
             must_drive=False,
             seconds_before_event_start_can_leave=600,
             distance_to_destination_seconds=300.0,
@@ -127,6 +134,29 @@ def test_generate_feasible_groups_no_drivers():
     assert len(groups) == 0
 
 
+def test_generate_feasible_groups_zero_non_driver_seats_can_drive_solo():
+    """A driver with zero non-driver seats can still drive themself."""
+    trippers = [
+        Tripper(
+            user_id="driver",
+            origin_id="origin-driver",
+            event_id="event-1",
+            can_drive=True,
+            non_driver_seats=0,
+            must_drive=False,
+            seconds_before_event_start_can_leave=600,
+            distance_to_destination_seconds=300.0,
+        )
+    ]
+
+    groups = generate_feasible_groups(trippers, {})
+
+    assert len(groups) == 1
+    assert groups[0].driver_index == 0
+    assert groups[0].passenger_indices == []
+    assert groups[0].drive_time == 300.0
+
+
 def test_generate_feasible_groups_single_driver():
     """Test group generation with single driver alone."""
     trippers = [
@@ -134,7 +164,8 @@ def test_generate_feasible_groups_single_driver():
             user_id="user-1",
             origin_id="origin-1",
             event_id="event-1",
-            car_fits=2,
+            can_drive=True,
+            non_driver_seats=2,
             must_drive=False,
             seconds_before_event_start_can_leave=600,
             distance_to_destination_seconds=300.0,
@@ -157,7 +188,8 @@ def test_generate_feasible_groups_driver_and_rider():
             user_id="driver",
             origin_id="origin-driver",
             event_id="event-1",
-            car_fits=2,
+            can_drive=True,
+            non_driver_seats=2,
             must_drive=False,
             seconds_before_event_start_can_leave=600,
             distance_to_destination_seconds=300.0,
@@ -166,7 +198,8 @@ def test_generate_feasible_groups_driver_and_rider():
             user_id="rider",
             origin_id="origin-rider",
             event_id="event-1",
-            car_fits=0,
+            can_drive=False,
+            non_driver_seats=0,
             must_drive=False,
             seconds_before_event_start_can_leave=600,
             distance_to_destination_seconds=300.0,
@@ -198,7 +231,8 @@ def test_generate_feasible_groups_must_drive_constraint():
             user_id="must-driver",
             origin_id="origin-1",
             event_id="event-1",
-            car_fits=2,
+            can_drive=True,
+            non_driver_seats=2,
             must_drive=True,
             seconds_before_event_start_can_leave=600,
             distance_to_destination_seconds=300.0,
@@ -207,7 +241,8 @@ def test_generate_feasible_groups_must_drive_constraint():
             user_id="optional-driver",
             origin_id="origin-2",
             event_id="event-1",
-            car_fits=2,
+            can_drive=True,
+            non_driver_seats=2,
             must_drive=False,
             seconds_before_event_start_can_leave=600,
             distance_to_destination_seconds=300.0,
@@ -236,7 +271,8 @@ def test_generate_feasible_groups_capacity_constraint():
             user_id="small-car",
             origin_id="origin-1",
             event_id="event-1",
-            car_fits=1,
+            can_drive=True,
+            non_driver_seats=1,
             must_drive=False,
             seconds_before_event_start_can_leave=600,
             distance_to_destination_seconds=300.0,
@@ -245,7 +281,8 @@ def test_generate_feasible_groups_capacity_constraint():
             user_id="rider-1",
             origin_id="origin-2",
             event_id="event-1",
-            car_fits=0,
+            can_drive=False,
+            non_driver_seats=0,
             must_drive=False,
             seconds_before_event_start_can_leave=600,
             distance_to_destination_seconds=300.0,
@@ -254,7 +291,8 @@ def test_generate_feasible_groups_capacity_constraint():
             user_id="rider-2",
             origin_id="origin-3",
             event_id="event-1",
-            car_fits=0,
+            can_drive=False,
+            non_driver_seats=0,
             must_drive=False,
             seconds_before_event_start_can_leave=600,
             distance_to_destination_seconds=300.0,

@@ -14,7 +14,8 @@ comptime INTS_PER_SLOT = 3 + 2 * MAX_K
 
 struct NativeGroupGeneratorInputs:
     var n: Int
-    var car_fits: UnsafePointer[Int, MutExternalOrigin]
+    var can_drive_flags: UnsafePointer[Bool, MutExternalOrigin]
+    var non_driver_seats: UnsafePointer[Int, MutExternalOrigin]
     var must_drive_flags: UnsafePointer[Bool, MutExternalOrigin]
     var distance_to_dest: UnsafePointer[Float64, MutExternalOrigin]
     var dist_matrix: UnsafePointer[Float64, MutExternalOrigin]
@@ -22,19 +23,22 @@ struct NativeGroupGeneratorInputs:
     def __init__(
         out self,
         n: Int,
-        car_fits: UnsafePointer[Int, MutExternalOrigin],
+        can_drive_flags: UnsafePointer[Bool, MutExternalOrigin],
+        non_driver_seats: UnsafePointer[Int, MutExternalOrigin],
         must_drive_flags: UnsafePointer[Bool, MutExternalOrigin],
         distance_to_dest: UnsafePointer[Float64, MutExternalOrigin],
         dist_matrix: UnsafePointer[Float64, MutExternalOrigin],
     ):
         self.n = n
-        self.car_fits = car_fits
+        self.can_drive_flags = can_drive_flags
+        self.non_driver_seats = non_driver_seats
         self.must_drive_flags = must_drive_flags
         self.distance_to_dest = distance_to_dest
         self.dist_matrix = dist_matrix
 
     def __del__(deinit self):
-        self.car_fits.free()
+        self.can_drive_flags.free()
+        self.non_driver_seats.free()
         self.must_drive_flags.free()
         self.distance_to_dest.free()
         self.dist_matrix.free()
@@ -119,15 +123,16 @@ struct HeapPermutations:
 
 def generate_feasible_groups_native(
     n: Int,
-    car_fits: UnsafePointer[Int, MutAnyOrigin],
+    can_drive_flags: UnsafePointer[Bool, MutAnyOrigin],
+    non_driver_seats: UnsafePointer[Int, MutAnyOrigin],
     must_drive_flags: UnsafePointer[Bool, MutAnyOrigin],
     distance_to_dest: UnsafePointer[Float64, MutAnyOrigin],
     dist_matrix: UnsafePointer[Float64, MutAnyOrigin],
 ) -> NativeGeneratedGroups:
     var max_capacity = 0
     for i in range(n):
-        if car_fits[i] > max_capacity:
-            max_capacity = car_fits[i]
+        if can_drive_flags[i] and non_driver_seats[i] > max_capacity:
+            max_capacity = non_driver_seats[i]
     var max_group_size = max_capacity + 1
 
     var num_sizes = min(n, max_group_size)
@@ -167,7 +172,8 @@ def generate_feasible_groups_native(
             group,
             k,
             n,
-            car_fits,
+            can_drive_flags,
+            non_driver_seats,
             must_drive_flags,
             distance_to_dest,
             dist_matrix,
@@ -189,7 +195,8 @@ def _check_group_into_slot(
     group: UnsafePointer[Int, MutAnyOrigin],
     k: Int,
     n: Int,
-    car_fits: UnsafePointer[Int, MutAnyOrigin],
+    can_drive_flags: UnsafePointer[Bool, MutAnyOrigin],
+    non_driver_seats: UnsafePointer[Int, MutAnyOrigin],
     must_drive_flags: UnsafePointer[Bool, MutAnyOrigin],
     distance_to_dest: UnsafePointer[Float64, MutAnyOrigin],
     dist_matrix: UnsafePointer[Float64, MutAnyOrigin],
@@ -211,7 +218,7 @@ def _check_group_into_slot(
     var group_drivers = alloc[Int](k)
     for gi in range(k):
         var idx = group[gi]
-        if car_fits[idx] > 0:
+        if can_drive_flags[idx]:
             group_drivers[num_group_drivers] = idx
             num_group_drivers += 1
 
@@ -247,13 +254,13 @@ def _check_group_into_slot(
                 passengers[num_passengers] = idx
                 num_passengers += 1
 
-        if num_passengers > car_fits[driver_idx]:
+        if num_passengers > non_driver_seats[driver_idx]:
             continue
 
         var can_all_ride = True
         for pi in range(num_passengers):
             var p = passengers[pi]
-            if car_fits[p] > 0 and must_drive_flags[p]:
+            if must_drive_flags[p]:
                 can_all_ride = False
                 break
         if not can_all_ride:

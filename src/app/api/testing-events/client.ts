@@ -22,7 +22,7 @@ const riderSchema = z.object({
   userEmail: z.string(),
   isTestUser: z.boolean(),
   drivingStatus: z.enum(drivingStatusEnumValues),
-  carFits: z.number(),
+  nonDriverSeats: z.number().int().min(0).max(5),
   earliestLeaveTime: z.string().nullable(),
   originLocationId: z.string().nullable(),
   originLocation: riderLocationSchema,
@@ -36,7 +36,7 @@ export type TestRider = z.infer<typeof riderSchema>;
 
 export type RiderFieldUpdate = {
   drivingStatus?: DrivingStatus;
-  carFits?: number;
+  nonDriverSeats?: number;
   earliestLeaveTime?: string | null;
 };
 
@@ -100,7 +100,7 @@ async function updateRiders(
   updates: {
     userId: string;
     drivingStatus?: DrivingStatus;
-    carFits?: number;
+    nonDriverSeats?: number;
     earliestLeaveTime?: string | null;
   }[]
 ) {
@@ -174,7 +174,7 @@ export function useUpdateRiders() {
       updates: {
         userId: string;
         drivingStatus?: DrivingStatus;
-        carFits?: number;
+        nonDriverSeats?: number;
         earliestLeaveTime?: string | null;
       }[];
     }) => updateRiders(eventId, updates),

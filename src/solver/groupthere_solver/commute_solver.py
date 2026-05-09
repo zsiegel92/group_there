@@ -97,7 +97,7 @@ def _generate_commute_groups(
     enum = SubsetEnumerator()
     feasible_groups: list[FeasibleGroup] = []
 
-    driver_indices = [i for i, tripper in enumerate(trippers) if tripper.car_fits > 0]
+    driver_indices = [i for i, tripper in enumerate(trippers) if tripper.can_drive]
     driver_index_set = set(driver_indices)
     must_drive_index_set = {
         i for i, tripper in enumerate(trippers) if tripper.must_drive
@@ -107,7 +107,8 @@ def _generate_commute_groups(
     if not driver_indices:
         return []
 
-    max_group_size = max(trippers[i].car_fits for i in driver_indices) + 1
+    # Total group size is non-driver seat capacity plus the driver.
+    max_group_size = max(trippers[i].non_driver_seats for i in driver_indices) + 1
 
     for group_size in range(1, min(n, max_group_size) + 1):
         for group_indices in enum.iter_subsets(n, group_size):
@@ -130,8 +131,9 @@ def _generate_commute_groups(
             for driver_idx in group_drivers:
                 driver = trippers[driver_idx]
                 passenger_indices = [i for i in group_indices if i != driver_idx]
+                non_driver_seats = driver.non_driver_seats
 
-                if len(passenger_indices) > driver.car_fits:
+                if len(passenger_indices) > non_driver_seats:
                     continue
 
                 if any(trippers[i].must_drive for i in passenger_indices):

@@ -70,7 +70,7 @@ function randomDrivingStatus(): DrivingStatus {
   return "can_drive_or_not";
 }
 
-function randomCarFits(status: DrivingStatus) {
+function randomNonDriverSeats(status: DrivingStatus) {
   if (status === "cannot_drive") return 0;
   return Math.floor(Math.random() * 4) + 2; // 2-5 non-driver seats
 }
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest, props: Params) {
 
     // Create eventsToUsers with random attendance
     const drivingStatus = randomDrivingStatus();
-    const carFits = randomCarFits(drivingStatus);
+    const nonDriverSeats = randomNonDriverSeats(drivingStatus);
     const earliestLeaveTime = randomEarliestLeaveTime(
       event.time,
       drivingStatus
@@ -241,7 +241,7 @@ export async function POST(request: NextRequest, props: Params) {
       eventId,
       userId: testUserId,
       drivingStatus,
-      carFits,
+      nonDriverSeats,
       earliestLeaveTime,
       originLocationId: locationId,
       destinationLocationId,

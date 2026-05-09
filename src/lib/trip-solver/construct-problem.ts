@@ -99,17 +99,19 @@ export async function constructTripProblem(eventId: string): Promise<Problem> {
           0)
         : 0;
 
+    const canDrive = drivingStatusEnumValuesForDrivers.includes(
+      eventToUser.drivingStatus
+    );
+    const nonDriverSeats = canDrive ? eventToUser.nonDriverSeats : 0;
+
     return {
       user_id: eventToUser.user.id,
       origin_id: eventToUser.originLocationId ?? eventToUser.user.id,
       event_id: event.id,
       destination_id: destinationLocationId ?? null,
       required_arrival_time: requiredArrivalTime.toISOString(),
-      car_fits: drivingStatusEnumValuesForDrivers.includes(
-        eventToUser.drivingStatus
-      )
-        ? eventToUser.carFits
-        : 0,
+      can_drive: canDrive,
+      non_driver_seats: nonDriverSeats,
       seconds_before_event_start_can_leave: eventToUser.earliestLeaveTime
         ? secondsBetween(event.time, eventToUser.earliestLeaveTime)
         : 0,
@@ -164,7 +166,7 @@ export async function constructTripProblem(eventId: string): Promise<Problem> {
           .map((eventToUser) => ({
             id: `rideshare-${event.id}-${eventToUser.userId}`,
             origin_id: eventToUser.originLocationId ?? eventToUser.userId,
-            car_fits: event.externalRideshareSeats,
+            non_driver_seats: event.externalRideshareSeats,
             cost_multiplier: event.externalRideshareCostMultiplier,
             fixed_cost_seconds: event.externalRideshareFixedCostSeconds,
           }));

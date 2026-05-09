@@ -20,7 +20,7 @@ type Params = {
 const attendanceSchema = z
   .object({
     drivingStatus: z.enum(["cannot_drive", "must_drive", "can_drive_or_not"]),
-    carFits: z.number().int().min(0).nullable(),
+    nonDriverSeats: z.number().int().min(0).max(5).nullable(),
     earliestLeaveTime: z.string().nullable(),
     originLocationId: z.string().min(1),
     destinationLocationId: z.string().min(1).nullable().optional(),
@@ -29,35 +29,31 @@ const attendanceSchema = z
   })
   .refine(
     (data) => {
-      // If driving, must provide carFits and earliest leave time
+      // A driver may have zero non-driver seats.
       if (
         data.drivingStatus === "must_drive" ||
         data.drivingStatus === "can_drive_or_not"
       ) {
-        return (
-          data.carFits !== null &&
-          data.carFits > 0 &&
-          data.earliestLeaveTime !== null
-        );
+        return data.nonDriverSeats !== null && data.earliestLeaveTime !== null;
       }
       return true;
     },
     {
       message:
-        "carFits and earliestLeaveTime are required when driving status is 'must_drive' or 'can_drive_or_not'",
+        "non-driver seat count and earliestLeaveTime are required when driving status is 'must_drive' or 'can_drive_or_not'",
     }
   )
   .refine(
     (data) => {
-      // If cannot drive, carFits should be 0 and earliestLeaveTime should be null
+      // Non-drivers offer zero non-driver seats and have no driver leave time.
       if (data.drivingStatus === "cannot_drive") {
-        return data.carFits === 0 && data.earliestLeaveTime === null;
+        return data.nonDriverSeats === 0 && data.earliestLeaveTime === null;
       }
       return true;
     },
     {
       message:
-        "carFits should be 0 and earliestLeaveTime should be null when driving status is 'cannot_drive'",
+        "non-driver seat count should be 0 and earliestLeaveTime should be null when driving status is 'cannot_drive'",
     }
   );
 
@@ -138,7 +134,7 @@ export async function POST(request: NextRequest, props: Params) {
 
   const {
     drivingStatus,
-    carFits,
+    nonDriverSeats,
     earliestLeaveTime,
     originLocationId,
     destinationLocationId,
@@ -203,15 +199,15 @@ export async function POST(request: NextRequest, props: Params) {
     }
   }
 
-  // After validation, carFits is always a number (0 for cannot_drive, >0 for others)
-  const carFitsValue = carFits ?? 0;
+  // After validation, this is always a non-driver seat count.
+  const nonDriverSeatsValue = nonDriverSeats ?? 0;
 
   // Create attendance record
   await db.insert(eventsToUsers).values({
     eventId,
     userId: user.id,
     drivingStatus,
-    carFits: carFitsValue,
+    nonDriverSeats: nonDriverSeatsValue,
     earliestLeaveTime: earliestLeaveTime ? new Date(earliestLeaveTime) : null,
     originLocationId,
     destinationLocationId: normalizedDestinationLocationId,
@@ -230,7 +226,7 @@ export async function POST(request: NextRequest, props: Params) {
       eventId,
       userId: user.id,
       drivingStatus,
-      carFits,
+      nonDriverSeats: nonDriverSeatsValue,
       earliestLeaveTime: earliestLeaveTime ?? null,
       originLocationId,
       destinationLocationId: normalizedDestinationLocationId,
@@ -293,7 +289,7 @@ export async function PATCH(request: NextRequest, props: Params) {
 
   const {
     drivingStatus,
-    carFits,
+    nonDriverSeats,
     earliestLeaveTime,
     originLocationId,
     destinationLocationId,
@@ -358,15 +354,15 @@ export async function PATCH(request: NextRequest, props: Params) {
     }
   }
 
-  // After validation, carFits is always a number (0 for cannot_drive, >0 for others)
-  const carFitsValue = carFits ?? 0;
+  // After validation, this is always a non-driver seat count.
+  const nonDriverSeatsValue = nonDriverSeats ?? 0;
 
   // Update attendance record
   await db
     .update(eventsToUsers)
     .set({
       drivingStatus,
-      carFits: carFitsValue,
+      nonDriverSeats: nonDriverSeatsValue,
       earliestLeaveTime: earliestLeaveTime ? new Date(earliestLeaveTime) : null,
       originLocationId,
       destinationLocationId: normalizedDestinationLocationId,
@@ -388,7 +384,7 @@ export async function PATCH(request: NextRequest, props: Params) {
       eventId,
       userId: user.id,
       drivingStatus,
-      carFits,
+      nonDriverSeats: nonDriverSeatsValue,
       earliestLeaveTime: earliestLeaveTime || null,
       originLocationId,
       destinationLocationId: normalizedDestinationLocationId,

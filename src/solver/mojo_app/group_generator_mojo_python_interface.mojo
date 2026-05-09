@@ -37,7 +37,8 @@ def PyInit_group_generator_mojo_python_interface() -> PythonObject:
 
 def generate_feasible_groups_mojo(
     py_n: PythonObject,  # Int
-    py_car_fits: PythonObject,  # Python sequence[Int]
+    py_can_drive: PythonObject,  # Python sequence[Bool]
+    py_non_driver_seats: PythonObject,  # Python sequence[Int]
     py_must_drive: PythonObject,  # Python sequence[Bool]
     py_distance_to_dest: PythonObject,  # Python sequence[Float64]
     py_dist_matrix: PythonObject,  # Python sequence[Float64]
@@ -47,7 +48,8 @@ def generate_feasible_groups_mojo(
 
     Expected Python inputs:
     - py_n: int
-    - py_car_fits: list[int] with length n
+    - py_can_drive: list[bool] with length n
+    - py_non_driver_seats: list[int] with length n
     - py_must_drive: list[bool] with length n
     - py_distance_to_dest: list[float] with length n
     - py_dist_matrix: flat list[float] with length n * n in row-major order
@@ -59,7 +61,8 @@ def generate_feasible_groups_mojo(
     print("Constructing groups in Mojo.")
     var native_inputs = _unpack_python_inputs(
         py_n,
-        py_car_fits,
+        py_can_drive,
+        py_non_driver_seats,
         py_must_drive,
         py_distance_to_dest,
         py_dist_matrix,
@@ -70,19 +73,22 @@ def generate_feasible_groups_mojo(
 
 def _unpack_python_inputs(
     py_n: PythonObject,
-    py_car_fits: PythonObject,
+    py_can_drive: PythonObject,
+    py_non_driver_seats: PythonObject,
     py_must_drive: PythonObject,
     py_distance_to_dest: PythonObject,
     py_dist_matrix: PythonObject,
 ) raises -> NativeGroupGeneratorInputs:
     var n = Int(py=py_n)
-    var car_fits = alloc[Int](n)
+    var can_drive_flags = alloc[Bool](n)
+    var non_driver_seats = alloc[Int](n)
     var must_drive_flags = alloc[Bool](n)
     var distance_to_dest = alloc[Float64](n)
     var dist_matrix = alloc[Float64](n * n)
 
     for i in range(n):
-        car_fits[i] = Int(py=py_car_fits[i])
+        can_drive_flags[i] = Bool(py=py_can_drive[i])
+        non_driver_seats[i] = Int(py=py_non_driver_seats[i])
         must_drive_flags[i] = Bool(py=py_must_drive[i])
         distance_to_dest[i] = Float64(py=py_distance_to_dest[i])
 
@@ -90,7 +96,12 @@ def _unpack_python_inputs(
         dist_matrix[i] = Float64(py=py_dist_matrix[i])
 
     return NativeGroupGeneratorInputs(
-        n, car_fits, must_drive_flags, distance_to_dest, dist_matrix
+        n,
+        can_drive_flags,
+        non_driver_seats,
+        must_drive_flags,
+        distance_to_dest,
+        dist_matrix,
     )
 
 
@@ -99,7 +110,8 @@ def _generate_feasible_groups_native(
 ) -> NativeGeneratedGroups:
     return generate_feasible_groups_native(
         inputs.n,
-        inputs.car_fits,
+        inputs.can_drive_flags,
+        inputs.non_driver_seats,
         inputs.must_drive_flags,
         inputs.distance_to_dest,
         inputs.dist_matrix,

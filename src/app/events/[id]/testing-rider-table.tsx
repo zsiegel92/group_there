@@ -186,7 +186,9 @@ function RiderRow({
                 : () => {
                     onUpdate(rider.userId, {
                       drivingStatus: status,
-                      ...(status === "cannot_drive" ? { carFits: 0 } : {}),
+                      ...(status === "cannot_drive"
+                        ? { nonDriverSeats: 0 }
+                        : {}),
                     });
                   }
             }
@@ -211,7 +213,7 @@ function RiderRow({
             <button
               onClick={() =>
                 onUpdate(rider.userId, {
-                  carFits: Math.max(1, rider.carFits - 1),
+                  nonDriverSeats: Math.max(0, rider.nonDriverSeats - 1),
                 })
               }
               className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-xs cursor-pointer"
@@ -219,11 +221,15 @@ function RiderRow({
               -
             </button>
           )}
-          <span className="text-xs w-5 text-center">{rider.carFits}</span>
+          <span className="text-xs w-5 text-center">
+            {rider.nonDriverSeats}
+          </span>
           {!locked && (
             <button
               onClick={() =>
-                onUpdate(rider.userId, { carFits: rider.carFits + 1 })
+                onUpdate(rider.userId, {
+                  nonDriverSeats: Math.min(5, rider.nonDriverSeats + 1),
+                })
               }
               className="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-xs cursor-pointer"
             >

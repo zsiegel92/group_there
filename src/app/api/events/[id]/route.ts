@@ -153,7 +153,7 @@ export async function GET(request: NextRequest, props: Params) {
               eventId: seriesEvent.id,
               eventTime: seriesEvent.time.toISOString(),
               drivingStatus: attendance.drivingStatus,
-              carFits: attendance.carFits,
+              nonDriverSeats: attendance.nonDriverSeats,
               earliestLeaveTime: attendance.earliestLeaveTime
                 ? attendance.earliestLeaveTime.toISOString()
                 : null,
@@ -363,7 +363,7 @@ export async function GET(request: NextRequest, props: Params) {
         userImage: att.user.image,
         userAttendance: {
           drivingStatus: att.drivingStatus,
-          carFits: att.carFits,
+          nonDriverSeats: att.nonDriverSeats,
           earliestLeaveTime: att.earliestLeaveTime
             ? att.earliestLeaveTime.toISOString()
             : null,
@@ -415,7 +415,7 @@ export async function GET(request: NextRequest, props: Params) {
       userAttendance: userAttendance
         ? {
             drivingStatus: userAttendance.drivingStatus,
-            carFits: userAttendance.carFits,
+            nonDriverSeats: userAttendance.nonDriverSeats,
             earliestLeaveTime: userAttendance.earliestLeaveTime
               ? userAttendance.earliestLeaveTime.toISOString()
               : null,
