@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import type { Solution } from "@/python-client";
 
-import { solveProblem } from "./solve-action";
+import { solveProblemWithProgress } from "./solve-client";
 
 interface SolveProblemProps {
   eventId: string;
@@ -20,8 +20,13 @@ export function SolveProblem({ eventId }: SolveProblemProps) {
     setIsSolving(true);
     setSolution(null);
     try {
-      const result = await solveProblem(eventId);
-      setSolution(result.solution);
+      await solveProblemWithProgress({
+        eventId,
+        includeHeuristic: true,
+        onResult: (result) => {
+          setSolution(result.solution);
+        },
+      });
     } catch (error) {
       console.error("Failed to solve problem:", error);
       dialog.alert(

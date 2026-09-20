@@ -1,7 +1,8 @@
 import modal
+from fastapi import HTTPException
 from groupthere_solver.fastapi_utils import webapp
 from groupthere_solver.models import Problem, ProblemReceivedResponse, Solution
-from groupthere_solver.solve import solve_problem
+from groupthere_solver.solve import solve_problem, solve_problem_heuristic
 from groupthere_solver.milp import MilpSolver
 
 # Single image with everything: GLPK, CBC, Mojo, and cuOpt.
@@ -64,6 +65,14 @@ async def solve(problem: Problem) -> Solution:
     return solve_problem(problem)
 
 
+@webapp.post("/solve/heuristic")
+async def solve_heuristic(problem: Problem) -> Solution:
+    try:
+        return solve_problem_heuristic(problem)
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
+
+
 @webapp.post("/solve-async")
 async def solve_async(problem: Problem) -> ProblemReceivedResponse:
     # TODO: spawn solution
@@ -105,6 +114,15 @@ def solve_problem_remote(
     return solve_problem(
         problem, use_mojo=use_mojo, milp_solver=milp_solver, mip_gap=mip_gap
     )
+
+
+@app.function(
+    cpu=4,
+    memory=8_000,
+    timeout=1800,
+)
+def solve_problem_heuristic_remote(problem: Problem) -> Solution:
+    return solve_problem_heuristic(problem)
 
 
 @app.function(

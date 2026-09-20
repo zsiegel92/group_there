@@ -26,3 +26,16 @@ def solve_problem(
         milp_solver=milp_solver,
         mip_gap=mip_gap,
     )
+
+
+def solve_problem_heuristic(problem: Problem) -> Solution:
+    if problem.kind == "commute":
+        raise NotImplementedError(
+            "Heuristic solve is only available for shared-destination events."
+        )
+
+    from groupthere_solver.mojo_group_generator import (
+        solve_shared_destination_heuristic_mojo,
+    )
+
+    return solve_shared_destination_heuristic_mojo(problem)

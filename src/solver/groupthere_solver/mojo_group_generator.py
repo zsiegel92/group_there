@@ -13,7 +13,8 @@ from typing import Protocol, TypeAlias, cast
 
 from pydantic import RootModel
 from groupthere_solver.group_generator import FeasibleGroup
-from groupthere_solver.models import Tripper
+from groupthere_solver.models import Problem, Solution, Tripper
+from groupthere_solver.solution_builder import build_parties
 
 # Search paths for the compiled Mojo shared library:
 # - Local dev: mojo_app/ relative to this file's parent (src/solver/)
@@ -42,8 +43,28 @@ class RawGroupsResponse(RootModel[list[RawGroup]]):
     pass
 
 
+RawHeuristicResponse: TypeAlias = tuple[
+    bool,  # feasible
+    list[RawGroup],  # selected groups
+]
+
+
+class RawHeuristicResponseModel(RootModel[RawHeuristicResponse]):
+    pass
+
+
 class MojoGroupGeneratorModule(Protocol):
     def generate_feasible_groups_mojo(
+        self,
+        n: int,
+        can_drive: list[bool],
+        non_driver_seats: list[int],
+        must_drive: list[bool],
+        distance_to_dest: list[float],
+        dist_matrix: list[float],
+    ) -> object: ...
+
+    def solve_shared_destination_heuristic_mojo(
         self,
         n: int,
         can_drive: list[bool],
@@ -107,7 +128,137 @@ def generate_feasible_groups_mojo(
             "Failed to import compiled Mojo module"
         ) from _MOJO_IMPORT_ERROR
 
-    # Pack data into flat lists for the Mojo interface
+    (
+        can_drive,
+        non_driver_seats,
+        must_drive,
+        distance_to_dest,
+        dist_matrix,
+    ) = _pack_mojo_inputs(
+        trippers,
+        distance_lookup,
+        external_rideshare_cost_multiplier,
+        external_rideshare_seats,
+        external_rideshare_fixed_cost_seconds,
+    )
+
+    # Call Mojo
+    raw_groups = _MOJO_MODULE.generate_feasible_groups_mojo(
+        n,
+        can_drive,
+        non_driver_seats,
+        must_drive,
+        distance_to_dest,
+        dist_matrix,
+    )
+    validated_groups = RawGroupsResponse.model_validate(raw_groups)
+
+    return _raw_groups_to_feasible_groups(validated_groups.root)
+
+
+def solve_shared_destination_heuristic_mojo(problem: Problem) -> Solution:
+    """Solve a shared-destination problem with the Mojo greedy heuristic."""
+    if problem.kind != "shared_destination":
+        raise ValueError("The Mojo heuristic only supports shared-destination problems")
+
+    if not problem.trippers:
+        return Solution(
+            id=f"heuristic-solution-{problem.id}",
+            kind=problem.kind,
+            successfully_completed=True,
+            feasible=True,
+            optimal=True,
+            parties=[],
+            total_drive_seconds=0,
+            status_message="Solved by Mojo heuristic.",
+        )
+
+    if _MOJO_MODULE is None:
+        raise RuntimeError(
+            "Failed to import compiled Mojo module"
+        ) from _MOJO_IMPORT_ERROR
+
+    distance_lookup: dict[tuple[str, str], float] = {}
+    for dist in problem.tripper_distances:
+        distance_lookup[(dist.origin_user_id, dist.destination_user_id)] = (
+            dist.distance_seconds
+        )
+
+    rideshare_cost_multiplier = (
+        problem.external_rideshare_cost_multiplier
+        if problem.external_rideshare_mode != "disabled"
+        else None
+    )
+
+    (
+        can_drive,
+        non_driver_seats,
+        must_drive,
+        distance_to_dest,
+        dist_matrix,
+    ) = _pack_mojo_inputs(
+        problem.trippers,
+        distance_lookup,
+        rideshare_cost_multiplier,
+        problem.external_rideshare_seats,
+        problem.external_rideshare_fixed_cost_seconds,
+    )
+
+    raw_response = _MOJO_MODULE.solve_shared_destination_heuristic_mojo(
+        len(problem.trippers),
+        can_drive,
+        non_driver_seats,
+        must_drive,
+        distance_to_dest,
+        dist_matrix,
+    )
+    feasible, raw_groups = RawHeuristicResponseModel.model_validate(raw_response).root
+
+    if not feasible:
+        return Solution(
+            id=f"heuristic-solution-{problem.id}",
+            kind=problem.kind,
+            successfully_completed=True,
+            feasible=False,
+            optimal=False,
+            parties=[],
+            total_drive_seconds=0,
+            status_message="Mojo heuristic could not build a feasible solution.",
+        )
+
+    selected_groups = _raw_groups_to_feasible_groups(raw_groups)
+    parties = build_parties(problem.trippers, selected_groups)
+    external_rideshare_groups = [
+        group for group in selected_groups if group.vehicle_kind == "external_rideshare"
+    ]
+
+    return Solution(
+        id=f"heuristic-solution-{problem.id}",
+        kind=problem.kind,
+        successfully_completed=True,
+        feasible=True,
+        optimal=False,
+        parties=parties,
+        total_drive_seconds=sum(group.drive_time for group in selected_groups),
+        external_rideshare_vehicle_count=len(external_rideshare_groups),
+        total_external_rideshare_seconds=sum(
+            group.drive_time for group in external_rideshare_groups
+        ),
+        total_external_rideshare_cost_seconds=sum(
+            group.assignment_cost_seconds for group in external_rideshare_groups
+        ),
+        status_message="Solved by Mojo heuristic.",
+    )
+
+
+def _pack_mojo_inputs(
+    trippers: list[Tripper],
+    distance_lookup: dict[tuple[str, str], float],
+    external_rideshare_cost_multiplier: float | None,
+    external_rideshare_seats: int,
+    external_rideshare_fixed_cost_seconds: float,
+) -> tuple[list[bool], list[int], list[bool], list[float], list[float]]:
+    n = len(trippers)
     can_drive = [t.can_drive for t in trippers]
     non_driver_seats = [t.non_driver_seats for t in trippers]
     must_drive = [t.must_drive for t in trippers]
@@ -121,8 +272,7 @@ def generate_feasible_groups_mojo(
         external_rideshare_fixed_cost_seconds,
     ]
 
-    # Build n*n flat distance matrix (row-major: dist_matrix[i*n + j] = distance from i to j)
-    # Use user_id ordering matching the trippers list
+    # Row-major matrix: dist_matrix[i*n + j] is the drive from tripper i to j.
     dist_matrix = [0.0] * (n * n)
     for i, t1 in enumerate(trippers):
         for j, t2 in enumerate(trippers):
@@ -131,18 +281,10 @@ def generate_feasible_groups_mojo(
                     (t1.user_id, t2.user_id), 0.0
                 )
 
-    # Call Mojo
-    raw_groups = _MOJO_MODULE.generate_feasible_groups_mojo(
-        n,
-        can_drive,
-        non_driver_seats,
-        must_drive,
-        distance_to_dest,
-        dist_matrix,
-    )
-    validated_groups = RawGroupsResponse.model_validate(raw_groups)
+    return can_drive, non_driver_seats, must_drive, distance_to_dest, dist_matrix
 
-    # Convert back to FeasibleGroup objects
+
+def _raw_groups_to_feasible_groups(raw_groups: list[RawGroup]) -> list[FeasibleGroup]:
     feasible_groups: list[FeasibleGroup] = []
     for (
         tripper_indices,
@@ -152,7 +294,7 @@ def generate_feasible_groups_mojo(
         is_external_rideshare,
         assignment_cost_seconds,
         cost_multiplier,
-    ) in validated_groups.root:
+    ) in raw_groups:
         feasible_groups.append(
             FeasibleGroup(
                 tripper_indices=tripper_indices,

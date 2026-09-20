@@ -5,7 +5,10 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/db";
 import { events, eventsToUsers, solutions } from "@/db/schema";
 import { buildEstimateMembers, computePartyEstimates } from "@/lib/itinerary";
-import { solveSolvePost } from "@/lib/python-client";
+import {
+  solveHeuristicSolveHeuristicPost,
+  solveSolvePost,
+} from "@/lib/python-client";
 import { constructTripProblem } from "@/lib/trip-solver/construct-problem";
 import type { Problem, Solution } from "@/python-client";
 
@@ -15,11 +18,23 @@ export type PartyEstimate = {
   estimatedEventArrival: string | null;
 };
 
-export async function solveProblem(eventId: string) {
+export type SolveMode = "exact" | "heuristic";
+
+export type SolveProblemResult = {
+  problem: Problem;
+  solution: Solution;
+  partyEstimates: PartyEstimate[];
+};
+
+export async function solveProblem(
+  eventId: string,
+  mode: SolveMode = "exact"
+): Promise<SolveProblemResult> {
   const problem = await constructTripProblem(eventId);
-  const response = await solveSolvePost({
-    body: problem,
-  });
+  const response =
+    mode === "heuristic"
+      ? await solveHeuristicSolveHeuristicPost({ body: problem })
+      : await solveSolvePost({ body: problem });
 
   if (response.error) {
     throw new Error(
@@ -28,7 +43,15 @@ export async function solveProblem(eventId: string) {
   }
 
   const solution = response.data;
+  const partyEstimates = await buildPartyEstimates(eventId, solution);
 
+  return { problem, solution, partyEstimates };
+}
+
+async function buildPartyEstimates(
+  eventId: string,
+  solution: Solution
+): Promise<PartyEstimate[]> {
   // Compute itinerary estimates for each party
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
@@ -38,7 +61,7 @@ export async function solveProblem(eventId: string) {
   });
 
   if (!event || !solution.feasible) {
-    return { problem, solution, partyEstimates: [] satisfies PartyEstimate[] };
+    return [] satisfies PartyEstimate[];
   }
 
   const attendeeLookup = new Map(
@@ -90,7 +113,7 @@ export async function solveProblem(eventId: string) {
     })
   );
 
-  return { problem, solution, partyEstimates };
+  return partyEstimates;
 }
 
 /**

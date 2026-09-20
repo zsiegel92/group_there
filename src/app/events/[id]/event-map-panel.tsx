@@ -20,7 +20,8 @@ import {
   useUnlockEvent,
   type EventDetail,
 } from "../../api/events/client";
-import { solveProblem, type PartyEstimate } from "./solve-action";
+import type { PartyEstimate } from "./solve-action";
+import { solveProblemWithProgress } from "./solve-client";
 
 type EventForPanel = {
   kind: EventKind;
@@ -360,17 +361,22 @@ export function EventMapPanel({
     setRoutes([]);
     onSolveStart?.();
     try {
-      const result = await solveProblem(eventId);
-      setEphemeralData({
-        solution: result.solution,
-        partyEstimates: result.partyEstimates,
+      await solveProblemWithProgress({
+        eventId,
+        includeHeuristic: event.kind === "shared_destination",
+        onResult: (result) => {
+          setEphemeralData({
+            solution: result.solution,
+            partyEstimates: result.partyEstimates,
+          });
+          if (result.solution.feasible) {
+            onSolutionGenerated?.({
+              problem: result.problem,
+              solution: result.solution,
+            });
+          }
+        },
       });
-      if (result.solution.feasible) {
-        onSolutionGenerated?.({
-          problem: result.problem,
-          solution: result.solution,
-        });
-      }
     } catch (error) {
       console.error("Failed to solve problem:", error);
       dialog.alert(
