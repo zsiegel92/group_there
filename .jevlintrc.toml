@@ -1,0 +1,58 @@
+include = ["*.py", "*.pyi", "*.ts", "*.tsx", "**/*.py", "**/*.pyi", "**/*.ts", "**/*.tsx"]
+exclude = [
+  ".next/**",
+  ".venv/**",
+  "node_modules/**",
+  "out/**",
+  "build/**",
+  "dist/**",
+  ".jevlint/**",
+  "src/python-client/**",
+  "next-env.d.ts",
+  "**/*.d.ts",
+]
+rules_dir = ".jevlint-rules"
+system_prompt = ".jevlint-system.md"
+cache_dir = ".jevlint"
+model = "jev-latest"
+concurrency = 5
+request_timeout_seconds = 30
+typesafe_api_key_file = "~/.config/jevlint/typesafe-api-key"
+
+[[overrides]]
+files = ["*.py", "*.pyi", "**/*.py", "**/*.pyi"]
+rules = [
+  "python-no-blocking-io-in-async",
+  "python-no-silent-exception-fallback",
+  "python-validate-boundary-data",
+]
+
+[[overrides]]
+files = ["*.ts", "*.tsx", "**/*.ts", "**/*.tsx"]
+rules = [
+  "typescript-no-client-server-boundary-leaks",
+  "typescript-no-floating-side-effects",
+  "typescript-validate-boundary-data",
+]
+
+[rule_severity]
+python-no-blocking-io-in-async = "error"
+python-no-silent-exception-fallback = "warning"
+python-validate-boundary-data = "error"
+typescript-no-client-server-boundary-leaks = "error"
+typescript-no-floating-side-effects = "warning"
+typescript-validate-boundary-data = "error"
+
+[line_detection]
+enabled = true
+max_questions_per_request = 200
+
+[watch]
+debounce_milliseconds = 400
+
+[precondition]
+command = [
+  "sh",
+  "-c",
+  "pnpm run tsgo-check && pnpm run lint && pnpm run pr python-type-check && pnpm run pr python-lint",
+]
