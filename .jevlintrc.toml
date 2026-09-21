@@ -1,3 +1,4 @@
+# Global discovery: only these files can be linted.
 include = ["*.py", "*.pyi", "*.ts", "*.tsx", "**/*.py", "**/*.pyi", "**/*.ts", "**/*.tsx"]
 exclude = [
   ".next/**",
@@ -19,6 +20,7 @@ concurrency = 5
 request_timeout_seconds = 30
 typesafe_api_key_file = "~/.config/jevlint/typesafe-api-key"
 
+# Rule assignment blocks are additive when more than one matches a file.
 [[overrides]]
 files = ["*.py", "*.pyi", "**/*.py", "**/*.pyi"]
 rules = [

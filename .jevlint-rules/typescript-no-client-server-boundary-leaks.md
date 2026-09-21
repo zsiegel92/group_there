@@ -1,6 +1,8 @@
 # TypeScript: keep server capabilities out of client modules
 
-Scope: TypeScript `.ts` and `.tsx` files only. Always pass other file types.
+A client module imports or accesses a server-only capability.
+
+---
 
 Fail when a module marked `"use client"` imports or directly accesses
 server-only capabilities such as the database, server authentication, private

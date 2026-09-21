@@ -1,6 +1,8 @@
 # Python: validate data at trust boundaries
 
-Scope: Python `.py` and `.pyi` files only. Always pass other file types.
+Dynamic external data is used without runtime validation.
+
+---
 
 Fail when dynamic external data from JSON, HTTP requests, environment variables,
 database JSON, queues, or third-party services is used as trusted structured

@@ -1,6 +1,8 @@
 # Python: no silent exception fallback
 
-Scope: Python `.py` and `.pyi` files only. Always pass other file types.
+An exception is hidden behind a fallback value that looks successful.
+
+---
 
 Fail when production code catches an exception and silently substitutes `None`,
 an empty collection, a fabricated success value, or stale/default data in a way

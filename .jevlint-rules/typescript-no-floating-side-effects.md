@@ -1,6 +1,8 @@
 # TypeScript: no floating asynchronous side effects
 
-Scope: TypeScript `.ts` and `.tsx` files only. Always pass other file types.
+An asynchronous side effect is started without being observed or documented.
+
+---
 
 Fail when a clearly asynchronous side effect is started and its Promise is
 neither awaited, returned, handled, nor explicitly discarded with `void` and a

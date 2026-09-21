@@ -21,6 +21,16 @@ There is no local `.venv` anymore. Solver tasks live in [`src/solver/pyproject.t
 The root `.jevlintrc.toml` covers handwritten Python, TypeScript, and TSX while
 excluding generated clients and build output. Its override blocks apply Python
 rules only to Python files and TypeScript rules only to TypeScript and TSX.
+The top-level `include`/`exclude` lists define the candidate file set;
+`[[overrides]]` then assigns rule IDs to matching subsets. Matching blocks are
+additive, while `[rule_severity]` controls how each rule is presented and whether
+it affects JevLint's exit status.
+
+Each rule's user-facing diagnostic message is the Markdown before its `---`
+separator. The full Markdown, including the detailed instructions after that
+separator, is sent to Jev. Editing a rule triggers a cached project-wide pass;
+ordinary source edits analyze and replace diagnostics for only the affected
+file. The configured 400 ms debounce coalesces editor save events.
 
 Before making Jev requests, each pass requires the existing TypeScript typecheck
 and ESLint checks plus Python Pyright and Ruff checks to succeed. Run a one-off

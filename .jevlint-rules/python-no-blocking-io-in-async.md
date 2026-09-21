@@ -1,6 +1,8 @@
 # Python: no blocking I/O in async code
 
-Scope: Python `.py` and `.pyi` files only. Always pass other file types.
+Blocking I/O inside an async function can stall the event loop.
+
+---
 
 Fail when an `async` function directly performs clearly blocking work such as
 `time.sleep`, synchronous HTTP requests, synchronous subprocess execution, or

@@ -1,6 +1,8 @@
 # TypeScript: validate data at trust boundaries
 
-Scope: TypeScript `.ts` and `.tsx` files only. Always pass other file types.
+Dynamic external data is used without runtime validation.
+
+---
 
 Fail when dynamic external data from `JSON.parse`, an HTTP response, storage,
 environment input, database JSON, or a message payload is used or returned as
