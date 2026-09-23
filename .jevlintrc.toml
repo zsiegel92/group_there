@@ -14,7 +14,7 @@ rules_dir = ".jevlint-rules"
 system_prompt = ".jevlint-system.md"
 cache_dir = ".jevlint"
 model = "jev-latest"
-concurrency = 5
+concurrency = 20
 request_timeout_seconds = 30
 typesafe_api_key_file = "~/.config/jevlint/typesafe-api-key"
 
