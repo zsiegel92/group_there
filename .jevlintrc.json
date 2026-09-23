@@ -15,7 +15,7 @@
   "system_prompt": ".jevlint-system.md",
   "cache_dir": ".jevlint",
   "model": "jev-latest",
-  "concurrency": 80,
+  "concurrency": 50,
   "request_timeout_seconds": 30,
   "typesafe_api_key_file": "~/.config/jevlint/typesafe-api-key",
   "rule_sets": [
@@ -52,7 +52,7 @@
   ],
   "line_detection": {
     "enabled": true,
-    "max_questions_per_request": 200
+    "max_questions_per_request": 100
   },
   "watch": {
     "debounce_milliseconds": 400

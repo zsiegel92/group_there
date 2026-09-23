@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field, model_validator
 import datetime
 from typing import Literal, Self
+
+from pydantic import BaseModel, Field, model_validator
 
 
 class LatLon(BaseModel):

@@ -16,12 +16,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = [
-    "pytest>=9.0.2",
-    "ruff>=0.14.10",
-    "uv>=0.8.19",
-    "uvicorn>=0.40.0",
-]
+dev = ["pytest>=9.0.2", "ruff>=0.14.10", "uv>=0.8.19", "uvicorn>=0.40.0"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
