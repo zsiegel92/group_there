@@ -18,11 +18,10 @@ There is no local `.venv` anymore. Solver tasks live in [`src/solver/pyproject.t
 
 ## JevLint
 
-The root `.jevlintrc.toml` covers handwritten Python, TypeScript, and TSX while
+The root `.jevlintrc.json` covers handwritten Python, TypeScript, and TSX while
 excluding generated clients and build output. Its rule sets apply Python rules
 only to Python files and TypeScript rules only to TypeScript and TSX. Each
-`[[rule_sets]]` block defines its file globs and maps rule IDs directly to
-`error` or `warning`; files matching no rule set are ignored. The top-level
+`rule_sets` entry defines its file globs and maps rule IDs to minimum confidence thresholds under `error` or `warn`; files matching no rule set are ignored. The top-level
 `exclude` list removes shared generated and build paths.
 
 Each rule's user-facing diagnostic message is the Markdown before its `---`
