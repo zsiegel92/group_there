@@ -17,7 +17,8 @@
 	"model": "jev-latest",
 	"concurrency": 50,
 	"request_timeout_seconds": 30,
-	"typesafe_api_key_file": "~/.config/jevlint/typesafe-api-key",
+	"typesafe_api_key_file": "~/.config/jevlint/typesafe-api-key-localhost-of-electric-sheep",
+	"typesafeCompatibleBaseUrlFile": "~/.config/jevlint/typesafe-base-url-localhost-of-electric-sheep",
 	"rule_sets": [
 		{
 			"match": ["*.py", "*.pyi", "**/*.py", "**/*.pyi"],
