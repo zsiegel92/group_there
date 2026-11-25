@@ -65,3 +65,6 @@ next-env.d.ts
 
 docs/html/
 test-results/
+# Local semantic lint caches
+.nllint/
+.jevlint/
