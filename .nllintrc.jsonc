@@ -18,14 +18,19 @@
 				"*.py",
 				"*.pyi",
 				"**/*.py",
-				"**/*.pyi"
+				"**/*.pyi",
+				"*.ts",
+				"*.tsx",
+				"**/*.ts",
+				"**/*.tsx"
 			],
 			"error": {
-				"python-no-blocking-io-in-async": 0.8,
-				"python-validate-boundary-data": 0.8
+				"no-blocking-io-in-async": 0.8,
+				"validate-boundary-data": 0.8
 			},
 			"warn": {
-				"python-no-silent-exception-fallback": 0.8
+				"no-floating-side-effects": 0.8,
+				"no-silent-exception-fallback": 0.8
 			}
 		},
 		{
@@ -36,11 +41,7 @@
 				"**/*.tsx"
 			],
 			"error": {
-				"typescript-no-client-server-boundary-leaks": 0.8,
-				"typescript-validate-boundary-data": 0.8
-			},
-			"warn": {
-				"typescript-no-floating-side-effects": 0.8
+				"no-client-server-boundary-leaks": 0.8
 			}
 		}
 	],

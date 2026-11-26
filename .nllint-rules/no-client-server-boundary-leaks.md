@@ -1,4 +1,4 @@
-# TypeScript: keep server capabilities out of client modules
+# keep server capabilities out of client modules
 
 A client module imports or accesses a server-only capability.
 
